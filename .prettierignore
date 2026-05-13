@@ -1,0 +1,12 @@
+node_modules
+.next
+.expo
+.turbo
+dist
+build
+out
+coverage
+pnpm-lock.yaml
+**/.next/**
+**/dist/**
+**/build/**
