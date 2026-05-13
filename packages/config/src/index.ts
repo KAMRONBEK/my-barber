@@ -1,4 +1,4 @@
-export * from './app-constants.js';
-export * from './env.js';
-export * from './firestore-collections.js';
-export { getFirebaseAdmin } from './firebase.js';
+export * from './app-constants';
+export * from './env';
+export * from './firestore-collections';
+export { getFirebaseAdmin } from './firebase';

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IdSchema, TimestampSchema } from './common.js';
+import { IdSchema, TimestampSchema } from './common';
 
 export const SlotSchema = z.object({
   barberId: IdSchema,

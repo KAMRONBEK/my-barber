@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IdSchema, TimestampSchema } from './common.js';
+import { IdSchema, TimestampSchema } from './common';
 
 export const NotificationChannelSchema = z.enum(['push', 'sms', 'email']);
 export type NotificationChannel = z.infer<typeof NotificationChannelSchema>;

@@ -1,4 +1,4 @@
-import { parseServerEnv } from './env.js';
+import { parseServerEnv } from './env';
 
 type FirebaseAdminApp = { name: string };
 type FirebaseAdminModule = typeof import('firebase-admin');

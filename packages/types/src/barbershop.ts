@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IdSchema, TimestampSchema } from './common.js';
+import { IdSchema, TimestampSchema } from './common';
 
 export const GeoPointSchema = z.object({
   lat: z.number().min(-90).max(90),
