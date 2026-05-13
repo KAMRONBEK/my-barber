@@ -1,0 +1,410 @@
+{
+    "info": {
+      "name": "My Barber API",
+      "description": "API collection for the My Barber application",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "System",
+        "item": [
+          {
+            "name": "Health Check",
+            "request": {
+              "method": "GET",
+              "url": "{{baseUrl}}/health"
+            }
+          },
+          {
+            "name": "API Information",
+            "request": {
+              "method": "GET",
+              "url": "{{baseUrl}}/"
+            }
+          },
+          {
+            "name": "Metrics",
+            "request": {
+              "method": "GET",
+              "url": "{{baseUrl}}/metrics"
+            }
+          },
+          {
+            "name": "Test Notification",
+            "request": {
+              "method": "POST",
+              "url": "{{baseUrl}}/test/send-notification",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"deviceToken\": \"ExponentPushToken[your-device-token-here]\",\n    \"title\": \"Custom Test Notification\",\n    \"body\": \"This is a test notification with custom content!\",\n    \"data\": {\n        \"type\": \"test\",\n        \"customData\": \"example\",\n        \"timestamp\": \"2024-01-01T00:00:00Z\"\n    }\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Authentication",
+        "item": [
+          {
+            "name": "Barber Register",
+            "request": {
+              "method": "POST",
+              "url": "{{baseUrl}}/auth/barber/register",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"username\": \"johndoe_barber\",\n    \"password\": \"password123\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"phone\": \"+998901234567\",\n    \"location\": \"Tashkent, Uzbekistan\",\n    \"birthDate\": \"1990-01-15\",\n    \"workingHours\": \"9:00 AM - 6:00 PM\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "Barber Login",
+            "request": {
+              "method": "POST",
+              "url": "{{baseUrl}}/auth/barber/login",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"username\": \"johndoe_barber\",\n    \"password\": \"password123\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "Client Register",
+            "request": {
+              "method": "POST",
+              "url": "{{baseUrl}}/auth/client/register",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"username\": \"client123\",\n    \"password\": \"password123\",\n    \"firstName\": \"Jane\",\n    \"lastName\": \"Smith\",\n    \"phone\": \"+998901234568\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "Client Login",
+            "request": {
+              "method": "POST",
+              "url": "{{baseUrl}}/auth/client/login",
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"username\": \"client123\",\n    \"password\": \"password123\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Barber",
+        "item": [
+          {
+            "name": "Get Barber Profile",
+            "request": {
+              "method": "GET",
+              "url": "{{baseUrl}}/barber/getMe",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{barberToken}}"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Update Barber Profile",
+            "request": {
+              "method": "PUT",
+              "url": "{{baseUrl}}/barber/update",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{barberToken}}"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"phone\": \"+998901234567\",\n    \"location\": \"Tashkent, Uzbekistan\",\n    \"workingHours\": \"9:00 AM - 6:00 PM\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "Add Barber Service",
+            "request": {
+              "method": "POST",
+              "url": "{{baseUrl}}/barber/add-service",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{barberToken}}"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"name\": \"Haircut\",\n    \"price\": 50,\n    \"duration\": 30\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "Upload Barber Avatar",
+            "request": {
+              "method": "PUT",
+              "url": "{{baseUrl}}/barber/update-avatar",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{barberToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"avatar\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "Upload Barber Avatar (Object Format)",
+            "request": {
+              "method": "PUT",
+              "url": "{{baseUrl}}/barber/update-avatar",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{barberToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"avatar\": {\n        \"data\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=\",\n        \"filename\": \"avatar.jpg\",\n        \"mimeType\": \"image/jpeg\"\n    }\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "Upload Portfolio Images",
+            "request": {
+              "method": "POST",
+              "url": "{{baseUrl}}/barber/add-image",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{barberToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"images\": [\n        \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=\",\n        {\n            \"data\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\",\n            \"filename\": \"portfolio2.png\",\n            \"mimeType\": \"image/png\"\n        }\n    ]\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "Get Barber Orders",
+            "request": {
+              "method": "GET",
+              "url": "{{baseUrl}}/barber/bookings",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{barberToken}}"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "Client",
+        "item": [
+          {
+            "name": "Get Client Profile",
+            "request": {
+              "method": "GET",
+              "url": "{{baseUrl}}/client/getMe",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{clientToken}}"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Update Client Profile",
+            "request": {
+              "method": "PUT",
+              "url": "{{baseUrl}}/client/update",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{clientToken}}"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"firstName\": \"Jane\",\n    \"lastName\": \"Smith\",\n    \"phone\": \"+998901234568\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "Upload Client Avatar",
+            "request": {
+              "method": "PUT",
+              "url": "{{baseUrl}}/client/update-avatar",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{clientToken}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"avatar\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "name": "My booking history (all barbers)",
+            "request": {
+              "method": "GET",
+              "url": "{{baseUrl}}/client/booking-history",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{clientToken}}"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Get client bookings for barber",
+            "request": {
+              "method": "GET",
+              "url": "{{baseUrl}}/client/bookings",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{clientToken}}"
+                }
+              ]
+            }
+          },
+          {
+            "name": "Create booking",
+            "request": {
+              "method": "POST",
+              "url": "{{baseUrl}}/client/bookings",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{clientToken}}"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"barberId\": \"barber_id_here\",\n    \"serviceId\": \"service_id_here\",\n    \"date\": \"2024-03-20T10:00:00Z\"\n}",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "variable": [
+      {
+        "key": "baseUrl",
+        "value": "http://localhost:8080",
+        "type": "string"
+      },
+      {
+        "key": "barberToken",
+        "value": "your_barber_jwt_token_here",
+        "type": "string"
+      },
+      {
+        "key": "clientToken",
+        "value": "your_client_jwt_token_here",
+        "type": "string"
+      }
+    ]
+  }

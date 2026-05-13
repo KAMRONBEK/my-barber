@@ -1,0 +1,86 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# API Conventions & Standards
+
+## API Response Format
+All API responses follow a consistent structure:
+
+### Success Response
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Operation completed successfully"
+}
+```
+
+### Error Response
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error message"
+  }
+}
+```
+
+## Authentication Conventions
+- **Header**: `Authorization: Bearer <jwt-token>`
+- **JWT Structure**: Contains user ID, user type (barber/client), and expiration
+- **Protected Routes**: Use authentication middleware to validate tokens
+- **User Types**: Separate endpoints and logic for barbers vs clients
+
+## Endpoint Naming Patterns
+- **Authentication**: `/auth/{userType}/{action}` (e.g., `/auth/barber/login`)
+- **Resource Management**: `/{resource}/{action}` (e.g., `/barber/profile`)
+- **RESTful Verbs**: GET (read), POST (create), PUT (update), DELETE (remove)
+- **System Endpoints**: `/health`, `/metrics`, `/docs`
+
+## Validation Standards
+- **Input Validation**: Use Joi schemas for request validation
+- **Required Fields**: Clearly define required vs optional fields
+- **Error Messages**: Provide specific validation error details
+- **File Uploads**: Validate file types, sizes, and formats
+
+## Logging Conventions
+Structured logging with Winston:
+- **Request ID**: Unique identifier for each request
+- **User Context**: Include user ID and type in logs
+- **Performance**: Log response times and database query times
+- **Error Context**: Include stack traces and request details for errors
+
+## Security Standards
+- **Rate Limiting**: Implement per-endpoint and per-user rate limits
+- **Input Sanitization**: Sanitize all user inputs
+- **CORS Policy**: Configure appropriate CORS origins per environment
+- **Security Headers**: Use Helmet middleware for security headers
+
+## Database Conventions
+Using Firebase Firestore:
+- **Collections**: Organized by resource type (users, bookings, etc.)
+- **Document Structure**: Consistent field naming and data types
+- **Timestamps**: Use Firebase server timestamps for created/updated fields
+- **References**: Use document references for relationships
+
+## File Upload Standards
+Using Firebase Storage:
+- **Path Structure**: Organized by user type and file purpose
+- **File Validation**: Check file types, sizes, and content
+- **Access Control**: Implement proper read/write permissions
+- **URL Generation**: Generate signed URLs for secure access
+
+## Environment-Specific Behavior
+- **Development**: Verbose logging, permissive CORS, higher rate limits
+- **Staging**: Production-like settings with test data
+- **Production**: Restrictive security, minimal logging, strict rate limits
+
+## Migration Notes
+This API maintains compatibility with the original Go implementation:
+- **Endpoint URLs**: Same path structure as original API
+- **Request/Response Format**: Compatible data structures
+- **Authentication Flow**: Same JWT token format and validation
+

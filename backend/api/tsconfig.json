@@ -1,0 +1,43 @@
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "lib": [
+            "ES2020"
+        ],
+        "module": "commonjs",
+        "rootDir": "./",
+        "outDir": "./dist",
+        "removeComments": true,
+        "strict": true,
+        "moduleResolution": "node",
+        "baseUrl": "./",
+        "paths": {
+            "*": [
+                "node_modules/*"
+            ]
+        },
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "declaration": false,
+        "declarationMap": false,
+        "sourceMap": false,
+        "incremental": true,
+        "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
+    },
+    "include": [
+        "*.ts",
+        "**/*.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "**/*.test.ts",
+        "**/*.spec.ts",
+        ".vercel"
+    ]
+}
