@@ -1,0 +1,9 @@
+node_modules/
+dist/
+build/
+*.js
+*.json
+.git/
+.vercel/
+coverage/
+*.log 

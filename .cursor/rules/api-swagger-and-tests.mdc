@@ -1,0 +1,31 @@
+---
+description: Require Swagger docs and tests for every new API
+alwaysApply: true
+---
+
+# New APIs: Swagger and tests
+
+When adding or changing a public HTTP endpoint in this Express API, do **both** of the following in the same change (or follow-up PR, but do not ship without them).
+
+## Swagger (OpenAPI)
+
+- Document the route with a JSDoc `@swagger` block **above** the handler (same pattern as `routes/system.ts` and other route files).
+- Include at minimum: `summary`, `tags`, path and method, `requestBody` or parameters when applicable, `responses` for success and common errors (401/403/404/422/500 as relevant), and `security` for protected routes (`bearerAuth`).
+- Ensure the scanner picks up the file: `scripts/generate-swagger.js` uses `apis` globs under `./routes/*.ts`. If you add routes outside `routes/`, extend the `apis` array there.
+- Regenerate the spec so `public/swagger.json` matches the source of truth: run `node scripts/generate-swagger.js` (also runs via `prebuild` before `npm run build`). Commit the updated `public/swagger.json` when it changes.
+
+```typescript
+// ❌ BAD — new router.get/post/etc. with no @swagger above it
+router.post('/foo', handler);
+
+// ✅ GOOD — full @swagger block + handler (mirror existing routes)
+```
+
+## Tests
+
+- Add **automated tests** that exercise **each new/changed endpoint** (Jest: `npm test`).
+- Cover at least: **success** for the primary use case, and **meaningful failures** (auth required, validation, not found) where the API defines them.
+- Prefer **integration-style** tests against the Express app (supertest or equivalent) when practical so the real route stack runs; mock external services (e.g. Firestore) as the rest of the suite does.
+- Do not merge a new route with zero tests unless the user explicitly defers testing (default: tests required).
+
+If an endpoint is intentionally internal-only (e.g. local debug), say so in code review and still document or exclude it consistently—do not leave public routes undocumented.
