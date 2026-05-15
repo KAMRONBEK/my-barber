@@ -2,20 +2,30 @@
   "expo": {
     "name": "My Barber Shop",
     "newArchEnabled": true,
-    "slug": "my-barber-mobile",
+    "slug": "my-barber",
     "scheme": "mybarber",
     "version": "1.0.0",
+    "experiments": {
+      "typedRoutes": true
+    },
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#FAF7F2"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "uz.mybarber.app"
+      "bundleIdentifier": "uz.mybarber.app",
+      "appleTeamId": "7BLQ2AA4R3",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "uz.mybarber.app",
@@ -38,7 +48,11 @@
     "extra": {
       "router": {
         "origin": false
+      },
+      "eas": {
+        "projectId": "5d42f48c-712c-4e1a-942d-8bad9510a9ba"
       }
-    }
+    },
+    "owner": "softwhere"
   }
 }
