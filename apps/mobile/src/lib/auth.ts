@@ -55,10 +55,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   role: null,
 
   hydrate: async () => {
-    const token = await getItem(STORAGE_KEYS.jwt);
-    const role = (await getItem(STORAGE_KEYS.role)) as UserRole | null;
-    const clientRaw = await getItem(STORAGE_KEYS.client);
-    const barberRaw = await getItem(STORAGE_KEYS.barber);
+    const [token, roleRaw, clientRaw, barberRaw] = await Promise.all([
+      getItem(STORAGE_KEYS.jwt),
+      getItem(STORAGE_KEYS.role),
+      getItem(STORAGE_KEYS.client),
+      getItem(STORAGE_KEYS.barber),
+    ]);
+    const role = roleRaw as UserRole | null;
     let client: ClientProfile | null = null;
     let barber: BarberProfile | null = null;
     if (clientRaw) {
