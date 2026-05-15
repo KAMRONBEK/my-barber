@@ -13,6 +13,11 @@ import { Avatar } from '../atoms/Avatar';
 import { Icon } from '../atoms/Icon';
 import { Button } from '../atoms/Button';
 import { ScreenLayout } from '../templates/ScreenLayout';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  TAB_BAR_PILL_HEIGHT,
+  TAB_BAR_BOTTOM_OFFSET,
+} from '../navigation/GlassTabBar';
 import { shadows } from '@my-barber/ui';
 import { getBanner, type ApiBarber } from '../lib/api';
 import { queryKeys, STALE } from '../lib/query';
@@ -65,6 +70,8 @@ export const BarberShopScreen: React.FC = () => {
   const theme = useTheme<AppTheme>();
   const router = useRouter();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const tabBarPadding = TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
   const { id } = useLocalSearchParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<TabKey>('bio');
 
@@ -123,7 +130,7 @@ export const BarberShopScreen: React.FC = () => {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { backgroundColor: theme.colors.bg },
+          { backgroundColor: theme.colors.bg, paddingBottom: tabBarPadding },
         ]}
         showsVerticalScrollIndicator={false}
       >

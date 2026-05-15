@@ -19,6 +19,11 @@ import { Avatar } from '../atoms/Avatar';
 import { Badge } from '../atoms/Badge';
 import { Icon, type IconName } from '../atoms/Icon';
 import { ScreenLayout } from '../templates/ScreenLayout';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  TAB_BAR_PILL_HEIGHT,
+  TAB_BAR_BOTTOM_OFFSET,
+} from '../navigation/GlassTabBar';
 import { getMe } from '../lib/api';
 import { useAuthStore } from '../lib/auth';
 import { queryKeys, STALE } from '../lib/query';
@@ -35,6 +40,9 @@ export const ProfileScreen: React.FC = () => {
   const signOut = useAuthStore((s) => s.signOut);
 
   const [marketingEnabled, setMarketingEnabled] = useState(false);
+
+  const insets = useSafeAreaInsets();
+  const tabBarPadding = TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
 
   const meQuery = useQuery({
     queryKey: queryKeys.me,
@@ -156,7 +164,7 @@ export const ProfileScreen: React.FC = () => {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: tabBarPadding }}
         showsVerticalScrollIndicator={false}
       >
         {/* ID card */}

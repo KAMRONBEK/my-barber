@@ -18,6 +18,11 @@ import { Avatar } from '../atoms/Avatar';
 import { BarberCard, BarberRailCard } from '../molecules/BarberCard';
 import { UpcomingBanner } from '../molecules/UpcomingBanner';
 import { ScreenLayout } from '../templates/ScreenLayout';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  TAB_BAR_PILL_HEIGHT,
+  TAB_BAR_BOTTOM_OFFSET,
+} from '../navigation/GlassTabBar';
 import { getBanner, api } from '../lib/api';
 import { useAuthStore } from '../lib/auth';
 import { queryKeys, STALE } from '../lib/query';
@@ -33,6 +38,8 @@ export const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { t } = useTranslation();
   const client = useAuthStore((s) => s.client);
+  const insets = useSafeAreaInsets();
+  const tabBarPadding = TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
 
   const bannerQuery = useQuery({
     queryKey: queryKeys.banner,
@@ -82,7 +89,7 @@ export const HomeScreen: React.FC = () => {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { backgroundColor: theme.colors.bg },
+          { backgroundColor: theme.colors.bg, paddingBottom: tabBarPadding },
         ]}
         showsVerticalScrollIndicator={false}
       >

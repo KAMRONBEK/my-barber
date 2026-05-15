@@ -11,6 +11,11 @@ import { useTranslation } from 'react-i18next';
 import { Text } from '../atoms/Text';
 import { Button } from '../atoms/Button';
 import { ScreenLayout } from '../templates/ScreenLayout';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  TAB_BAR_PILL_HEIGHT,
+  TAB_BAR_BOTTOM_OFFSET,
+} from '../navigation/GlassTabBar';
 import { api } from '../lib/api';
 import { fontFamilies } from '@my-barber/ui';
 import {
@@ -80,6 +85,8 @@ export const BookingHistoryScreen: React.FC = () => {
   const theme = useTheme<AppTheme>();
   const router = useRouter();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const tabBarPadding = TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
   const [segment, setSegment] = useState<Segment>('upcoming');
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -166,7 +173,7 @@ export const BookingHistoryScreen: React.FC = () => {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { backgroundColor: theme.colors.bg },
+          { backgroundColor: theme.colors.bg, paddingBottom: tabBarPadding },
         ]}
         showsVerticalScrollIndicator={false}
       >

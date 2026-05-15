@@ -19,6 +19,9 @@ const ROUTE_ICONS: Record<string, IconName> = {
   profile: 'user',
 };
 
+export const TAB_BAR_PILL_HEIGHT = 64;
+export const TAB_BAR_BOTTOM_OFFSET = 16;
+
 export const GlassTabBar: React.FC<BottomTabBarProps> = ({
   state,
   descriptors,
@@ -31,11 +34,11 @@ export const GlassTabBar: React.FC<BottomTabBarProps> = ({
     <View
       style={[
         styles.container,
-        { bottom: Math.max(insets.bottom, 16) },
+        { bottom: Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) },
       ]}
       pointerEvents="box-none"
     >
-      <View style={styles.pill}>
+      <View style={[styles.pill, { height: TAB_BAR_PILL_HEIGHT }]}>
         {/* Blur background */}
         <BlurView
           intensity={60}
