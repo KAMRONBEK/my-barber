@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Always run from backend/api/ regardless of caller's CWD.
+# Works whether called as "bash vercel-build.sh" (from backend/api/)
+# or as "bash backend/api/vercel-build.sh" (from repo root).
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
 echo "Generating Swagger spec..."
 node scripts/generate-swagger.js
 
