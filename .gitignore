@@ -21,6 +21,8 @@ out/
 .env.development
 .env.staging
 .env.production
+.env.vercel
+.vercel/.env.*
 
 # logs
 *.log
@@ -39,3 +41,6 @@ coverage/
 
 # misc
 .cache/
+.claude-flow/
+.claude/
+cspell.json
