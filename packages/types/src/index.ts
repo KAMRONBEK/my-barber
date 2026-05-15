@@ -6,3 +6,4 @@ export * from './service';
 export * from './booking';
 export * from './slot';
 export * from './notification';
+export * from './duration';

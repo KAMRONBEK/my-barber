@@ -1,16 +1,19 @@
 import { z } from 'zod';
 import { IdSchema, TimestampSchema } from './common';
 
+// Mirrors `BarberService` in backend/api/models/barber.ts. `price` is whole
+// UZS units (no minor unit). `durationMinutes` is optional in storage;
+// consumers should fall back to DEFAULT_SERVICE_DURATION_MINUTES (see ./duration).
 export const ServiceSchema = z.object({
   id: IdSchema,
-  barbershopId: IdSchema,
+  barberId: IdSchema,
   name: z.string(),
   description: z.string().optional(),
-  durationMinutes: z.number().int().positive(),
-  priceCents: z.number().int().nonnegative(),
-  currency: z.string().length(3).default('UZS'),
-  active: z.boolean().default(true),
-  createdAt: TimestampSchema,
-  updatedAt: TimestampSchema,
+  price: z.number().int().nonnegative(),
+  durationMinutes: z.number().int().positive().optional(),
+  catalogServiceId: IdSchema.optional(),
+  isActive: z.boolean().optional(),
+  createdAt: TimestampSchema.optional(),
+  updatedAt: TimestampSchema.optional(),
 });
 export type Service = z.infer<typeof ServiceSchema>;
