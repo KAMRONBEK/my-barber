@@ -9,7 +9,6 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { config, AWS_S3_SIGNED_URL_TTL_SECONDS } from '../config/config';
-import { db } from '../config/database';
 import { logger } from '../utils/logger';
 
 export type OwnerRole = 'barber' | 'client';
@@ -172,28 +171,11 @@ export class FileStorageService {
     }
   }
 
-  /** Delete Firebase / GCS object using Admin SDK when URL belongs to configured bucket */
-  public async deleteGcsLegacyObject(publicUrl: string): Promise<void> {
-    const parsed = parseGcsPublicUrl(publicUrl);
-    if (!parsed) return;
-    if (parsed.bucket !== config.firebaseStorageBucket) {
-      logger.warn('Skipping legacy GCS delete — bucket mismatch', {
-        parsedBucket: parsed.bucket,
-      });
-      return;
-    }
-    const bucket = db.getStorage().bucket(parsed.bucket);
-    await bucket.file(parsed.objectKey).delete();
-    logger.info('Legacy GCS object deleted:', {
-      bucket: parsed.bucket,
-      objectKey: parsed.objectKey,
-    });
-  }
-
   public async deleteStoredReference(reference: string): Promise<void> {
     if (!reference) return;
     if (looksLikeHttpsRef(reference)) {
-      await this.deleteGcsLegacyObject(reference);
+      // Legacy GCS URL from before S3 migration — no longer deletable via SDK.
+      logger.warn('Skipping delete of legacy GCS URL (storage migrated to S3)', { reference });
       return;
     }
     await this.deleteObject(reference);

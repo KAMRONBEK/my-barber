@@ -1,6 +1,5 @@
 import { initializeApp, cert, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
-import { getStorage, Storage } from 'firebase-admin/storage';
 import { config } from './config';
 import { logger } from '../utils/logger';
 
@@ -8,7 +7,6 @@ export class Database {
   private static instance: Database;
   private app: App;
   private firestore: Firestore;
-  private storage: Storage;
 
   private constructor() {
     try {
@@ -28,7 +26,6 @@ export class Database {
               clientEmail: config.firebaseClientEmail,
             }),
             projectId: config.firebaseProjectId,
-            storageBucket: config.firebaseStorageBucket,
           });
         } else {
           logger.error(
@@ -41,7 +38,6 @@ export class Database {
       }
 
       this.firestore = getFirestore(this.app);
-      this.storage = getStorage(this.app);
 
       // Configure Firestore settings
       this.firestore.settings({
@@ -71,20 +67,12 @@ export class Database {
     return this.firestore;
   }
 
-  public getStorage(): Storage {
-    return this.storage;
-  }
-
   public async collection(collectionName: string) {
     return this.firestore.collection(collectionName);
   }
 
   public async doc(collectionName: string, docId: string) {
     return this.firestore.collection(collectionName).doc(docId);
-  }
-
-  public getBucket(bucketName?: string) {
-    return this.storage.bucket(bucketName);
   }
 
   public async testConnection(): Promise<void> {

@@ -1,25 +1,21 @@
 import { parseServerEnv } from './env';
+import { initializeApp, cert, getApps, type App } from 'firebase-admin/app';
 
-type FirebaseAdminApp = { name: string };
-type FirebaseAdminModule = typeof import('firebase-admin');
+let initialized = false;
 
-let cachedApp: FirebaseAdminApp | undefined;
-
-export async function getFirebaseAdmin(): Promise<FirebaseAdminModule> {
-  const admin = (await import('firebase-admin')) as unknown as FirebaseAdminModule;
-  if (!cachedApp) {
+export function getFirebaseAdmin(): App {
+  if (!initialized) {
     const env = parseServerEnv();
-    if (admin.apps.length === 0) {
-      cachedApp = admin.initializeApp({
-        credential: admin.credential.cert({
+    if (getApps().length === 0) {
+      initializeApp({
+        credential: cert({
           projectId: env.FIREBASE_PROJECT_ID,
           clientEmail: env.FIREBASE_CLIENT_EMAIL,
           privateKey: env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
         }),
       });
-    } else {
-      cachedApp = admin.app();
     }
+    initialized = true;
   }
-  return admin;
+  return getApps()[0]!;
 }

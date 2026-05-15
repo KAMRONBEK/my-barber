@@ -44,8 +44,6 @@ export interface Config {
   firebaseProjectId: string;
   firebasePrivateKey?: string;
   firebaseClientEmail?: string;
-  /** Default GCS bucket (legacy deletes / Admin SDK); fallback project.appspot.com */
-  firebaseStorageBucket: string;
   jwtSecret: string;
   /** Legacy base URL helper; superseded by S3 signed URLs for new uploads */
   fileUrl: string;
@@ -100,8 +98,6 @@ function validateConfig(): Config {
   const nodeEnv = process.env.NODE_ENV || 'development';
 
   const firebaseProjectId = process.env.FIREBASE_PROJECT_ID!;
-  const firebaseStorageBucket =
-    process.env.FIREBASE_STORAGE_BUCKET || `${firebaseProjectId}.appspot.com`;
 
   const defaultRateLimit =
     nodeEnv === 'production' ? 100 : nodeEnv === 'staging' ? 200 : 1000;
@@ -121,7 +117,6 @@ function validateConfig(): Config {
     firebaseProjectId,
     firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY,
     firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    firebaseStorageBucket,
     jwtSecret: process.env.JWT_SECRET!,
     fileUrl:
       process.env.FILE_URL ||
