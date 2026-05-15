@@ -17,9 +17,8 @@ export const BOOKING_GRID_STEP_MINUTES = 15;
 /**
  * Default API base URL for mobile clients (resolved at build time).
  * Override at runtime with `EXPO_PUBLIC_API_BASE_URL` in `apps/mobile`.
- *  - dev: simulator → http://localhost:3000; device → set to your LAN IP.
- *  - staging: SITE_URLS.apiStaging
- *  - prod: SITE_URLS.api
+ *  - dev: create `.env.local` with `EXPO_PUBLIC_API_BASE_URL=http://localhost:3000`
+ *  - staging: set `EXPO_PUBLIC_API_BASE_URL=https://staging-api.my-barber.uz`
+ *  - prod: falls back to `SITE_URLS.api`
  */
-export const DEFAULT_MOBILE_API_BASE_URL = 'http://localhost:3000';
-// override per environment: SITE_URLS.apiStaging or SITE_URLS.api
+export const DEFAULT_MOBILE_API_BASE_URL = SITE_URLS.api;
