@@ -1,0 +1,233 @@
+{
+  "app": {
+    "name": "My Barber"
+  },
+  "common": {
+    "back": "Назад",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "done": "Готово",
+    "confirm": "Подтвердить",
+    "continue": "Продолжить",
+    "loading": "Загрузка…",
+    "retry": "Повторить",
+    "empty": "Пусто",
+    "error": "Ошибка",
+    "min": "мин",
+    "sum": "сум",
+    "from": "от {{value}} сум"
+  },
+  "auth": {
+    "welcomeBack": "С возвращением",
+    "signIn": "Войти",
+    "signInTitle": "Вход.",
+    "signInBody": "Используйте имя пользователя и пароль. Мы запомним вас на этом устройстве.",
+    "username": "Имя пользователя",
+    "password": "Пароль",
+    "forgotPassword": "Забыли пароль?",
+    "signOut": "Выйти",
+    "newHere": "Новенький?",
+    "createAccount": "Создать аккаунт",
+    "loginFailed": "Не удалось войти. Неверный логин или пароль.",
+    "orContinueWith": "ИЛИ ПРОДОЛЖИТЬ С ПОЧТОЙ",
+    "continueWithGoogle": "Войти через Google",
+    "continueWithApple": "Войти через Apple",
+    "emailAddress": "Адрес электронной почты",
+    "choosePassword": "Придумайте пароль",
+    "passwordSubtitle": "Минимум 8 символов, одна цифра и одна заглавная буква.",
+    "passwordWeak": "Слабый",
+    "passwordFair": "Средний",
+    "passwordStrong": "Надёжный",
+    "verification": "Подтверждение",
+    "enterCode": "Введите код",
+    "enterCodeSubtitle": "Введите код, отправленный на номер {{phone}}."
+  },
+  "home": {
+    "greeting": "Привет, {{name}} —",
+    "greetingPrefix": "Привет, ",
+    "dateLine": "{{weekday}} · {{date}}",
+    "upcomingEyebrow": "Скоро · Сегодня",
+    "viewBooking": "Открыть запись",
+    "bookAgain": "Записаться снова",
+    "seeAll": "Все",
+    "seeAllCount": "Все {{count}}",
+    "featuredTitle": "Лучшие в Мирзо-Улугбеке",
+    "notifications": "Уведомления",
+    "noUpcoming": "Пока нет записей.",
+    "browse": "Найти барбера"
+  },
+  "tabs": {
+    "home": "Главная",
+    "search": "Поиск",
+    "calendar": "Календарь",
+    "bookings": "Записи",
+    "profile": "Профиль"
+  },
+  "barber": {
+    "verified": "Подтверждён",
+    "services": "Услуги",
+    "portfolio": "Работы",
+    "reviews": "Отзывы",
+    "about": "О себе",
+    "bookSeat": "Забронировать кресло",
+    "priceFrom": "Цена",
+    "openUntil": "Открыт до {{time}}",
+    "experienceYears": "{{years}} лет",
+    "experienceLabel": "Опыт",
+    "distance": "Расстояние",
+    "rating": "Рейтинг",
+    "ratingReviews": "{{count}} отзыв(ов)",
+    "priceLabel": "Цена",
+    "bio": "Восемь лет специализируется на градиентных стрижках, оформлении бороды и редакторском мужском груминге."
+  },
+  "booking": {
+    "title": "Записаться",
+    "pickService": "Выберите услугу",
+    "pickDay": "Выберите день",
+    "pickTime": "Выберите время",
+    "timesLocal": "{{dayLong}}, {{date}} · время местное.",
+    "summary": "Итого",
+    "service": "Услуга",
+    "date": "Дата",
+    "time": "Время",
+    "total": "Стоимость услуги",
+    "summaryNote": "Оплата у барбера на месте. Платформа не принимает оплату.",
+    "confirmCta": "Подтвердить запись",
+    "noServiceSelected": "Сначала выберите услугу",
+    "noSlotsToday": "На этот день нет свободных слотов.",
+    "creating": "Создание…",
+    "createError": "Не удалось создать запись.",
+    "duration": "{{minutes}} мин",
+    "durationHrMin": "{{hours}} ч {{minutes}} мин"
+  },
+  "confirmation": {
+    "eyebrow": "Запись подтверждена",
+    "title": "Вы в кресле.",
+    "body": "{{name}} ждёт вас {{dayLong}}, {{date}}, в {{time}}. Напомним за 24 часа.",
+    "status": "Подтверждено",
+    "addCalendar": "В календарь",
+    "viewBooking": "Открыть запись",
+    "viewBookings": "Мои записи",
+    "cancelBooking": "Отменить запись",
+    "cancelling": "Отмена…",
+    "cancelConfirmTitle": "Подтвердить отмену?",
+    "cancelConfirmBody": "Если вы отмените запись, время освободится для других.",
+    "cancelledNote": "Запись отменена.",
+    "footnote": "Бесплатная отмена за 24 часа.",
+    "ref": "Номер записи"
+  },
+  "onboarding": {
+    "slide1Title": "Найдите барбера рядом",
+    "slide1Body": "Откройте для себя барберов с лучшими оценками в вашем районе.",
+    "slide2Title": "Записывайтесь мгновенно",
+    "slide2Body": "Выберите услугу, время — и подтвердите за секунды.",
+    "slide3Title": "Управляйте записями",
+    "slide3Body": "Предстоящие и прошедшие визиты в одном месте.",
+    "skip": "Пропустить"
+  },
+  "selectRole": {
+    "eyebrow": "Добро пожаловать",
+    "title": "Я…",
+    "clientDesc": "Записывайтесь к лучшим барберам рядом с вами.",
+    "barberDesc": "Управляйте расписанием, клиентами и доходом."
+  },
+  "bookings": {
+    "title": "Записи",
+    "upcoming": "Предстоящие",
+    "past": "Прошедшие",
+    "emptyUpcoming": "Предстоящих записей нет.",
+    "emptyPast": "Прошедших записей нет.",
+    "thisWeek": "На этой неделе",
+    "nextWeek": "На следующей неделе",
+    "earlier": "Ранее"
+  },
+  "notifications": {
+    "title": "Уведомления",
+    "markAllRead": "Отметить все как прочитанные",
+    "emptyTitle": "Уведомлений пока нет",
+    "emptyBody": "Новые уведомления появятся здесь.",
+    "accept": "Принять",
+    "reject": "Отклонить"
+  },
+  "profileEdit": {
+    "title": "Редактировать профиль",
+    "firstName": "Имя",
+    "lastName": "Фамилия",
+    "username": "Имя пользователя",
+    "phone": "Номер телефона",
+    "location": "Адрес",
+    "changePhoto": "Изменить фото",
+    "saveSuccess": "Профиль сохранён"
+  },
+  "search": {
+    "title": "Все барберы",
+    "subtitle": "Найдите мастера рядом",
+    "filterLabel": "Фильтры",
+    "filterRating": "★ 4.8+",
+    "filterDistance": "1.5 км",
+    "filterOpen": "Сейчас открыт",
+    "filterBeard": "Борода",
+    "resultCount": "{{count}} барбер(ов)",
+    "open": "Открыт",
+    "closed": "Закрыт"
+  },
+  "profile": {
+    "title": "Профиль",
+    "edit": "Редактировать профиль",
+    "phoneSecurity": "Телефон и безопасность",
+    "primaryLocation": "Основной адрес",
+    "notifications": "Push-уведомления",
+    "marketing": "Маркетинговые сообщения",
+    "appearance": "Внешний вид",
+    "appearanceSystem": "Система",
+    "help": "Помощь и поддержка",
+    "signOut": "Выйти",
+    "section": {
+      "account": "Аккаунт",
+      "settings": "Настройки",
+      "help": "Помощь"
+    },
+    "stats": {
+      "cuts": "Стрижки",
+      "saved": "В избранном"
+    },
+    "role": {
+      "client": "Клиент",
+      "barber": "Барбер"
+    }
+  },
+  "weekday": {
+    "short": {
+      "0": "Вс",
+      "1": "Пн",
+      "2": "Вт",
+      "3": "Ср",
+      "4": "Чт",
+      "5": "Пт",
+      "6": "Сб"
+    },
+    "long": {
+      "0": "Воскресенье",
+      "1": "Понедельник",
+      "2": "Вторник",
+      "3": "Среда",
+      "4": "Четверг",
+      "5": "Пятница",
+      "6": "Суббота"
+    }
+  },
+  "month": {
+    "0": "января",
+    "1": "февраля",
+    "2": "марта",
+    "3": "апреля",
+    "4": "мая",
+    "5": "июня",
+    "6": "июля",
+    "7": "августа",
+    "8": "сентября",
+    "9": "октября",
+    "10": "ноября",
+    "11": "декабря"
+  }
+}

@@ -1,0 +1,233 @@
+{
+  "app": {
+    "name": "My Barber"
+  },
+  "common": {
+    "back": "Orqaga",
+    "cancel": "Bekor qilish",
+    "save": "Saqlash",
+    "done": "Tayyor",
+    "confirm": "Tasdiqlash",
+    "continue": "Davom etish",
+    "loading": "Yuklanmoqda…",
+    "retry": "Qayta urinish",
+    "empty": "Bo'sh",
+    "error": "Xatolik",
+    "min": "min",
+    "sum": "so'm",
+    "from": "{{value}} so'mdan"
+  },
+  "auth": {
+    "welcomeBack": "Xush kelibsiz",
+    "signIn": "Kirish",
+    "signInTitle": "Kirish.",
+    "signInBody": "Ro'yxatdan o'tgan emailingizdan foydalaning. Sizni shu qurilmada saqlab qolamiz.",
+    "username": "Foydalanuvchi nomi",
+    "password": "Parol",
+    "forgotPassword": "Parolni unutdingizmi?",
+    "signOut": "Chiqish",
+    "newHere": "Yangimisiz?",
+    "createAccount": "Akkaunt yaratish",
+    "loginFailed": "Kirish amalga oshmadi. Foydalanuvchi nomi yoki parol noto'g'ri.",
+    "orContinueWith": "YOKI EMAIL ORQALI DAVOM ETING",
+    "continueWithGoogle": "Google orqali kirish",
+    "continueWithApple": "Apple orqali kirish",
+    "emailAddress": "Elektron pochta manzilingiz",
+    "choosePassword": "Parol tanlang",
+    "passwordSubtitle": "Kamida 8 ta belgi, bitta raqam va bitta katta harf.",
+    "passwordWeak": "Kuchsiz",
+    "passwordFair": "O'rtacha",
+    "passwordStrong": "Kuchli",
+    "verification": "Tasdiqlash",
+    "enterCode": "Kodni kiriting",
+    "enterCodeSubtitle": "{{phone}} raqamiga yuborilgan kodni kiriting."
+  },
+  "home": {
+    "greeting": "Salom, {{name}} —",
+    "greetingPrefix": "Salom, ",
+    "dateLine": "{{weekday}} · {{date}}",
+    "upcomingEyebrow": "Bo'lajak · Bugun",
+    "viewBooking": "Buyurtmani ko'rish",
+    "bookAgain": "Yana band qilish",
+    "seeAll": "Hammasi",
+    "seeAllCount": "Barchasi {{count}} ta",
+    "featuredTitle": "Mirzo-Ulug'bekda eng yaxshilar",
+    "notifications": "Bildirishnomalar",
+    "noUpcoming": "Hozircha buyurtmangiz yo'q.",
+    "browse": "Sartaroshlarni ko'rish"
+  },
+  "tabs": {
+    "home": "Bosh sahifa",
+    "search": "Qidiruv",
+    "calendar": "Kalendar",
+    "bookings": "Buyurtmalar",
+    "profile": "Profil"
+  },
+  "barber": {
+    "verified": "Tasdiqlangan",
+    "services": "Xizmatlar",
+    "portfolio": "Ishlar",
+    "reviews": "Sharhlar",
+    "about": "Haqida",
+    "bookSeat": "O'rindiq band qilish",
+    "priceFrom": "Narx",
+    "openUntil": "{{time}} gacha ochiq",
+    "experienceYears": "{{years}} yil",
+    "experienceLabel": "Tajriba",
+    "distance": "Masofa",
+    "rating": "Reyting",
+    "ratingReviews": "{{count}} sharh",
+    "priceLabel": "Narx",
+    "bio": "Sakkiz yildan beri bosqichli soch olish, soqol shakllari va erkaklar uchun editorial uslubdagi grooming bo'yicha ixtisoslashgan."
+  },
+  "booking": {
+    "title": "Uchrashuv band qilish",
+    "pickService": "Xizmatni tanlang",
+    "pickDay": "Kunni tanlang",
+    "pickTime": "Vaqtni tanlang",
+    "timesLocal": "{{dayLong}}, {{date}} · barcha vaqtlar mahalliy vaqtda.",
+    "summary": "Xulosa",
+    "service": "Xizmat",
+    "date": "Sana",
+    "time": "Vaqt",
+    "total": "Xizmat narxi",
+    "summaryNote": "Sartaroshda joyda to'lanadi · platforma to'lovni qabul qilmaydi",
+    "confirmCta": "Buyurtmani tasdiqlash",
+    "noServiceSelected": "Avval xizmat tanlang",
+    "noSlotsToday": "Bu kunda bo'sh vaqt yo'q.",
+    "creating": "Yaratilmoqda…",
+    "createError": "Buyurtmani yaratib bo'lmadi.",
+    "duration": "{{minutes}} min",
+    "durationHrMin": "{{hours}} soat {{minutes}} min"
+  },
+  "confirmation": {
+    "eyebrow": "Buyurtma tasdiqlandi",
+    "title": "Siz o'rindiqdasiz.",
+    "body": "{{name}} sizni {{dayLong}}, {{date}}, soat {{time}} da kutadi. 24 soat oldin eslatib qo'yamiz.",
+    "status": "Tasdiqlangan",
+    "addCalendar": "Kalendarga qo'shish",
+    "viewBooking": "Buyurtmani ko'rish",
+    "viewBookings": "Buyurtmalarim",
+    "cancelBooking": "Buyurtmani bekor qilish",
+    "cancelling": "Bekor qilinmoqda…",
+    "cancelConfirmTitle": "Bekor qilishni tasdiqlaysizmi?",
+    "cancelConfirmBody": "Buyurtmani bekor qilsangiz, bu vaqt boshqalar uchun ochiladi.",
+    "cancelledNote": "Buyurtma bekor qilindi.",
+    "footnote": "24 soat oldin bepul bekor qilish mumkin.",
+    "ref": "Buyurtma raqami"
+  },
+  "onboarding": {
+    "slide1Title": "Yaqinidagi sartaroshlarni toping",
+    "slide1Body": "Mahallangizdagi eng yaxshi baholangan sartaroshlarni kashf eting.",
+    "slide2Title": "Bir zumda band qiling",
+    "slide2Body": "Xizmatni tanlang, vaqtni belgilang, soniyalarda tasdiqlang.",
+    "slide3Title": "Buyurtmalaringizni boshqaring",
+    "slide3Body": "Kelgusi va o'tgan uchrashuvlarni bir joyda ko'ring.",
+    "skip": "O'tkazib yuborish"
+  },
+  "selectRole": {
+    "eyebrow": "Xush kelibsiz",
+    "title": "Men…",
+    "clientDesc": "Yaqinidagi eng yaxshi sartaroshlar bilan uchrashuvlarni band qiling.",
+    "barberDesc": "Taqvimingizni, mijozlaringizni va daromadingizni boshqaring."
+  },
+  "bookings": {
+    "title": "Buyurtmalar",
+    "upcoming": "Bo'lajak",
+    "past": "O'tgan",
+    "emptyUpcoming": "Hozircha kelgusi buyurtmangiz yo'q.",
+    "emptyPast": "O'tgan buyurtmalaringiz yo'q.",
+    "thisWeek": "Shu hafta",
+    "nextWeek": "Keyingi hafta",
+    "earlier": "Ilgari"
+  },
+  "notifications": {
+    "title": "Bildirishnomalar",
+    "markAllRead": "Barchasini o'qilgan deb belgilash",
+    "emptyTitle": "Hozircha bildirishnomalar yo'q",
+    "emptyBody": "Yangi bildirishnomalar shu yerda ko'rinadi.",
+    "accept": "Qabul qilish",
+    "reject": "Rad etish"
+  },
+  "profileEdit": {
+    "title": "Profilni tahrirlash",
+    "firstName": "Ism",
+    "lastName": "Familiya",
+    "username": "Foydalanuvchi nomi",
+    "phone": "Telefon raqami",
+    "location": "Manzil",
+    "changePhoto": "Rasmni o'zgartirish",
+    "saveSuccess": "Profil saqlandi"
+  },
+  "search": {
+    "title": "Barcha sartaroshlar",
+    "subtitle": "Yaqinidagi ustalarni toping",
+    "filterLabel": "Filtrlar",
+    "filterRating": "★ 4.8+",
+    "filterDistance": "1.5 km",
+    "filterOpen": "Hozir ochiq",
+    "filterBeard": "Soqol",
+    "resultCount": "{{count}} ta sartarosh",
+    "open": "Ochiq",
+    "closed": "Yopiq"
+  },
+  "profile": {
+    "title": "Profil",
+    "edit": "Profilni tahrirlash",
+    "phoneSecurity": "Telefon va xavfsizlik",
+    "primaryLocation": "Asosiy manzil",
+    "notifications": "Push bildirishnomalar",
+    "marketing": "Reklama xabarlari",
+    "appearance": "Ko'rinish",
+    "appearanceSystem": "Tizim",
+    "help": "Yordam va savollar",
+    "signOut": "Chiqish",
+    "section": {
+      "account": "Akkaunt",
+      "settings": "Sozlamalar",
+      "help": "Yordam"
+    },
+    "stats": {
+      "cuts": "Soch olish",
+      "saved": "Saqlangan"
+    },
+    "role": {
+      "client": "Mijoz",
+      "barber": "Sartarosh"
+    }
+  },
+  "weekday": {
+    "short": {
+      "0": "Yak",
+      "1": "Dush",
+      "2": "Sesh",
+      "3": "Chor",
+      "4": "Pay",
+      "5": "Jum",
+      "6": "Shan"
+    },
+    "long": {
+      "0": "Yakshanba",
+      "1": "Dushanba",
+      "2": "Seshanba",
+      "3": "Chorshanba",
+      "4": "Payshanba",
+      "5": "Juma",
+      "6": "Shanba"
+    }
+  },
+  "month": {
+    "0": "yanvar",
+    "1": "fevral",
+    "2": "mart",
+    "3": "aprel",
+    "4": "may",
+    "5": "iyun",
+    "6": "iyul",
+    "7": "avgust",
+    "8": "sentyabr",
+    "9": "oktyabr",
+    "10": "noyabr",
+    "11": "dekabr"
+  }
+}
