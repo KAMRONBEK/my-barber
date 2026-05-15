@@ -28,6 +28,21 @@ describe('notifications', () => {
     await request(app).get('/notifications').expect(401);
   });
 
+  it('GET /client/notifications alias returns 401 without token', async () => {
+    await request(app).get('/client/notifications').expect(401);
+  });
+
+  it('GET /client/notifications alias lists inbox', async () => {
+    const token = signBarberToken(barberId, 'barber_n');
+    const res = await request(app)
+      .get('/client/notifications')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(res.body.ok).toBe(true);
+    expect(res.body.data.items).toBeDefined();
+  });
+
   it('GET /notifications lists inbox for barber', async () => {
     const token = signBarberToken(barberId, 'barber_n');
     const res = await request(app)

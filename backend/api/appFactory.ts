@@ -166,6 +166,8 @@ export function createApp(): express.Application {
   app.use('/admin', adminAuthMiddleware, adminRoutes);
   app.use(trustRoutes);
   app.use('/notifications', authMiddleware, notificationRoutes);
+  // Alias so clients that call /client/notifications also work
+  app.use('/client/notifications', authMiddleware, notificationRoutes);
   app.use('/barber', authMiddleware, barberApprovalGate, barberRoutes);
   app.use('/client', authMiddleware, clientRoutes);
   app.use('/barbers', authMiddleware, barberApprovalGate, barberRoutes);

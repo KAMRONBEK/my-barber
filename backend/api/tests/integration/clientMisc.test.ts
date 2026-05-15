@@ -159,14 +159,65 @@ describe('client misc routes', () => {
       expect(res.body.data.length).toBe(1);
     });
 
-    it('returns 400 when barber_id missing', async () => {
+    it('returns client booking history when barber_id is absent', async () => {
+      // Without barber_id the endpoint now returns the authenticated client's own
+      // booking history (all barbers, newest first) rather than a 400 error.
       seedClient('cbo2');
+      seedApprovedBarber('bo-hist');
+      seedDoc(COLLECTIONS.BOOKINGS, 'ord-hist-1', {
+        id: 'ord-hist-1',
+        barberId: 'bo-hist',
+        clientId: 'cbo2',
+        timestamp: new Date().toISOString(),
+        status: 'confirmed',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
       const token = signClientToken('cbo2', 'c_cbo2');
 
-      await request(app)
+      const res = await request(app)
         .get('/client/bookings')
         .set('Authorization', `Bearer ${token}`)
-        .expect(400);
+        .expect(200);
+
+      expect(res.body.ok).toBe(true);
+      expect(res.body.data.items).toBeDefined();
+    });
+
+    it('filters by ?status=upcoming', async () => {
+      seedClient('cbo3');
+      seedApprovedBarber('bo-upcoming');
+      seedDoc(COLLECTIONS.BOOKINGS, 'ord-upcoming-1', {
+        id: 'ord-upcoming-1',
+        barberId: 'bo-upcoming',
+        clientId: 'cbo3',
+        timestamp: new Date().toISOString(),
+        status: 'confirmed',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'ord-past-1', {
+        id: 'ord-past-1',
+        barberId: 'bo-upcoming',
+        clientId: 'cbo3',
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+        status: 'completed',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      const token = signClientToken('cbo3', 'c_cbo3');
+
+      const res = await request(app)
+        .get('/client/bookings')
+        .query({ status: 'upcoming' })
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body.ok).toBe(true);
+      // Only the confirmed booking should appear; the completed one is filtered out
+      expect(res.body.data.items.every((b: { status: string }) =>
+        ['pending_confirmation', 'confirmed', 'rescheduled'].includes(b.status)
+      )).toBe(true);
     });
 
     it('accepts legacy path GET /client/barber-bookings', async () => {

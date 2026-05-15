@@ -652,7 +652,9 @@ router.get(
       const clientId = (req as any).user.id;
       const limitRaw = req.query.limit;
       const limit =
-        limitRaw !== undefined && limitRaw !== '' ? Number(limitRaw) : 20;
+        limitRaw !== undefined && limitRaw !== ''
+          ? parseInt(String(limitRaw), 10)
+          : 20;
       const cursor =
         typeof req.query.cursor === 'string' && req.query.cursor.length > 0
           ? req.query.cursor
@@ -738,16 +740,39 @@ router.get(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-// Client bookings list for a barber (/barber-bookings is a legacy alias)
+// Client bookings list.
+// - With ?barber_id=<id> (and optional ?date=YYYY-MM-DD): returns bookings for that barber (barber-calendar view).
+// - With ?status=<upcoming|past|...> (no barber_id): returns the client's own bookings, newest first, filtered by status.
+// /barber-bookings is a legacy alias for the barber-id variant.
 router.get(
   ['/bookings', '/barber-bookings'],
   [
     authenticateToken,
-    query('barber_id').notEmpty().withMessage('Barber ID is required'),
+    query('barber_id').optional().isString(),
+    query('status')
+      .optional()
+      .isString()
+      .isIn([
+        'upcoming',
+        'past',
+        'pending_confirmation',
+        'confirmed',
+        'declined',
+        'cancelled',
+        'rescheduled',
+        'completed',
+        'no_show',
+      ])
+      .withMessage('status must be a valid booking status or filter group'),
     query('date')
       .optional()
       .isISO8601()
       .withMessage('Date must be in ISO format (YYYY-MM-DD)'),
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 50 })
+      .withMessage('limit must be an integer from 1 to 50'),
+    query('cursor').optional().isString(),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -762,16 +787,48 @@ router.get(
         });
       }
 
-      const barberId = req.query.barber_id as string;
-      const date = req.query.date as string;
+      const barberId = req.query.barber_id as string | undefined;
+      const statusParam = req.query.status as string | undefined;
 
-      const bookings = await clientService.getClientBookings(barberId, date);
+      // When barber_id is present: return bookings for that specific barber (existing behaviour).
+      if (barberId) {
+        const date = req.query.date as string | undefined;
+        const bookings = await clientService.getClientBookings(barberId, date);
+        return res.json({ ok: true, data: bookings });
+      }
 
-      res.json({
-        ok: true,
-        data: bookings,
-      });
+      // When barber_id is absent: return the client's own booking history, optionally filtered by status.
+      const clientId = (req as any).user.id;
+      const limitRaw = req.query.limit;
+      const limit =
+        limitRaw !== undefined && limitRaw !== ''
+          ? parseInt(String(limitRaw), 10)
+          : 20;
+      const cursor =
+        typeof req.query.cursor === 'string' && req.query.cursor.length > 0
+          ? req.query.cursor
+          : undefined;
+
+      const data = await bookingService.listBookingHistoryForClient(
+        clientId,
+        limit,
+        cursor,
+        statusParam
+      );
+
+      res.json({ ok: true, data });
     } catch (error) {
+      if (isFirestoreMissingIndexError(error)) {
+        logger.error(
+          'Client bookings: Firestore composite index missing or still building. Deploy: firebase deploy --only firestore:indexes',
+          error
+        );
+        return res.status(503).json({
+          ok: false,
+          error:
+            'Bookings unavailable until the Firestore index is deployed. See firestore.indexes.json.',
+        });
+      }
       logger.error('Error getting client bookings:', error);
       res.status(500).json({
         ok: false,

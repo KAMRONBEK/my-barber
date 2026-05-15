@@ -414,19 +414,54 @@ export class BookingServiceClass {
     }
   }
 
+  /**
+   * Map a `status` query-string value to the set of Firestore status values that
+   * should be included.  Returns `undefined` when no filter should be applied.
+   */
+  private resolveStatusFilter(
+    status: string | undefined
+  ): BookingStatus[] | undefined {
+    if (!status) return undefined;
+    switch (status) {
+      case 'upcoming':
+        return ['pending_confirmation', 'confirmed', 'rescheduled'];
+      case 'past':
+        return ['completed', 'cancelled', 'declined', 'no_show'];
+      default:
+        // Treat any other value as a direct single-status filter if it is a valid status
+        if (
+          status === 'pending_confirmation' ||
+          status === 'confirmed' ||
+          status === 'declined' ||
+          status === 'cancelled' ||
+          status === 'rescheduled' ||
+          status === 'completed' ||
+          status === 'no_show'
+        ) {
+          return [status];
+        }
+        return undefined;
+    }
+  }
+
   /** Paginated booking contracts for the authenticated client (all barbers, newest first). */
   async listBookingHistoryForClient(
     clientId: string,
     limit: number,
-    cursor?: string
+    cursor?: string,
+    status?: string
   ): Promise<{ items: BookingContract[]; next_cursor: string | null }> {
+    // Over-fetch when a status filter is active so in-memory filtering still yields a
+    // full page (avoids needing a composite Firestore index on clientId+status+timestamp).
+    const fetchLimit = status ? limit * 4 : limit;
+
     // Query type after orderBy/startAfter chaining is awkward to name in admin SDK typings.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Firestore Query chain
     let q: any = this.firestore
       .collection(COLLECTIONS.BOOKINGS)
       .where('clientId', '==', clientId)
       .orderBy('timestamp', 'desc')
-      .limit(limit + 1);
+      .limit(fetchLimit + 1);
 
     if (cursor) {
       const dec = this.decodeBookingHistoryCursor(cursor);
@@ -442,8 +477,20 @@ export class BookingServiceClass {
     }
 
     const snapshot = await q.get();
-    const docs = snapshot.docs.slice(0, limit);
-    const hasMore = snapshot.docs.length > limit;
+    const statusFilter = this.resolveStatusFilter(status);
+
+    // Pre-filter on raw document status before the expensive per-booking enrichment,
+    // so getBookingById is only called for docs that will actually appear in the page.
+    const candidateDocs = statusFilter
+      ? snapshot.docs.filter(d =>
+          statusFilter.includes(
+            normalizeBookingStatus((d.data() as Booking).status)
+          )
+        )
+      : snapshot.docs;
+
+    const hasMore = candidateDocs.length > limit;
+    const docs = candidateDocs.slice(0, limit);
 
     const items: BookingContract[] = [];
     for (const d of docs) {
