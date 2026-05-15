@@ -5,18 +5,22 @@ import {
 } from '../models/booking';
 
 export function normalizeBookingStatus(raw?: string): BookingStatus {
-  if (
-    raw === 'pending_confirmation' ||
-    raw === 'confirmed' ||
-    raw === 'declined' ||
-    raw === 'cancelled' ||
-    raw === 'rescheduled' ||
-    raw === 'completed' ||
-    raw === 'no_show'
-  ) {
-    return raw;
+  switch (raw) {
+    case 'pending_confirmation':
+    case 'confirmed':
+    case 'declined':
+    case 'cancelled':
+    case 'rescheduled':
+    case 'completed':
+    case 'no_show':
+      return raw;
+    case 'pending':
+      return 'pending_confirmation'; // legacy Firestore value pre-migration
+    case 'in_progress':
+      return 'confirmed'; // legacy Firestore value pre-migration
+    default:
+      return 'pending_confirmation';
   }
-  return 'confirmed';
 }
 
 export function bookingResponseToContract(o: BookingResponse): BookingContract {
