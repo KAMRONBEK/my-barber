@@ -101,12 +101,7 @@ export class NotificationService {
           extra
         );
 
-        const message = this.createMessage(
-          token,
-          d.title,
-          d.body,
-          dataPayload
-        );
+        const message = this.createMessage(token, d.title, d.body, dataPayload);
 
         await this.sendNotificationThroughExpo(message, token);
       }
@@ -128,10 +123,7 @@ export class NotificationService {
     message: NotificationMessage,
     explicitTokenCorrelation?: string
   ): Promise<void> {
-    await this.sendNotificationThroughExpo(
-      message,
-      explicitTokenCorrelation
-    );
+    await this.sendNotificationThroughExpo(message, explicitTokenCorrelation);
   }
 
   /** Send one Expo message; correlate token for delayed receipt pruning. */
@@ -161,9 +153,7 @@ export class NotificationService {
           const chunkMsg = chunk[idx];
           const ticket = ticketChunk[idx];
           const tokenResolved =
-            typeof chunkMsg.to === 'string'
-              ? chunkMsg.to
-              : correlateToken;
+            typeof chunkMsg.to === 'string' ? chunkMsg.to : correlateToken;
 
           if (
             ticket.status === 'ok' &&
@@ -238,7 +228,9 @@ export class NotificationService {
     }));
   }
 
-  private scheduleReceiptPruning(ticketPairs: Array<{ ticketId: string; token: string }>) {
+  private scheduleReceiptPruning(
+    ticketPairs: Array<{ ticketId: string; token: string }>
+  ) {
     const delayMs = getExpoReceiptPollDelayMs();
     const run = () => void this.consumePushReceiptsForTokens(ticketPairs);
 
@@ -247,8 +239,9 @@ export class NotificationService {
       return;
     }
     const t = setTimeout(run, delayMs);
-    if ('unref' in t && typeof (t as NodeJS.Timeout).unref === 'function') {
-      (t as NodeJS.Timeout).unref();
+    const timer = t as { unref?: () => void };
+    if ('unref' in timer && typeof timer.unref === 'function') {
+      timer.unref();
     }
   }
 
@@ -272,7 +265,9 @@ export class NotificationService {
           const receiptMap =
             await this.expo.getPushNotificationReceiptsAsync(chunk);
 
-          for (const [receiptId, receiptUnknown] of Object.entries(receiptMap)) {
+          for (const [receiptId, receiptUnknown] of Object.entries(
+            receiptMap
+          )) {
             const token = idToToken.get(receiptId);
             const receipt = receiptUnknown as {
               status?: string;

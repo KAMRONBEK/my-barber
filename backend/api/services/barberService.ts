@@ -725,7 +725,9 @@ export class BarberServiceClass {
       }
 
       const avatarResolved = await resolveMediaRefForApi(validatedAvatar);
-      const imagesResolved = await resolveManyMediaRefsForApi(barberData.images);
+      const imagesResolved = await resolveManyMediaRefsForApi(
+        barberData.images
+      );
 
       barbers.push({
         id: barberData.id,
@@ -767,17 +769,21 @@ export class BarberServiceClass {
    */
   async setBarberApproval(
     barberId: string,
-    input: { status: Exclude<BarberApprovalStatus, 'pending'>; message?: string }
+    input: {
+      status: Exclude<BarberApprovalStatus, 'pending'>;
+      message?: string;
+    }
   ): Promise<BarberResponse> {
     const barber = await this.getBarberById(barberId);
     if (!barber) {
-      const err = new Error('Barber not found') as Error & { statusCode: number };
+      const err = new Error('Barber not found') as Error & {
+        statusCode: number;
+      };
       err.statusCode = 404;
       throw err;
     }
 
-    const current: BarberApprovalStatus =
-      barber.approvalStatus ?? 'approved';
+    const current: BarberApprovalStatus = barber.approvalStatus ?? 'approved';
 
     if (!this.canTransitionApproval(current, input.status)) {
       const err = new Error(
@@ -787,18 +793,23 @@ export class BarberServiceClass {
       throw err;
     }
 
-    await this.firestore.collection(COLLECTIONS.BARBERS).doc(barberId).update({
-      approvalStatus: input.status,
-      approvalMessage:
-        input.message !== undefined
-          ? input.message
-          : barber.approvalMessage ?? null,
-      updatedAt: new Date(),
-    });
+    await this.firestore
+      .collection(COLLECTIONS.BARBERS)
+      .doc(barberId)
+      .update({
+        approvalStatus: input.status,
+        approvalMessage:
+          input.message !== undefined
+            ? input.message
+            : (barber.approvalMessage ?? null),
+        updatedAt: new Date(),
+      });
 
     const updated = await this.getBarberWithServices(barberId);
     if (!updated) {
-      const err = new Error('Barber not found') as Error & { statusCode: number };
+      const err = new Error('Barber not found') as Error & {
+        statusCode: number;
+      };
       err.statusCode = 404;
       throw err;
     }

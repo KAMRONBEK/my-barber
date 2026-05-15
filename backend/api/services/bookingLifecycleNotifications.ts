@@ -68,8 +68,7 @@ export function getBookingLifecycleDeliveries(
     return [];
   }
 
-  const timeLocale = (): string =>
-    new Date(booking.timestamp).toLocaleString();
+  const timeLocale = (): string => new Date(booking.timestamp).toLocaleString();
 
   type Side = Omit<BookingLifecycleDelivery, 'recipientType'>;
   const templates: Record<
@@ -129,9 +128,7 @@ export function getBookingLifecycleDeliveries(
   if (!t) return [];
 
   const out: BookingLifecycleDelivery[] = [];
-  if (t.barber)
-    out.push({ recipientType: 'barber', ...t.barber });
-  if (t.client)
-    out.push({ recipientType: 'client', ...t.client });
+  if (t.barber) out.push({ recipientType: 'barber', ...t.barber });
+  if (t.client) out.push({ recipientType: 'client', ...t.client });
   return out;
 }

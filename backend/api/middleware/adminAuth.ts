@@ -92,7 +92,9 @@ export async function adminAuthMiddleware(
       // Not a Firebase ID token (or invalid): try app JWT + allowlist
       logger.debug('Admin auth: Firebase verify failed, trying JWT allowlist', {
         err:
-          firebaseErr instanceof Error ? firebaseErr.message : String(firebaseErr),
+          firebaseErr instanceof Error
+            ? firebaseErr.message
+            : String(firebaseErr),
       });
     }
 

@@ -1,10 +1,5 @@
 import { Router, Request, Response } from 'express';
-import {
-  body,
-  param,
-  query,
-  validationResult,
-} from 'express-validator';
+import { body, param, query, validationResult } from 'express-validator';
 import { barberService } from '../services/barberService';
 import { adminService } from '../services/adminService';
 import { logger } from '../utils/logger';

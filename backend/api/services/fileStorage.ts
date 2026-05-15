@@ -175,7 +175,10 @@ export class FileStorageService {
     if (!reference) return;
     if (looksLikeHttpsRef(reference)) {
       // Legacy GCS URL from before S3 migration — no longer deletable via SDK.
-      logger.warn('Skipping delete of legacy GCS URL (storage migrated to S3)', { reference });
+      logger.warn(
+        'Skipping delete of legacy GCS URL (storage migrated to S3)',
+        { reference }
+      );
       return;
     }
     await this.deleteObject(reference);

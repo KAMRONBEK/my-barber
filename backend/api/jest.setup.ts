@@ -64,15 +64,14 @@ jest.mock('expo-server-sdk', () => {
     }
   }
 
-  (Expo as unknown as { isExpoPushToken: (t: unknown) => boolean }).isExpoPushToken =
-    (token: unknown) =>
-      typeof token === 'string' &&
-      (((token.startsWith('ExponentPushToken[') ||
-        token.startsWith('ExpoPushToken[')) &&
-        token.endsWith(']')) ||
-        /^[a-z\d]{8}-[a-z\d]{4}-[a-z\d]{4}-[a-z\d]{4}-[a-z\d]{12}$/i.test(
-          token
-        ));
+  (
+    Expo as unknown as { isExpoPushToken: (t: unknown) => boolean }
+  ).isExpoPushToken = (token: unknown) =>
+    typeof token === 'string' &&
+    (((token.startsWith('ExponentPushToken[') ||
+      token.startsWith('ExpoPushToken[')) &&
+      token.endsWith(']')) ||
+      /^[a-z\d]{8}-[a-z\d]{4}-[a-z\d]{4}-[a-z\d]{4}-[a-z\d]{12}$/i.test(token));
 
   return { Expo };
 });

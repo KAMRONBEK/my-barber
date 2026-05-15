@@ -119,9 +119,8 @@ export class BookingServiceClass {
         clientId: bookingRow.clientId,
         timestamp: bookingRow.timestamp,
       };
-      const { notificationInboxService } = await import(
-        './notificationInboxService'
-      );
+      const { notificationInboxService } =
+        await import('./notificationInboxService');
       const { notificationService } = await import('./notificationService');
       await notificationInboxService.applyLifecycleToInbox(kind, snap, extra);
       await notificationService.notifyBookingLifecyclePush(kind, snap, extra);

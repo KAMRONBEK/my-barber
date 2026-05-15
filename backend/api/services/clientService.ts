@@ -148,7 +148,9 @@ export class ClientServiceClass {
       batch.update(d.ref, { deviceId: FieldValue.delete(), updatedAt: now });
     });
     await batch.commit();
-    logger.info('Cleared stale client Expo push token(s)', { count: snap.size });
+    logger.info('Cleared stale client Expo push token(s)', {
+      count: snap.size,
+    });
   }
 
   async clearClientStoredDevice(id: string): Promise<void> {

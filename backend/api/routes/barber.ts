@@ -1071,7 +1071,9 @@ router.patch(
           reason
         );
         if (!updated) {
-          return res.status(404).json({ ok: false, error: 'Booking not found' });
+          return res
+            .status(404)
+            .json({ ok: false, error: 'Booking not found' });
         }
         res.json({
           ok: true,
@@ -1122,7 +1124,9 @@ router.post(
           reason
         );
         if (!updated) {
-          return res.status(404).json({ ok: false, error: 'Booking not found' });
+          return res
+            .status(404)
+            .json({ ok: false, error: 'Booking not found' });
         }
         res.json({
           ok: true,
@@ -1175,7 +1179,9 @@ router.post(
           reason
         );
         if (!updated) {
-          return res.status(404).json({ ok: false, error: 'Booking not found' });
+          return res
+            .status(404)
+            .json({ ok: false, error: 'Booking not found' });
         }
         res.json({
           ok: true,
@@ -1218,7 +1224,9 @@ router.post(
           req.params.bookingId
         );
         if (!updated) {
-          return res.status(404).json({ ok: false, error: 'Booking not found' });
+          return res
+            .status(404)
+            .json({ ok: false, error: 'Booking not found' });
         }
         res.json({
           ok: true,
@@ -1261,7 +1269,9 @@ router.post(
           req.params.bookingId
         );
         if (!updated) {
-          return res.status(404).json({ ok: false, error: 'Booking not found' });
+          return res
+            .status(404)
+            .json({ ok: false, error: 'Booking not found' });
         }
         res.json({
           ok: true,
@@ -1526,23 +1536,27 @@ router.put(
  *       500:
  *         description: Internal server error
  */
-router.delete('/push-token', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const barberId = (req as any).user.id;
-    if ((req as any).user.type !== 'barber') {
-      return res.status(403).json({
-        ok: false,
-        error: 'Access denied. Barber account required.',
-      });
+router.delete(
+  '/push-token',
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    try {
+      const barberId = (req as any).user.id;
+      if ((req as any).user.type !== 'barber') {
+        return res.status(403).json({
+          ok: false,
+          error: 'Access denied. Barber account required.',
+        });
+      }
+
+      await barberService.clearBarberStoredDevice(barberId);
+
+      res.json({ ok: true, message: 'Push token cleared' });
+    } catch (error) {
+      logger.error('Error clearing barber push token:', error);
+      res.status(500).json({ ok: false, error: 'Internal server error' });
     }
-
-    await barberService.clearBarberStoredDevice(barberId);
-
-    res.json({ ok: true, message: 'Push token cleared' });
-  } catch (error) {
-    logger.error('Error clearing barber push token:', error);
-    res.status(500).json({ ok: false, error: 'Internal server error' });
   }
-});
+);
 
 export default router;
