@@ -481,7 +481,7 @@ export class BookingServiceClass {
     // Pre-filter on raw document status before the expensive per-booking enrichment,
     // so getBookingById is only called for docs that will actually appear in the page.
     const candidateDocs = statusFilter
-      ? snapshot.docs.filter(d =>
+      ? snapshot.docs.filter((d: FirebaseFirestore.QueryDocumentSnapshot) =>
           statusFilter.includes(
             normalizeBookingStatus((d.data() as Booking).status)
           )
