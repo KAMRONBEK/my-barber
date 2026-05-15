@@ -53,4 +53,6 @@ export async function removeItem(key: string): Promise<void> {
 export const STORAGE_KEYS = {
   jwt: 'jwt',
   client: 'client',
+  barber: 'barber',
+  role: 'role',
 } as const;

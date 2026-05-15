@@ -2,7 +2,7 @@
 // Social auth: Apple Sign-In (iOS only, expo-apple-authentication TODO),
 // Google Sign-In (stub Pressable, @react-native-google-signin TODO).
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -18,8 +18,9 @@ import { Input } from '../atoms/Input';
 import { Button } from '../atoms/Button';
 import { Icon } from '../atoms/Icon';
 import { ScreenLayout } from '../templates/ScreenLayout';
-import { loginClient } from '../lib/api';
+import { loginClient, loginBarber } from '../lib/api';
 import { useAuthStore } from '../lib/auth';
+import { getItem } from '../lib/storage';
 import type { AppTheme } from '../lib/restyle';
 
 export const LoginScreen: React.FC = () => {
@@ -33,13 +34,27 @@ export const LoginScreen: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [qaTapCount, setQaTapCount] = useState(0);
+  const [role, setRole] = useState<'client' | 'barber' | null>(null);
+
+  useEffect(() => {
+    async function loadRole() {
+      const r = await getItem('role');
+      if (r === 'client' || r === 'barber') setRole(r);
+    }
+    void loadRole();
+  }, []);
 
   async function onSubmit() {
     setSubmitting(true);
     setError(null);
     try {
-      const { token, client } = await loginClient(username.trim(), password);
-      await signIn(token, client);
+      if (role === 'barber') {
+        const { token, barber } = await loginBarber(username.trim(), password);
+        await signIn(token, barber, 'barber');
+      } else {
+        const { token, client } = await loginClient(username.trim(), password);
+        await signIn(token, client, 'client');
+      }
       router.replace('/(tabs)');
     } catch {
       setError(t('auth.loginFailed'));

@@ -52,7 +52,7 @@ import type {
   BookingContract,
   BookingCreateRequest,
 } from '@my-barber/types';
-import type { ClientProfile } from './auth';
+import type { BarberProfile, ClientProfile } from './auth';
 
 interface OkData<T> {
   ok: true;
@@ -64,11 +64,28 @@ export interface LoginResponse {
   token: string;
 }
 
+export interface BarberLoginResponse {
+  barber: BarberProfile;
+  services?: string[];
+  token: string;
+}
+
 export async function loginClient(
   username: string,
   password: string,
 ): Promise<LoginResponse> {
   const r = await api.post<OkData<LoginResponse>>('/auth/client/login', {
+    username,
+    password,
+  });
+  return r.data.data;
+}
+
+export async function loginBarber(
+  username: string,
+  password: string,
+): Promise<BarberLoginResponse> {
+  const r = await api.post<OkData<BarberLoginResponse>>('/auth/barber/login', {
     username,
     password,
   });
