@@ -21,7 +21,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "uz.mybarber.app",
+      "bundleIdentifier": "uz.my-barber.app",
       "appleTeamId": "7BLQ2AA4R3",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
