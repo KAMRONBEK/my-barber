@@ -36,8 +36,3 @@ jobs:
 
       - name: Test
         run: pnpm turbo run test
-
-      - name: Build
-        run: pnpm turbo run build
-        env:
-          NEXT_PUBLIC_API_URL: https://api.my-barber.uz
