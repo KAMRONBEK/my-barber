@@ -56,18 +56,21 @@ export default function RootLayout() {
     async function navigate() {
       const onAuthRoute = segments[0] === '(auth)';
       const onOnboarding = segments[0] === 'onboarding' || segments[0] === 'select-role';
+      const onTabs = segments[0] === '(tabs)';
 
-      if (status === 'authenticated' && (onAuthRoute || onOnboarding)) {
-        router.replace('/(tabs)');
+      if (status === 'authenticated') {
+        // Logged-in users belong on tabs; redirect away from auth / onboarding / root.
+        if (!onTabs) {
+          router.replace('/(tabs)');
+        }
         return;
       }
 
       if (status === 'unauthenticated') {
-        // Show onboarding on first launch; skip it on subsequent launches.
         const seen = await getItem(ONBOARDING_SEEN_KEY);
-        if (!seen && !onOnboarding && !onAuthRoute) {
+        if (!seen && !onOnboarding) {
           router.replace('/onboarding');
-        } else if (seen && !onAuthRoute && !onOnboarding) {
+        } else if (!onAuthRoute) {
           router.replace('/(auth)/login');
         }
       }
