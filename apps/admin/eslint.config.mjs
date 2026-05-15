@@ -5,7 +5,7 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts']),
+  globalIgnores(['.next/**', 'out/**', 'build/**', '.vercel/**', 'next-env.d.ts']),
   {
     rules: {
       // TailAdmin template ships with violations of these new React 19 rules.
