@@ -27,7 +27,6 @@
     "format": "prettier --write \"**/*.ts\"",
     "format:check": "prettier --check \"**/*.ts\"",
     "format:lint": "pnpm run format && pnpm run lint:fix",
-    "seed": "tsx scripts/seed-test-accounts.ts",
     "test": "jest",
     "vercel-build": "pnpm run build",
     "vercel:staging": "pnpm run build && vercel --prod",
