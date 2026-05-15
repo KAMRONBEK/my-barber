@@ -18,9 +18,9 @@ describe('normalizeBookingStatus', () => {
     expect(normalizeBookingStatus(s)).toBe(s);
   });
 
-  it('falls back to confirmed for unknown values', () => {
-    expect(normalizeBookingStatus('garbage')).toBe('confirmed');
-    expect(normalizeBookingStatus(undefined)).toBe('confirmed');
+  it('falls back to pending_confirmation for unknown values', () => {
+    expect(normalizeBookingStatus('garbage')).toBe('pending_confirmation');
+    expect(normalizeBookingStatus(undefined)).toBe('pending_confirmation');
   });
 });
 
