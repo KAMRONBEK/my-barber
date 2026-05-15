@@ -8,7 +8,7 @@
 // registration. GestureHandlerRootView below handles initialization.
 import '../src/lib/i18n';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { ThemeProvider } from '@shopify/restyle';
@@ -21,6 +21,19 @@ import { queryClient } from '../src/lib/query';
 import { useAuthStore } from '../src/lib/auth';
 import { getItem } from '../src/lib/storage';
 import { ONBOARDING_SEEN_KEY } from './onboarding';
+
+/* ── dev-only network logger ─────────────────────────────────────────────── */
+let startNetworkLogging: (() => void) | undefined;
+let NetworkDebugButton: React.FC<{ onPress: () => void }> | undefined;
+let NetworkDebugSheet: React.ForwardRefExoticComponent<
+  React.RefAttributes<{ open: () => void }>
+> | undefined;
+
+if (__DEV__) {
+  ({ startNetworkLogging } = require('react-native-network-logger'));
+  ({ NetworkDebugButton } = require('../src/molecules/NetworkDebugButton'));
+  ({ NetworkDebugSheet } = require('../src/molecules/NetworkDebugSheet'));
+}
 
 export default function RootLayout() {
   const scheme = useColorScheme();
@@ -63,6 +76,15 @@ export default function RootLayout() {
     void navigate();
   }, [status, segments, router]);
 
+  /* ── start network logging in dev ──────────────────────────────────────── */
+  useEffect(() => {
+    if (__DEV__ && startNetworkLogging) {
+      startNetworkLogging();
+    }
+  }, []);
+
+  const sheetRef = useRef<{ open: () => void }>(null);
+
   if (status === 'unknown') {
     return (
       <SafeAreaProvider>
@@ -85,6 +107,13 @@ export default function RootLayout() {
                 contentStyle: { backgroundColor: restyleTheme.colors.bg },
               }}
             />
+
+            {__DEV__ && NetworkDebugButton && NetworkDebugSheet && (
+              <>
+                <NetworkDebugButton onPress={() => sheetRef.current?.open()} />
+                <NetworkDebugSheet ref={sheetRef} />
+              </>
+            )}
           </QueryClientProvider>
         </ThemeProvider>
       </SafeAreaProvider>
