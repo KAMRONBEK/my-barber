@@ -51,6 +51,17 @@ backend/
 - New Firebase env var → add to `packages/config/src/env.ts` AND to `backend/api/.env.example`.
 - Open Design MCP generates components into `packages/ui/`. Do not hand-edit `packages/ui/` until the first generation has landed.
 
+## QA test accounts
+
+Seeded in every environment (staging + production). Use for manual testing from the mobile app or Swagger UI.
+
+| Role   | Username           | Password      |
+|--------|--------------------|---------------|
+| Barber | `barber@test.local` | `DevTest12345` |
+| Client | `client@test.local` | `DevTest12345` |
+
+The barber account has `approvalStatus: approved` so it is immediately usable. To re-seed a fresh environment run `pnpm --filter @my-barber/api seed`.
+
 ## Verification
 
 ```bash
