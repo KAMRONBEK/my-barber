@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "bash backend/api/vercel-build.sh",
+  "buildCommand": "bash vercel-build.sh",
   "installCommand": "corepack enable && pnpm install --frozen-lockfile",
   "env": {
     "NODE_ENV": "production"
