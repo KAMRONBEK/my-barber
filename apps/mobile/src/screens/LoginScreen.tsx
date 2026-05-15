@@ -32,6 +32,7 @@ export const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [qaTapCount, setQaTapCount] = useState(0);
 
   async function onSubmit() {
     setSubmitting(true);
@@ -59,12 +60,82 @@ export const LoginScreen: React.FC = () => {
     // const { idToken } = await GoogleSignin.signIn();
   }
 
+  function handleQaTap() {
+    const next = (qaTapCount + 1) % 3;
+    setQaTapCount(next);
+    if (next === 1) {
+      setUsername('client@test.local');
+      setPassword('DevTest12345');
+    } else if (next === 2) {
+      setUsername('barber@test.local');
+      setPassword('DevTest12345');
+    } else {
+      setUsername('');
+      setPassword('');
+    }
+  }
+
   return (
     <ScreenLayout>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
       >
+        <View style={styles.top}>
+          {router.canGoBack() ? (
+            <Pressable
+              onPress={() => router.back()}
+              style={({ pressed }) => [
+                styles.backBtn,
+                {
+                  opacity: pressed ? 0.85 : 1,
+                  backgroundColor: theme.colors.surface2,
+                  borderColor: theme.colors.border,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.back')}
+              testID="login-back"
+            >
+              <Icon name="back" size={18} color={theme.colors.fg} />
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => router.push('/select-role')}
+              style={({ pressed }) => [
+                styles.backBtn,
+                {
+                  opacity: pressed ? 0.85 : 1,
+                  backgroundColor: theme.colors.surface2,
+                  borderColor: theme.colors.border,
+                  width: undefined,
+                  paddingHorizontal: 12,
+                },
+              ]}
+              accessibilityRole="button"
+              testID="login-switch-role"
+            >
+              <Text
+                style={{
+                  color: theme.colors.accent,
+                  fontSize: 12,
+                  fontWeight: '500',
+                }}
+                numberOfLines={1}
+              >
+                {t('auth.switchRole')}
+              </Text>
+            </Pressable>
+          )}
+          {__DEV__ && (
+            <Pressable
+              onPress={handleQaTap}
+              style={styles.qaBtn}
+              testID="login-qa-fill"
+            />
+          )}
+        </View>
+
         <View style={styles.head}>
           <Text
             style={{
@@ -256,10 +327,23 @@ export const LoginScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  top: {
+    paddingTop: 8,
+    paddingHorizontal: 20,
+    alignItems: 'flex-start',
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
   head: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     paddingTop: 32,
-    paddingBottom: 20,
+    paddingBottom: 24,
   },
   social: {
     paddingHorizontal: 24,
@@ -300,4 +384,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   foot: { padding: 24 },
+  qaBtn: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 60,
+    height: 60,
+  },
 });

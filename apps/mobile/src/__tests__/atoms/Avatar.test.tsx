@@ -10,8 +10,7 @@ describe('Avatar', () => {
       const { UNSAFE_getByType } = renderWithProviders(
         <Avatar uri="https://example.com/avatar.jpg" />,
       );
-      const { Image } = require('react-native');
-      // expo-image is mocked to RN Image
+      const { Image } = require('expo-image');
       expect(UNSAFE_getByType(Image)).toBeTruthy();
     });
   });

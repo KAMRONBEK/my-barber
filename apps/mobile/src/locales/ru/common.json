@@ -32,6 +32,7 @@
     "orContinueWith": "ИЛИ ПРОДОЛЖИТЬ С ПОЧТОЙ",
     "continueWithGoogle": "Войти через Google",
     "continueWithApple": "Войти через Apple",
+    "switchRole": "Сменить роль",
     "emailAddress": "Адрес электронной почты",
     "choosePassword": "Придумайте пароль",
     "passwordSubtitle": "Минимум 8 символов, одна цифра и одна заглавная буква.",

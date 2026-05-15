@@ -22,12 +22,8 @@ jest.mock('expo-localization', () => ({
 
 // ── expo-image: forward to a simple RN Image stub ───────────────────────────
 jest.mock('expo-image', () => {
-  const React = require('react');
   const { Image } = require('react-native');
-  return {
-    Image: ({ source, style, testID, ...rest }: Record<string, unknown>) =>
-      React.createElement(Image, { source, style, testID, ...rest }),
-  };
+  return { Image };
 });
 
 // ── react-native-safe-area-context: provides safe area mocks ────────────────

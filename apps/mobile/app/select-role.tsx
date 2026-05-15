@@ -24,7 +24,7 @@ export default function SelectRoleScreen() {
 
   async function onSelectRole(role: 'client' | 'barber') {
     await setItem('role', role);
-    router.replace('/(auth)/login');
+    router.push('/(auth)/login');
   }
 
   return (
