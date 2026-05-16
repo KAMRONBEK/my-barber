@@ -62,7 +62,9 @@
     "search": "Qidiruv",
     "calendar": "Kalendar",
     "bookings": "Buyurtmalar",
-    "profile": "Profil"
+    "profile": "Profil",
+    "requests": "So'rovlar",
+    "earnings": "Daromad"
   },
   "barber": {
     "verified": "Tasdiqlangan",
@@ -196,6 +198,58 @@
       "client": "Mijoz",
       "barber": "Sartarosh"
     }
+  },
+  "calendar": {
+    "today": "Bugun",
+    "todayBookings": "Bugun",
+    "hoursBooked": "Band",
+    "earnings": "Daromad"
+  },
+  "requests": {
+    "title": "So'rovlar",
+    "subtitle": "Qabul qilish bosing — o'rindiq ularniki. Rad etish bosing — ular xabardor bo'ladi.",
+    "incoming": "Kiruvchi",
+    "declined": "Rad etilgan",
+    "service": "Xizmat",
+    "when": "Qachon",
+    "duration": "Davomiyligi",
+    "declineBtn": "Rad etish",
+    "acceptBtn": "Qabul qilish",
+    "empty": "Hozircha so'rovlar yo'q"
+  },
+  "pending": {
+    "title": "Kutilayotgan ishlar",
+    "subtitle": "Tasdiqlangan ishlar, navbatma-navbat tayyor. Kunlar bo'yicha guruhlangan.",
+    "nextAppointment": "Keyingi o'rindiq",
+    "thisWeek": "Shu hafta",
+    "hours": "Soat",
+    "today": "Bugun",
+    "empty": "Hozircha kutilayotgan ishlar yo'q"
+  },
+  "earnings": {
+    "totalEarnings": "Jami daromad",
+    "completed": "bajarilgan",
+    "cancelled": "bekor qilingan",
+    "dailyBreakdown": "Kunlik tahlil",
+    "recentWork": "So'nggi ishlar",
+    "empty": "Bu davrda ishlar yo'q"
+  },
+  "portfolioEdit": {
+    "publicProfile": "Ommaviy profil",
+    "displayName": "Ko'rsatiladigan ism",
+    "displayNamePlaceholder": "Ism Familiya",
+    "title": "Lavozim",
+    "titlePlaceholder": "Masalan, Senior Barber",
+    "bio": "Bio",
+    "bioPlaceholder": "O'zingiz haqingizda qisqacha yozing...",
+    "service": "Xizmat",
+    "serviceName": "Xizmat nomi",
+    "serviceNamePlaceholder": "Masalan, Soch olish",
+    "price": "Narx",
+    "duration": "Davomiyligi (min)",
+    "addService": "Xizmat qo'shish",
+    "removeService": "O'chirish",
+    "photos": "Portfolio rasmlari"
   },
   "weekday": {
     "short": {

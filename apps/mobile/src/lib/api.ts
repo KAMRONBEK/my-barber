@@ -167,3 +167,111 @@ export async function cancelBooking(
   );
   return r.data.data.booking;
 }
+
+// ---- Barber endpoints ----
+
+export interface BarberMeResponse {
+  barber: BarberProfile;
+  services: ApiService[];
+}
+
+export async function getBarberMe(): Promise<BarberMeResponse> {
+  const r = await api.get<OkData<BarberMeResponse>>('/barber/getMe');
+  return r.data.data;
+}
+
+export interface BarberBookingDetail {
+  bookingId: string;
+  clientFirstName: string;
+  clientLastName: string;
+  timestamp: string;
+  services: { name: string; price: number; durationMinutes?: number }[];
+  status?: string;
+}
+
+export async function getBarberBookings(
+  date?: string,
+): Promise<BarberBookingDetail[]> {
+  const r = await api.get<OkData<BarberBookingDetail[]>>('/barber/bookings', {
+    params: date ? { date } : undefined,
+  });
+  return r.data.data ?? [];
+}
+
+export async function patchBookingStatus(
+  bookingId: string,
+  status: 'confirmed' | 'declined' | 'cancelled' | 'completed' | 'no_show',
+  reason?: string | null,
+): Promise<BookingContract> {
+  const r = await api.patch<OkData<{ booking: BookingContract }>>(
+    `/barber/bookings/${encodeURIComponent(bookingId)}/status`,
+    { status, reason },
+  );
+  return r.data.data.booking;
+}
+
+export interface EarningsSummary {
+  currency: string;
+  gross_total: number;
+  completed_bookings: number;
+  cancelled_bookings: number;
+  no_show_bookings: number;
+}
+
+export interface DailyEarning {
+  date: string;
+  gross_total: number;
+  completed_bookings: number;
+}
+
+export interface EarningsBooking {
+  booking_id: string;
+  timestamp: string;
+  client_name: string;
+  service_total: number;
+  status: string;
+}
+
+export interface EarningsResponse {
+  summary: EarningsSummary;
+  daily: DailyEarning[];
+  bookings: EarningsBooking[];
+}
+
+export async function getBarberEarnings(
+  from: string,
+  to: string,
+): Promise<EarningsResponse> {
+  const r = await api.get<OkData<EarningsResponse>>('/barber/earnings', {
+    params: { from, to },
+  });
+  return r.data.data;
+}
+
+export async function updateBarberProfile(
+  body: Partial<BarberProfile>,
+): Promise<{ ok: boolean; message: string }> {
+  const r = await api.put<{ ok: boolean; message: string }>('/barber/update', body);
+  return r.data;
+}
+
+export async function getBarberServices(): Promise<ApiService[]> {
+  const r = await api.get<OkData<{ services: ApiService[] }>>('/barber/services');
+  return r.data.data.services ?? [];
+}
+
+export async function updateBarberServices(
+  services: Omit<ApiService, 'id' | 'barberId'>[],
+): Promise<ApiService[]> {
+  const r = await api.put<OkData<{ services: ApiService[] }>>('/barber/services', {
+    services,
+  });
+  return r.data.data.services ?? [];
+}
+
+export async function deleteBarberService(serviceId: string): Promise<ApiService[]> {
+  const r = await api.delete<OkData<{ services: ApiService[] }>>(
+    `/barber/services/${encodeURIComponent(serviceId)}`,
+  );
+  return r.data.data.services ?? [];
+}

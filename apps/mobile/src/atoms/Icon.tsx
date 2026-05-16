@@ -25,7 +25,14 @@ export type IconName =
   | 'mail'
   | 'moon'
   | 'verified'
-  | 'logout';
+  | 'logout'
+  | 'inbox'
+  | 'trending-up'
+  | 'clock'
+  | 'chevron-left'
+  | 'chevron-right'
+  | 'x'
+  | 'more-horizontal';
 
 export interface IconProps {
   name: IconName;
@@ -162,6 +169,46 @@ function render(
         <>
           <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" {...common} />
           <Path d="M16 17l5-5-5-5M21 12H9" {...common} />
+        </>
+      );
+    case 'inbox':
+      return (
+        <>
+          <Path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7l9 5 9-5z" {...common} />
+          <Path d="M21 12l-9-5-9 5" {...common} />
+        </>
+      );
+    case 'trending-up':
+      return (
+        <>
+          <Polyline points="23,6 13.5,15.5 8.5,10.5 1,18" {...common} />
+          <Polyline points="17,6 23,6 23,12" {...common} />
+        </>
+      );
+    case 'clock':
+      return (
+        <>
+          <Circle cx={12} cy={12} r={10} {...common} />
+          <Polyline points="12,6 12,12 16,14" {...common} />
+        </>
+      );
+    case 'chevron-left':
+      return <Path d="M15 18l-6-6 6-6" {...common} />;
+    case 'chevron-right':
+      return <Path d="M9 18l6-6-6-6" {...common} />;
+    case 'x':
+      return (
+        <>
+          <Path d="M18 6L6 18" {...common} />
+          <Path d="M6 6l12 12" {...common} />
+        </>
+      );
+    case 'more-horizontal':
+      return (
+        <>
+          <Circle cx={12} cy={12} r={1} fill={stroke} stroke="none" />
+          <Circle cx={19} cy={12} r={1} fill={stroke} stroke="none" />
+          <Circle cx={5} cy={12} r={1} fill={stroke} stroke="none" />
         </>
       );
     default:

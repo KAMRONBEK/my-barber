@@ -62,7 +62,9 @@
     "search": "Поиск",
     "calendar": "Календарь",
     "bookings": "Записи",
-    "profile": "Профиль"
+    "profile": "Профиль",
+    "requests": "Заявки",
+    "earnings": "Доходы"
   },
   "barber": {
     "verified": "Подтверждён",
@@ -196,6 +198,58 @@
       "client": "Клиент",
       "barber": "Барбер"
     }
+  },
+  "calendar": {
+    "today": "Сегодня",
+    "todayBookings": "Сегодня",
+    "hoursBooked": "Занято",
+    "earnings": "Доход"
+  },
+  "requests": {
+    "title": "Заявки",
+    "subtitle": "Нажмите Принять — кресло их. Нажмите Отклонить — они будут уведомлены.",
+    "incoming": "Входящие",
+    "declined": "Отклонённые",
+    "service": "Услуга",
+    "when": "Когда",
+    "duration": "Длительность",
+    "declineBtn": "Отклонить",
+    "acceptBtn": "Принять",
+    "empty": "Пока заявок нет"
+  },
+  "pending": {
+    "title": "Ожидаемые работы",
+    "subtitle": "Подтверждённые работы, готовься по очереди. Сгруппировано по дням.",
+    "nextAppointment": "Следующий приём",
+    "thisWeek": "На этой неделе",
+    "hours": "Часов",
+    "today": "Сегодня",
+    "empty": "Пока нет ожидаемых работ"
+  },
+  "earnings": {
+    "totalEarnings": "Общий доход",
+    "completed": "выполнено",
+    "cancelled": "отменено",
+    "dailyBreakdown": "По дням",
+    "recentWork": "Последние работы",
+    "empty": "В этом периоде работ нет"
+  },
+  "portfolioEdit": {
+    "publicProfile": "Публичный профиль",
+    "displayName": "Отображаемое имя",
+    "displayNamePlaceholder": "Имя Фамилия",
+    "title": "Должность",
+    "titlePlaceholder": "Например, Senior Barber",
+    "bio": "О себе",
+    "bioPlaceholder": "Кратко расскажите о себе...",
+    "service": "Услуга",
+    "serviceName": "Название услуги",
+    "serviceNamePlaceholder": "Например, Стрижка",
+    "price": "Цена",
+    "duration": "Длительность (мин)",
+    "addService": "Добавить услугу",
+    "removeService": "Удалить",
+    "photos": "Фото портфолио"
   },
   "weekday": {
     "short": {
