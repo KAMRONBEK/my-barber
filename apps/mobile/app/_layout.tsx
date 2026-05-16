@@ -59,9 +59,19 @@ export default function RootLayout() {
       const onTabs = segments[0] === '(tabs)';
 
       if (status === 'authenticated') {
-        // Logged-in users belong on tabs; redirect away from auth / onboarding / root.
-        if (!onTabs) {
-          router.replace('/(tabs)');
+        const role = useAuthStore.getState().role;
+        const onBarber = segments[0] === '(barber)';
+
+        if (role === 'barber') {
+          // Barbers belong in the barber workspace
+          if (!onBarber) {
+            router.replace('/(barber)/calendar' as any);
+          }
+        } else {
+          // Clients (and fallback) belong on tabs
+          if (!onTabs) {
+            router.replace('/(tabs)' as any);
+          }
         }
         return;
       }
@@ -70,7 +80,7 @@ export default function RootLayout() {
         const seen = await getItem(ONBOARDING_SEEN_KEY);
         if (!seen && !onOnboarding) {
           router.replace('/onboarding');
-        } else if (!onAuthRoute) {
+        } else if (!onAuthRoute && !onOnboarding) {
           router.replace('/(auth)/login');
         }
       }

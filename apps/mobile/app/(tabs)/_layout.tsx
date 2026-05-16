@@ -1,13 +1,22 @@
 // Tabs layout. Four tabs: Home, Search, Bookings, Profile.
 // Uses the custom GlassTabBar (floating pill with blur).
 
-import React from 'react';
-import { Tabs } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Tabs, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { GlassTabBar } from '../../src/navigation/GlassTabBar';
+import { useAuthStore } from '../../src/lib/auth';
 
 export default function TabsLayout() {
   const { t } = useTranslation();
+  const router = useRouter();
+  const role = useAuthStore((s) => s.role);
+
+  useEffect(() => {
+    if (role === 'barber') {
+      router.replace('/(barber)/calendar' as any);
+    }
+  }, [role, router]);
 
   return (
     <Tabs

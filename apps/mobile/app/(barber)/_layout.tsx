@@ -1,7 +1,27 @@
 // Barber workspace route group layout.
-// TODO: add role guard — if the authenticated user is not a barber, redirect to /(tabs).
-import { Stack } from 'expo-router';
+// Stack that wraps the Tabs + modal/stack screens (portfolio-edit, pending, settings).
+// Redirects non-barbers to client tabs.
+
+import React, { useEffect } from 'react';
+import { Stack, useRouter } from 'expo-router';
+import { useAuthStore } from '../../src/lib/auth';
 
 export default function BarberLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  const router = useRouter();
+  const role = useAuthStore((s) => s.role);
+
+  useEffect(() => {
+    if (role === 'client') {
+      router.replace('/(tabs)');
+    }
+  }, [role, router]);
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="portfolio-edit" />
+      <Stack.Screen name="pending" />
+      <Stack.Screen name="settings" />
+    </Stack>
+  );
 }
