@@ -1144,6 +1144,72 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
+/**
+ * @swagger
+ * /client/barbers:
+ *   get:
+ *     summary: List all approved barbers (paginated)
+ *     tags: [Client]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *           default: 0
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 50
+ *     responses:
+ *       200:
+ *         description: Barber list retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/BarberResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/barbers', async (req: Request, res: Response) => {
+  try {
+    const page =
+      typeof req.query.page === 'string' ? parseInt(req.query.page, 10) || 0 : 0;
+    const limit =
+      typeof req.query.limit === 'string'
+        ? parseInt(req.query.limit, 10) || 50
+        : 50;
+
+    const result = await barberService.getAllBarbers(page, limit);
+
+    res.json({
+      ok: true,
+      data: result.barbers,
+    });
+  } catch (error) {
+    logger.error('Error getting barbers list:', error);
+    res.status(500).json({
+      ok: false,
+      error: 'Internal server error',
+    });
+  }
+});
+
 // Get banner/promotional content (top 3 barbers).
 // TODO: optionally merge or replace with Firestore `cms/banner` (see admin PUT /admin/content/banner).
 router.get('/banner', async (req: Request, res: Response) => {
