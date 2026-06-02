@@ -26,9 +26,6 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "config": {
-        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY_IOS"
-      }
     },
     "android": {
       "package": "uz.mybarber.app",
@@ -36,12 +33,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FAF7F2"
       },
-      "predictiveBackGestureEnabled": false,
-      "config": {
-        "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_ANDROID"
-        }
-      }
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -51,7 +43,8 @@
       "expo-router",
       "expo-secure-store",
       "expo-localization",
-      "expo-image"
+      "expo-image",
+      "./plugins/withGoogleMapsApiKey.js"
     ],
     "extra": {
       "router": {

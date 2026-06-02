@@ -24,6 +24,7 @@ export function parseServerEnv(input: Record<string, string | undefined> = proce
 const publicEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().url(),
   NEXT_PUBLIC_APP_ENV: z.enum(['development', 'staging', 'production']).default('development'),
+  GOOGLE_API_KEY: z.string().optional(),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
