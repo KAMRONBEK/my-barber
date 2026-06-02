@@ -81,25 +81,43 @@ export default function SearchScreen() {
     <ScreenLayout>
       {/* Display title header */}
       <View style={styles.titleWrap}>
-        <Text
-          style={{
-            fontSize: 32,
-            fontWeight: '700',
-            color: theme.colors.fg,
-            letterSpacing: -0.8,
-          }}
-        >
-          {t('search.title')}
-        </Text>
-        <Text
-          style={{
-            marginTop: 4,
-            fontSize: 14,
-            color: theme.colors.muted,
-          }}
-        >
-          {t('search.subtitle')}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 32,
+                fontWeight: '700',
+                color: theme.colors.fg,
+                letterSpacing: -0.8,
+              }}
+            >
+              {t('search.title')}
+            </Text>
+            <Text
+              style={{
+                marginTop: 4,
+                fontSize: 14,
+                color: theme.colors.muted,
+              }}
+            >
+              {t('search.subtitle')}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => router.push('/barbers-map' as any)}
+            style={[
+              styles.mapBtn,
+              {
+                backgroundColor: theme.colors.surface2,
+                borderColor: theme.colors.border,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={t('search.mapView')}
+          >
+            <Icon name="map" size={18} color={theme.colors.fg} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Search bar */}
@@ -127,6 +145,7 @@ export default function SearchScreen() {
           returnKeyType="search"
           testID="search-input"
         />
+        <Icon name="mic" size={16} color={theme.colors.accent} />
       </View>
 
       {/* Filter chips */}
@@ -146,10 +165,10 @@ export default function SearchScreen() {
                 styles.chip,
                 {
                   backgroundColor: isActive
-                    ? theme.colors.accent
+                    ? theme.colors.fg
                     : theme.colors.surface2,
                   borderColor: isActive
-                    ? theme.colors.accent
+                    ? theme.colors.fg
                     : theme.colors.border,
                 },
               ]}
@@ -159,7 +178,7 @@ export default function SearchScreen() {
                 style={{
                   fontSize: 13,
                   fontWeight: '600',
-                  color: isActive ? theme.colors.onAccent : theme.colors.fg,
+                  color: isActive ? theme.colors.bg : theme.colors.fg,
                 }}
               >
                 {filterLabel(key)}
@@ -366,6 +385,15 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
   },
+  mapBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    marginLeft: 12,
+  },
   searchWrap: {
     marginHorizontal: 20,
     marginBottom: 10,
@@ -415,7 +443,7 @@ const styles = StyleSheet.create({
   thumb: {
     width: 84,
     height: 100,
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',

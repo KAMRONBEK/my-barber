@@ -351,7 +351,7 @@ export default function BarberPendingScreen() {
                           marginTop: 4,
                         }}
                       >
-                        {duration} MIN
+                        {duration} {t('common.min').toUpperCase()}
                       </Text>
                     </View>
                     <View style={{ flex: 1, marginLeft: 14 }}>

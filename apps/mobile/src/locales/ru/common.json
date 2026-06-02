@@ -172,6 +172,19 @@
     "filterBeard": "Борода",
     "resultCount": "{{count}} барбер(ов)",
     "open": "Открыт",
+    "closed": "Закрыт",
+    "mapView": "Карта",
+    "listView": "Список"
+  },
+  "map": {
+    "title": "Карта",
+    "nearby": "Рядом",
+    "barberCount": "{{count}} барбер(ов)",
+    "directions": "Маршрут",
+    "searchPlaceholder": "Поиск барбера, стиля, услуги",
+    "locateMe": "Моё местоположение",
+    "openNow": "Сейчас открыт",
+    "closingSoon": "Скоро закроется",
     "closed": "Закрыт"
   },
   "profile": {

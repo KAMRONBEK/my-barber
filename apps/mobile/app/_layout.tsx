@@ -68,8 +68,18 @@ export default function RootLayout() {
             router.replace('/(barber)/calendar' as any);
           }
         } else {
-          // Clients (and fallback) belong on tabs
-          if (!onTabs) {
+          // Clients belong on tabs, but allow deep links to barber detail,
+          // booking flow, map view, etc.
+          const onValidClientScreen =
+            onTabs ||
+            segments[0] === 'barber' ||
+            segments[0] === 'booking' ||
+            segments[0] === 'barbers-map' ||
+            segments[0] === 'profile-edit' ||
+            segments[0] === 'settings' ||
+            segments[0] === 'notifications' ||
+            segments[0] === 'bookings';
+          if (!onValidClientScreen) {
             router.replace('/(tabs)' as any);
           }
         }

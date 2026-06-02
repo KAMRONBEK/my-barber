@@ -138,7 +138,7 @@ export const BarberShopScreen: React.FC = () => {
         <View style={styles.cover}>
           {/* Full dark-warm gradient base */}
           <LinearGradient
-            colors={['#3d1e0a', '#241308', '#1d150f']}
+            colors={['#140f0a', '#1a120c', '#1d150f']}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={StyleSheet.absoluteFillObject}
@@ -248,6 +248,62 @@ export const BarberShopScreen: React.FC = () => {
           />
         </View>
 
+        {/* Mini map widget */}
+        <View
+          style={[
+            styles.mapWidget,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <View style={styles.mapCanvas}>
+            {/* Stylized streets */}
+            <View style={[styles.mapStreet, { top: '38%', left: 0, right: 0, height: 2 }]} />
+            <View style={[styles.mapStreet, { top: 0, bottom: 0, left: '48%', width: 2 }]} />
+            <View style={[styles.mapStreet, { top: '62%', left: 0, right: 0, height: 1, opacity: 0.5 }]} />
+            <View style={[styles.mapStreet, { top: 0, bottom: 0, left: '22%', width: 1, opacity: 0.5 }]} />
+            {/* Pulse ring */}
+            <View style={[styles.locRing, { borderColor: theme.colors.accent }]} />
+            {/* Pin */}
+            <View style={styles.mapPin}>
+              <View style={[styles.mapBubble, { backgroundColor: theme.colors.accent }]}>
+                <Icon name="star" size={10} color={theme.colors.onAccent} />
+                <Text style={{ color: theme.colors.onAccent, fontSize: 12, fontWeight: '600' }}>
+                  {rating ? rating.toFixed(2) : '—'}
+                </Text>
+              </View>
+              <View style={[styles.mapNeedle, { backgroundColor: theme.colors.accent }]} />
+              <View style={[styles.mapDot, { backgroundColor: theme.colors.accent }]} />
+            </View>
+          </View>
+          <View style={styles.mapMeta}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+              <Icon name="pin" size={16} color={theme.colors.accent} />
+              <View>
+                <Text style={{ fontSize: 14, fontWeight: '500', color: theme.colors.fg }}>
+                  0,6 km {t('barber.distance').toLowerCase()}
+                </Text>
+                <Text style={{ fontSize: 12, color: theme.colors.muted, marginTop: 2 }}>
+                  Lochin Barbershop · Amir Temur 26
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              style={[
+                styles.navBtn,
+                { backgroundColor: theme.colors.fg },
+              ]}
+            >
+              <Icon name="arrow-right" size={14} color={theme.colors.bg} />
+              <Text style={{ color: theme.colors.bg, fontSize: 13, fontWeight: '600' }}>
+                {t('barber.directions')}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
         {/* Segmented tab control */}
         <ScrollView
           horizontal
@@ -263,12 +319,13 @@ export const BarberShopScreen: React.FC = () => {
                 onPress={() => setActiveTab(key)}
                 style={[
                   styles.tabChip,
+                  isActive && styles.tabChipActive,
                   {
                     backgroundColor: isActive
-                      ? theme.colors.accent
+                      ? 'rgba(42, 32, 24, 0.78)'
                       : theme.colors.surface2,
                     borderColor: isActive
-                      ? theme.colors.accent
+                      ? 'rgba(255, 255, 255, 0.09)'
                       : theme.colors.border,
                   },
                 ]}
@@ -278,7 +335,7 @@ export const BarberShopScreen: React.FC = () => {
                   style={{
                     fontSize: 13,
                     fontWeight: '600',
-                    color: isActive ? theme.colors.onAccent : theme.colors.fg,
+                    color: isActive ? theme.colors.bg : theme.colors.fg,
                   }}
                 >
                   {label}
@@ -298,7 +355,10 @@ export const BarberShopScreen: React.FC = () => {
                 lineHeight: 22,
               }}
             >
-              {t('barber.bio')}
+              {t('barber.bio')}{' '}
+              <Text style={{ color: theme.colors.accent, fontWeight: '500' }}>
+                {t('barber.more')}
+              </Text>
             </Text>
           </View>
         ) : null}
@@ -332,21 +392,25 @@ export const BarberShopScreen: React.FC = () => {
                       >
                         {s.name}
                       </Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={{ fontSize: 11, color: theme.colors.muted }}>
-                        {formatDurationMinutes(duration)}
-                      </Text>
                       <Text
                         style={{
-                          fontSize: 14,
-                          fontWeight: '600',
-                          color: theme.colors.fg,
+                          fontSize: 11,
+                          color: theme.colors.muted,
+                          marginTop: 2,
                         }}
                       >
-                        {formatUZS(s.price)}
+                        {formatDurationMinutes(duration)}
                       </Text>
                     </View>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: theme.colors.fg,
+                      }}
+                    >
+                      {formatUZS(s.price)}
+                    </Text>
                   </View>
                 );
               })}
@@ -582,6 +646,86 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
+  mapWidget: {
+    marginTop: 14,
+    marginHorizontal: 20,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  mapCanvas: {
+    height: 160,
+    backgroundColor: '#e8e4de',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  mapStreet: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255,255,255,0.85)',
+  },
+  locRing: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    marginLeft: -28,
+    marginTop: -28,
+    opacity: 0.25,
+  },
+  mapPin: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    marginLeft: -20,
+    marginTop: -36,
+    alignItems: 'center',
+  },
+  mapBubble: {
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  mapNeedle: {
+    width: 2,
+    height: 12,
+  },
+  mapDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    shadowColor: '#fff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  mapMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: 12,
+  },
+  navBtn: {
+    height: 36,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
   tabsScroll: {
     flexGrow: 0,
     marginTop: 16,
@@ -596,6 +740,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
+  },
+  tabChipActive: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 4,
   },
   section: {
     paddingHorizontal: 20,

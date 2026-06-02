@@ -32,7 +32,12 @@ export type IconName =
   | 'chevron-left'
   | 'chevron-right'
   | 'x'
-  | 'more-horizontal';
+  | 'more-horizontal'
+  | 'filter'
+  | 'mic'
+  | 'map'
+  | 'list'
+  | 'locate';
 
 export interface IconProps {
   name: IconName;
@@ -209,6 +214,40 @@ function render(
           <Circle cx={12} cy={12} r={1} fill={stroke} stroke="none" />
           <Circle cx={19} cy={12} r={1} fill={stroke} stroke="none" />
           <Circle cx={5} cy={12} r={1} fill={stroke} stroke="none" />
+        </>
+      );
+    case 'filter':
+      return (
+        <Path
+          d="M3 4h18l-7 8v6l-4 2v-8z"
+          {...common}
+        />
+      );
+    case 'mic':
+      return (
+        <>
+          <Path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z" {...common} />
+          <Path d="M19 10v2a7 7 0 0 1-14 0v-2" {...common} />
+          <Path d="M12 19v3M8 22h8" {...common} />
+        </>
+      );
+    case 'map':
+      return (
+        <>
+          <Path d="M1 6l7-4 7 4 7-4v16l-7 4-7-4-7 4V6z" {...common} />
+        </>
+      );
+    case 'list':
+      return (
+        <>
+          <Path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" {...common} />
+        </>
+      );
+    case 'locate':
+      return (
+        <>
+          <Circle cx={12} cy={12} r={3} {...common} />
+          <Path d="M12 2v4M12 18v4M2 12h4M18 12h4" {...common} />
         </>
       );
     default:

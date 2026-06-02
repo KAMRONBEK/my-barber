@@ -136,7 +136,7 @@ export default function BarberPortfolioEditScreen() {
             color: theme.colors.fg,
           }}
         >
-          {t('barber.portfolioEdit')}
+          {t('portfolioEdit.portfolioEditTitle')}
         </Text>
 
         <Pressable

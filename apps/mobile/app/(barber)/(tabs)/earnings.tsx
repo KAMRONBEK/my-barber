@@ -203,7 +203,7 @@ export default function BarberEarningsScreen() {
                   letterSpacing: -0.8,
                 }}
               >
-                {data.summary.gross_total.toLocaleString('ru-RU')}{' '}
+                {data.summary.gross_total.toLocaleString('uz-UZ')}{' '}
                 {t('common.sum')}
               </Text>
               <View style={{ flexDirection: 'row', marginTop: 12, gap: 8 }}>
@@ -390,7 +390,7 @@ export default function BarberEarningsScreen() {
                             : theme.colors.fg,
                         }}
                       >
-                        +{b.service_total.toLocaleString('ru-RU')}{' '}
+                        +{b.service_total.toLocaleString('uz-UZ')}{' '}
                         {t('common.sum')}
                       </Text>
                     </View>

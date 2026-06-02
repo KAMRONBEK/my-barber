@@ -81,7 +81,11 @@
     "rating": "Reyting",
     "ratingReviews": "{{count}} sharh",
     "priceLabel": "Narx",
-    "bio": "Sakkiz yildan beri bosqichli soch olish, soqol shakllari va erkaklar uchun editorial uslubdagi grooming bo'yicha ixtisoslashgan."
+    "bio": "Sakkiz yildan beri bosqichli soch olish, soqol shakllari va erkaklar uchun editorial uslubdagi grooming bo'yicha ixtisoslashgan.",
+    "more": "Batafsil",
+    "directions": "Yo'nalish",
+    "kmAway": "{{distance}} km uzoqlikda",
+    "allServices": "Barchasi {{count}} ta"
   },
   "booking": {
     "title": "Uchrashuv band qilish",
@@ -172,6 +176,19 @@
     "filterBeard": "Soqol",
     "resultCount": "{{count}} ta sartarosh",
     "open": "Ochiq",
+    "closed": "Yopiq",
+    "mapView": "Xarita ko'rinishi",
+    "listView": "Ro'yxat ko'rinishi"
+  },
+  "map": {
+    "title": "Xarita",
+    "nearby": "Yaqin atrofda",
+    "barberCount": "{{count}} ta sartarosh",
+    "directions": "Yo'nalish",
+    "searchPlaceholder": "Sartarosh, stil, xizmat qidiring",
+    "locateMe": "Mening joylashuvim",
+    "openNow": "Hozir ochiq",
+    "closingSoon": "Tez orada yopiladi",
     "closed": "Yopiq"
   },
   "profile": {
@@ -235,6 +252,7 @@
     "empty": "Bu davrda ishlar yo'q"
   },
   "portfolioEdit": {
+    "portfolioEditTitle": "Portfolioni tahrirlash",
     "publicProfile": "Ommaviy profil",
     "displayName": "Ko'rsatiladigan ism",
     "displayNamePlaceholder": "Ism Familiya",

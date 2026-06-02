@@ -1,19 +1,25 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
+  FlatList,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
-  Pressable,
+  useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
+import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Text } from '../../../src/atoms/Text';
 import { Icon } from '../../../src/atoms/Icon';
-import { Badge } from '../../../src/atoms/Badge';
+import { Button } from '../../../src/atoms/Button';
 import { ScreenLayout } from '../../../src/templates/ScreenLayout';
-import { getBarberBookings } from '../../../src/lib/api';
+import { getBarberBookings, patchBookingStatus } from '../../../src/lib/api';
 import {
   BARBER_TAB_BAR_PILL_HEIGHT,
   BARBER_TAB_BAR_BOTTOM_OFFSET,
@@ -21,18 +27,6 @@ import {
 import type { AppTheme } from '../../../src/lib/restyle';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 9); // 09:00 – 20:00
-
-function formatMonthYear(date: Date) {
-  return date.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' });
-}
-
-function formatShortWeekday(date: Date) {
-  return date.toLocaleDateString('uz-UZ', { weekday: 'short' });
-}
-
-function formatDay(date: Date) {
-  return date.getDate().toString();
-}
 
 function isoDate(d: Date) {
   return d.toISOString().split('T')[0];
@@ -46,19 +40,144 @@ function parseTime(iso: string) {
 function getWeekStart(d: Date) {
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  return new Date(d.setDate(diff));
+  const nd = new Date(d);
+  nd.setDate(diff);
+  return nd;
 }
+
+function addDays(d: Date, days: number) {
+  const nd = new Date(d);
+  nd.setDate(nd.getDate() + days);
+  return nd;
+}
+
+function isSameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function monthYearLabel(d: Date, t: (k: string) => string) {
+  const months = [
+    'month.0', 'month.1', 'month.2', 'month.3', 'month.4', 'month.5',
+    'month.6', 'month.7', 'month.8', 'month.9', 'month.10', 'month.11',
+  ];
+  const monthName = t(months[d.getMonth()]);
+  const capitalized = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+  return `${capitalized} ${d.getFullYear()}`;
+}
+
+function getWeekStartNormalized(d: Date) {
+  const nd = new Date(d);
+  nd.setHours(0, 0, 0, 0);
+  return getWeekStart(nd);
+}
+
+interface WeekDayItemProps {
+  date: Date;
+  selected: boolean;
+  dots: number;
+  isPast: boolean;
+  onPress: (date: Date) => void;
+}
+
+const WeekDayItem = React.memo(function WeekDayItem({
+  date,
+  selected,
+  dots,
+  isPast,
+  onPress,
+}: WeekDayItemProps) {
+  const theme = useTheme<AppTheme>();
+  const { t } = useTranslation();
+
+  return (
+    <Pressable
+      onPress={() => onPress(date)}
+      style={[
+        styles.weekDay,
+        {
+          borderColor: theme.colors.border,
+          backgroundColor: selected
+            ? theme.colors.accent
+            : theme.colors.surface,
+          opacity: isPast && !selected ? 0.6 : 1,
+        },
+      ]}
+    >
+      <Text
+        style={{
+          fontSize: 10,
+          fontWeight: '500',
+          color: selected ? theme.colors.onAccent : theme.colors.muted,
+          textTransform: 'uppercase',
+        }}
+      >
+        {t(`weekday.short.${date.getDay()}`)}
+      </Text>
+      <Text
+        style={{
+          marginTop: 4,
+          fontSize: 18,
+          fontWeight: '700',
+          color: selected ? theme.colors.onAccent : theme.colors.fg,
+          fontVariant: ['tabular-nums'],
+        }}
+      >
+        {date.getDate()}
+      </Text>
+      {dots > 0 && (
+        <View style={styles.dotRow}>
+          {Array.from({ length: dots }).map((_, j) => (
+            <View
+              key={j}
+              style={[
+                styles.dot,
+                {
+                  backgroundColor: selected
+                    ? theme.colors.onAccent
+                    : theme.colors.accent,
+                  opacity: j < dots - 1 ? 0.4 : 1,
+                },
+              ]}
+            />
+          ))}
+        </View>
+      )}
+    </Pressable>
+  );
+});
 
 export default function BarberCalendarScreen() {
   const theme = useTheme<AppTheme>();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [now, setNow] = useState(new Date());
+  const [activeBooking, setActiveBooking] = useState<any | null>(null);
+  const sheetRef = useRef<BottomSheet>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   const tabBarPadding =
     BARBER_TAB_BAR_PILL_HEIGHT +
     Math.max(insets.bottom, BARBER_TAB_BAR_BOTTOM_OFFSET) +
     8;
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const dateStr = isoDate(selectedDate);
 
@@ -70,45 +189,54 @@ export default function BarberCalendarScreen() {
 
   const bookings = bookingsQuery.data ?? [];
 
-  const weekStart = getWeekStart(new Date(selectedDate));
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStart);
-    d.setDate(weekStart.getDate() + i);
-    return d;
-  });
+  // Week slider data is computed below in the component body.
 
-  const todayBookings = bookings.filter((b) => {
-    const d = new Date(b.timestamp);
-    return d.toDateString() === selectedDate.toDateString();
-  });
+  const todayBookings = useMemo(
+    () =>
+      bookings.filter((b) => isSameDay(new Date(b.timestamp), selectedDate)),
+    [bookings, selectedDate]
+  );
 
   const totalHours = useMemo(() => {
     return todayBookings.reduce((acc, b) => {
       const dur =
-        b.services?.reduce((s, svc) => s + (svc.durationMinutes ?? 45), 0) ??
-        45;
+        b.services?.reduce((s: number, svc: any) => s + (svc.durationMinutes ?? 45), 0) ?? 45;
       return acc + dur / 60;
     }, 0);
   }, [todayBookings]);
 
-  const earningsToday = todayBookings.reduce((acc, b) => {
-    return (
-      acc + (b.services?.reduce((s, svc) => s + (svc.price ?? 0), 0) ?? 0)
-    );
-  }, 0);
+  const earningsToday = useMemo(() => {
+    return todayBookings.reduce((acc, b) => {
+      return acc + (b.services?.reduce((s: number, svc: any) => s + (svc.price ?? 0), 0) ?? 0);
+    }, 0);
+  }, [todayBookings]);
 
-  const bookingDotsForDay = (d: Date) => {
-    const dayStr = d.toDateString();
-    const count = bookings.filter(
-      (b) => new Date(b.timestamp).toDateString() === dayStr,
-    ).length;
-    if (count === 0) return 0;
-    if (count <= 2) return 1;
-    if (count <= 4) return 2;
-    return 3;
-  };
+  const bookingCountsByDay = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const b of bookings) {
+      const key = new Date(b.timestamp).toDateString();
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return map;
+  }, [bookings]);
+
+  const bookingDotsForDay = useCallback(
+    (d: Date) => {
+      const count = bookingCountsByDay.get(d.toDateString()) ?? 0;
+      if (count === 0) return 0;
+      if (count <= 2) return 1;
+      if (count <= 4) return 2;
+      return 3;
+    },
+    [bookingCountsByDay]
+  );
 
   const goPrevMonth = () => {
+    isUserScrollingRef.current = false;
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = null;
+    }
     setSelectedDate((d) => {
       const nd = new Date(d);
       nd.setMonth(nd.getMonth() - 1);
@@ -117,6 +245,11 @@ export default function BarberCalendarScreen() {
   };
 
   const goNextMonth = () => {
+    isUserScrollingRef.current = false;
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = null;
+    }
     setSelectedDate((d) => {
       const nd = new Date(d);
       nd.setMonth(nd.getMonth() + 1);
@@ -124,291 +257,604 @@ export default function BarberCalendarScreen() {
     });
   };
 
-  const goToday = () => setSelectedDate(new Date());
+  const goToday = () => {
+    isUserScrollingRef.current = false;
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = null;
+    }
+    const today = new Date();
+    setSelectedDate(today);
+    setTimeout(() => {
+      const hour = today.getHours();
+      if (hour >= 9 && hour <= 20) {
+        const y = (hour - 9) * 64;
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - 100), animated: true });
+      }
+    }, 300);
+  };
+
+  // --- Horizontally scrollable week slider ---
+  const { width: screenWidth } = useWindowDimensions();
+  const weekPageWidth = screenWidth - 40; // paddingHorizontal 20*2
+
+  const WEEKS_BEFORE = 26;
+  const WEEKS_AFTER = 26;
+  const TOTAL_WEEKS = WEEKS_BEFORE + WEEKS_AFTER + 1;
+
+  const weeksData = useMemo(() => {
+    const today = new Date();
+    const currentWeekStart = getWeekStartNormalized(today);
+    return Array.from({ length: TOTAL_WEEKS }, (_, i) =>
+      addDays(new Date(currentWeekStart), (i - WEEKS_BEFORE) * 7)
+    );
+  }, []);
+
+  const getIndexForDate = useCallback(
+    (date: Date) => {
+      const targetWeekStart = getWeekStartNormalized(date);
+      const anchorWeekStart = weeksData[WEEKS_BEFORE];
+      const diffDays = Math.round(
+        (targetWeekStart.getTime() - anchorWeekStart.getTime()) /
+          (1000 * 60 * 60 * 24)
+      );
+      const diffWeeks = Math.round(diffDays / 7);
+      const index = WEEKS_BEFORE + diffWeeks;
+      return Math.max(0, Math.min(TOTAL_WEEKS - 1, index));
+    },
+    [weeksData]
+  );
+
+  const flatListRef = useRef<FlatList<Date>>(null);
+  const visibleIndexRef = useRef<number>(WEEKS_BEFORE);
+  const isUserScrollingRef = useRef(false);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Scroll week slider when selectedDate changes (e.g. month nav, goToday)
+  useEffect(() => {
+    if (isUserScrollingRef.current) return;
+    const targetIndex = getIndexForDate(selectedDate);
+    if (targetIndex !== visibleIndexRef.current) {
+      visibleIndexRef.current = targetIndex;
+      // Defer to avoid race with FlatList layout
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToIndex({ index: targetIndex, animated: true });
+      });
+    }
+  }, [selectedDate, getIndexForDate]);
+
+  const handleScrollEnd = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const x = event.nativeEvent.contentOffset.x;
+      const index = Math.round(x / weekPageWidth);
+      if (index < 0 || index >= TOTAL_WEEKS) return;
+      if (index === visibleIndexRef.current) return;
+      visibleIndexRef.current = index;
+      const newWeekStart = weeksData[index];
+      const dayIndex =
+        selectedDate.getDay() === 0 ? 6 : selectedDate.getDay() - 1;
+      const newSelected = addDays(new Date(newWeekStart), dayIndex);
+      setSelectedDate(newSelected);
+    },
+    [weekPageWidth, weeksData, selectedDate]
+  );
+
+  const handleScrollBeginDrag = useCallback(() => {
+    isUserScrollingRef.current = true;
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+  }, []);
+
+  const handleScrollEndDrag = useCallback(() => {
+    // Clear user-scroll flag after momentum settles.
+    scrollTimeoutRef.current = setTimeout(() => {
+      isUserScrollingRef.current = false;
+    }, 500);
+  }, []);
+
+  const handleMomentumScrollEnd = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      handleScrollEnd(event);
+      isUserScrollingRef.current = false;
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = null;
+      }
+    },
+    [handleScrollEnd]
+  );
+
+  const todayStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [now]);
+
+  const handleDayPress = useCallback((date: Date) => {
+    setSelectedDate(new Date(date));
+  }, []);
+
+  const renderWeekItem = useCallback(
+    ({ item: weekStart }: { item: Date }) => {
+      const days = Array.from({ length: 7 }, (_, i) =>
+        addDays(new Date(weekStart), i)
+      );
+      return (
+        <View style={{ width: weekPageWidth, flexDirection: 'row', gap: 6 }}>
+          {days.map((d) => {
+            const active = isSameDay(d, selectedDate);
+            const dots = bookingDotsForDay(d);
+            const isPast = d < todayStart;
+            return (
+              <WeekDayItem
+                key={d.toISOString()}
+                date={d}
+                selected={active}
+                dots={dots}
+                isPast={isPast}
+                onPress={handleDayPress}
+              />
+            );
+          })}
+        </View>
+      );
+    },
+    [weekPageWidth, selectedDate, bookingDotsForDay, todayStart, handleDayPress]
+  );
+
+  const showBookingActions = (booking: any) => {
+    setActiveBooking(booking);
+    sheetRef.current?.snapToIndex(0);
+  };
+
+  const handleCancelBooking = () => {
+    if (!activeBooking) return;
+    sheetRef.current?.close();
+    Alert.alert(
+      t('confirmation.cancelConfirmTitle'),
+      t('confirmation.cancelConfirmBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('confirmation.cancelBooking'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await patchBookingStatus(activeBooking.bookingId, 'cancelled');
+              bookingsQuery.refetch();
+            } catch {
+              Alert.alert(t('common.error'), t('booking.createError'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleBlockTime = (hour: number) => {
+    Alert.alert(
+      'Vaqtni bloklash',
+      `${hour}:00 – ${hour + 1}:00 vaqtini bloklashni xohlaysizmi?`,
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: 'Bloklash',
+          onPress: () => {
+            // TODO: wire to availability API when ready
+          },
+        },
+      ]
+    );
+  };
+
+  const isToday = isSameDay(selectedDate, now);
+  const nowHour = now.getHours();
+  const nowMinute = now.getMinutes();
 
   return (
     <ScreenLayout>
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[1]}
         contentContainerStyle={{ paddingBottom: tabBarPadding }}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={goPrevMonth} style={styles.iconBtn}>
-            <Icon name="chevron-left" size={18} color={theme.colors.fg} />
-          </Pressable>
-          <Text
-            style={{
-              fontSize: 20,
-              fontWeight: '700',
-              color: theme.colors.fg,
-              letterSpacing: -0.4,
-            }}
-          >
-            {formatMonthYear(selectedDate)}
-          </Text>
-          <Pressable onPress={goNextMonth} style={styles.iconBtn}>
-            <Icon name="chevron-right" size={18} color={theme.colors.fg} />
-          </Pressable>
-        </View>
-
-        {/* Stat strip */}
-        <View style={styles.statStrip}>
-          <View
-            style={[
-              styles.statCell,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-              },
-            ]}
-          >
-            <Text style={[styles.statLabel, { color: theme.colors.muted }]}>
-              {t('calendar.todayBookings')}
-            </Text>
-            <Text
-              style={[styles.statValue, { color: theme.colors.fg }]}
-            >
-              {todayBookings.length}{' '}
-              <Text style={{ color: theme.colors.accent }}>marta</Text>
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.statCell,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-              },
-            ]}
-          >
-            <Text style={[styles.statLabel, { color: theme.colors.muted }]}>
-              {t('calendar.hoursBooked')}
-            </Text>
-            <Text style={[styles.statValue, { color: theme.colors.fg }]}>
-              {totalHours.toFixed(1)}{' '}
-              <Text style={{ color: theme.colors.accent }}>soat</Text>
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.statCell,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-              },
-            ]}
-          >
-            <Text style={[styles.statLabel, { color: theme.colors.muted }]}>
-              {t('calendar.earnings')}
-            </Text>
-            <Text style={[styles.statValue, { color: theme.colors.fg }]}>
-              {earningsToday.toLocaleString('uz-UZ')}
-            </Text>
-          </View>
-        </View>
-
-        {/* Week strip */}
-        <View style={styles.weekStrip}>
-          {weekDays.map((d, i) => {
-            const isActive = d.toDateString() === selectedDate.toDateString();
-            const dots = bookingDotsForDay(d);
-            return (
-              <Pressable
-                key={i}
-                onPress={() => setSelectedDate(new Date(d))}
-                style={[
-                  styles.weekDay,
-                  {
-                    borderColor: theme.colors.border,
-                    backgroundColor: isActive
-                      ? theme.colors.accent
-                      : theme.colors.surface,
-                  },
-                ]}
+        {/* index 0: Header + Stats (scrollable) */}
+        <View>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Pressable onPress={goPrevMonth} style={styles.iconBtn}>
+                <Icon name="chevron-left" size={18} color={theme.colors.fg} />
+              </Pressable>
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontWeight: '700',
+                  color: theme.colors.fg,
+                  letterSpacing: -0.4,
+                  minWidth: 140,
+                  textAlign: 'center',
+                }}
               >
-                <Text
+                {monthYearLabel(selectedDate, t)}
+              </Text>
+              <Pressable onPress={goNextMonth} style={styles.iconBtn}>
+                <Icon name="chevron-right" size={18} color={theme.colors.fg} />
+              </Pressable>
+            </View>
+
+            <Pressable
+              onPress={goToday}
+              style={[
+                styles.todayBtn,
+                {
+                  backgroundColor: theme.colors.surface2,
+                  borderColor: theme.colors.border,
+                },
+              ]}
+            >
+              <View
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: theme.colors.accent,
+                }}
+              />
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: '700',
+                  color: theme.colors.fg,
+                }}
+              >
+                {t('calendar.today')}
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Stat strip */}
+          <View style={styles.statStrip}>
+            <View
+              style={[
+                styles.statCell,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.statLabel, { color: theme.colors.muted }]}>
+                {t('calendar.todayBookings')}
+              </Text>
+              <Text style={[styles.statValue, { color: theme.colors.fg }]}>
+                {todayBookings.length}{' '}
+                <Text style={{ color: theme.colors.accent }}>marta</Text>
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statCell,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.statLabel, { color: theme.colors.muted }]}>
+                {t('calendar.hoursBooked')}
+              </Text>
+              <Text style={[styles.statValue, { color: theme.colors.fg }]}>
+                {totalHours.toFixed(1)}{' '}
+                <Text style={{ color: theme.colors.accent }}>soat</Text>
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statCell,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.statLabel, { color: theme.colors.muted }]}>
+                {t('calendar.earnings')}
+              </Text>
+              <Text style={[styles.statValue, { color: theme.colors.fg }]}>
+                {earningsToday.toLocaleString('uz-UZ')}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* index 1: Week strip (STICKY) */}
+        <View
+          style={{
+            backgroundColor: theme.colors.bg,
+            paddingHorizontal: 20,
+          }}
+        >
+          <FlatList
+            ref={flatListRef}
+            data={weeksData}
+            horizontal
+            pagingEnabled
+            disableIntervalMomentum
+            showsHorizontalScrollIndicator={false}
+            nestedScrollEnabled
+            initialScrollIndex={WEEKS_BEFORE}
+            getItemLayout={(_, index) => ({
+              length: weekPageWidth,
+              offset: weekPageWidth * index,
+              index,
+            })}
+            keyExtractor={(_, index) => `week-${index}`}
+            renderItem={renderWeekItem}
+            onScrollBeginDrag={handleScrollBeginDrag}
+            onScrollEndDrag={handleScrollEndDrag}
+            onMomentumScrollEnd={handleMomentumScrollEnd}
+            scrollEventThrottle={16}
+            maintainVisibleContentPosition={undefined}
+          />
+        </View>
+
+        {/* index 2: Timeline (scrollable) */}
+        <View>
+          {/* Timeline head */}
+          <View style={styles.timelineHead}>
+            <View>
+              <Text
+                style={{
+                  fontSize: 17,
+                  fontWeight: '600',
+                  color: theme.colors.fg,
+                }}
+              >
+                {selectedDate.toLocaleDateString('uz-UZ', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                })}
+              </Text>
+              <Text
+                style={{
+                  marginTop: 2,
+                  fontSize: 12,
+                  color: theme.colors.muted,
+                }}
+              >
+                {todayBookings.filter((b) => b.status === 'confirmed').length} ta{' '}
+                tasdiqlangan,{' '}
+                {todayBookings.filter((b) => b.status === 'pending_confirmation').length}{' '}
+                ta kutilmoqda
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View
                   style={{
-                    fontSize: 10,
-                    fontWeight: '500',
-                    color: isActive ? theme.colors.onAccent : theme.colors.muted,
-                    textTransform: 'uppercase',
+                    width: 8,
+                    height: 8,
+                    borderRadius: 2,
+                    backgroundColor: theme.colors.success,
                   }}
-                >
-                  {formatShortWeekday(d)}
-                </Text>
-                <Text
+                />
+                <Text style={{ fontSize: 10, color: theme.colors.muted }}>Band</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View
                   style={{
-                    marginTop: 4,
-                    fontSize: 18,
-                    fontWeight: '700',
-                    color: isActive ? theme.colors.onAccent : theme.colors.fg,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 2,
+                    backgroundColor: theme.colors.warning,
                   }}
-                >
-                  {formatDay(d)}
+                />
+                <Text style={{ fontSize: 10, color: theme.colors.muted }}>
+                  Kutilmoqda
                 </Text>
-                {dots > 0 && (
-                  <View style={styles.dotRow}>
-                    {Array.from({ length: dots }).map((_, j) => (
+              </View>
+            </View>
+          </View>
+
+          {/* Day timeline */}
+          <View style={styles.timeline}>
+            {HOURS.map((hour) => {
+              const hourBookings = todayBookings.filter((b) => {
+                const { hour: h } = parseTime(b.timestamp);
+                return h === hour;
+              });
+
+              return (
+                <Pressable
+                  key={hour}
+                  onLongPress={() => handleBlockTime(hour)}
+                  delayLongPress={400}
+                  style={[
+                    styles.hourRow,
+                    { borderBottomColor: theme.colors.border },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      width: 48,
+                      fontSize: 11,
+                      fontWeight: '600',
+                      color: theme.colors.muted,
+                    }}
+                  >
+                    {hour.toString().padStart(2, '0')}:00
+                  </Text>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    {hourBookings.map((b) => {
+                      const isConfirmed = b.status === 'confirmed';
+                      const clientName = `${b.clientFirstName} ${b.clientLastName}`;
+                      const serviceNames =
+                        b.services?.map((s: any) => s.name).join(' + ') ?? '';
+                      const { minute } = parseTime(b.timestamp);
+                      const duration =
+                        b.services?.reduce(
+                          (s: number, svc: any) => s + (svc.durationMinutes ?? 45),
+                          0
+                        ) ?? 45;
+                      const end = new Date(b.timestamp);
+                      end.setMinutes(end.getMinutes() + duration);
+                      const endStr = `${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
+
+                      return (
+                        <Pressable
+                          key={b.bookingId}
+                          onPress={() => showBookingActions(b)}
+                          onLongPress={() => showBookingActions(b)}
+                          delayLongPress={300}
+                          style={[
+                            styles.bookingBlock,
+                            {
+                              backgroundColor: isConfirmed
+                                ? theme.colors.successSoft ?? 'rgba(34,197,94,0.12)'
+                                : theme.colors.warningSoft ?? 'rgba(234,179,8,0.12)',
+                              borderLeftWidth: 3,
+                              borderLeftColor: isConfirmed
+                                ? theme.colors.success
+                                : theme.colors.warning,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              fontWeight: '600',
+                              color: theme.colors.fg,
+                            }}
+                          >
+                            {clientName}
+                          </Text>
+                          <Text
+                            style={{
+                              fontSize: 11,
+                              color: theme.colors.muted,
+                              marginTop: 2,
+                            }}
+                          >
+                            {`${hour.toString().padStart(2, '0')}:${minute
+                              .toString()
+                              .padStart(2, '0')} – ${endStr} · ${serviceNames}`}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {/* NOW line */}
+                  {isToday && nowHour === hour && (
+                    <View
+                      style={[
+                        styles.nowLine,
+                        {
+                          top: (nowMinute / 60) * 64 + 4,
+                          backgroundColor: theme.colors.danger,
+                        },
+                      ]}
+                    >
                       <View
-                        key={j}
                         style={[
-                          styles.dot,
+                          styles.nowDot,
                           {
-                            backgroundColor: isActive
-                              ? theme.colors.onAccent
-                              : theme.colors.accent,
+                            backgroundColor: theme.colors.danger,
+                            shadowColor: theme.colors.danger,
                           },
                         ]}
                       />
-                    ))}
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Today button */}
-        <Pressable onPress={goToday} style={{ alignSelf: 'flex-end', marginRight: 20, marginTop: 4 }}>
-          <Badge label={t('calendar.today')} tone="accent" />
-        </Pressable>
-
-        {/* Timeline head */}
-        <View style={styles.timelineHead}>
-          <View>
-            <Text
-              style={{
-                fontSize: 17,
-                fontWeight: '600',
-                color: theme.colors.fg,
-              }}
-            >
-              {selectedDate.toLocaleDateString('uz-UZ', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
-            </Text>
-            <Text style={{ marginTop: 2, fontSize: 12, color: theme.colors.muted }}>
-              {todayBookings.length} ta tasdiqlangan
-            </Text>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 2,
-                  backgroundColor: theme.colors.success,
-                }}
-              />
-              <Text style={{ fontSize: 10, color: theme.colors.muted }}>
-                Band
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 2,
-                  backgroundColor: theme.colors.warning,
-                }}
-              />
-              <Text style={{ fontSize: 10, color: theme.colors.muted }}>
-                Kutilmoqda
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Day timeline */}
-        <View style={styles.timeline}>
-          {HOURS.map((hour) => {
-            const hourBookings = todayBookings.filter((b) => {
-              const { hour: h } = parseTime(b.timestamp);
-              return h === hour;
-            });
-
-            return (
-              <View
-                key={hour}
-                style={[
-                  styles.hourRow,
-                  { borderBottomColor: theme.colors.border },
-                ]}
-              >
-                <Text
-                  style={{
-                    width: 48,
-                    fontSize: 11,
-                    fontWeight: '600',
-                    color: theme.colors.muted,
-                  }}
-                >
-                  {hour.toString().padStart(2, '0')}:00
-                </Text>
-                <View style={{ flex: 1, gap: 4 }}>
-                  {hourBookings.map((b) => {
-                    const isConfirmed = b.status === 'confirmed';
-                    const clientName = `${b.clientFirstName} ${b.clientLastName}`;
-                    const serviceNames =
-                      b.services?.map((s) => s.name).join(' + ') ?? '';
-                    const { minute } = parseTime(b.timestamp);
-                    const duration =
-                      b.services?.reduce(
-                        (s, svc) => s + (svc.durationMinutes ?? 45),
-                        0,
-                      ) ?? 45;
-                    const end = new Date(b.timestamp);
-                    end.setMinutes(end.getMinutes() + duration);
-                    const endStr = `${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
-
-                    return (
-                      <View
-                        key={b.bookingId}
-                        style={[
-                          styles.bookingBlock,
-                          {
-                            backgroundColor: isConfirmed
-                              ? theme.colors.successSoft ?? 'rgba(34,197,94,0.12)'
-                              : theme.colors.warningSoft ?? 'rgba(234,179,8,0.12)',
-                            borderLeftWidth: 3,
-                            borderLeftColor: isConfirmed
-                              ? theme.colors.success
-                              : theme.colors.warning,
-                          },
-                        ]}
+                      <Text
+                        style={{
+                          position: 'absolute',
+                          left: -44,
+                          top: -16,
+                          fontSize: 10,
+                          fontWeight: '700',
+                          color: theme.colors.danger,
+                        }}
                       >
-                        <Text
-                          style={{
-                            fontSize: 13,
-                            fontWeight: '600',
-                            color: theme.colors.fg,
-                          }}
-                        >
-                          {clientName}
-                        </Text>
-                        <Text
-                          style={{
-                            fontSize: 11,
-                            color: theme.colors.muted,
-                            marginTop: 2,
-                          }}
-                        >
-                          {`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} – ${endStr} · ${serviceNames}`}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            );
-          })}
+                        HOZIR · {nowHour.toString().padStart(2, '0')}:{nowMinute.toString().padStart(2, '0')}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       </ScrollView>
+
+      {/* Booking actions bottom sheet */}
+      <BottomSheet
+        ref={sheetRef}
+        index={-1}
+        snapPoints={['35%', '50%']}
+        enablePanDownToClose
+        backgroundStyle={{
+          backgroundColor: theme.colors.surface,
+        }}
+        handleIndicatorStyle={{
+          width: 36,
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: theme.colors.border,
+        }}
+      >
+        <BottomSheetView style={{ padding: 20, gap: 12 }}>
+          {activeBooking && (
+            <>
+              <View style={{ alignItems: 'center', marginBottom: 8 }}>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: '700',
+                    color: theme.colors.fg,
+                  }}
+                >
+                  {activeBooking.clientFirstName} {activeBooking.clientLastName}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color: theme.colors.muted,
+                    marginTop: 4,
+                  }}
+                >
+                  {activeBooking.services
+                    ?.map((s: any) => s.name)
+                    .join(' + ') ?? ''}
+                </Text>
+              </View>
+
+              <Button
+                variant="secondary"
+                label="Batafsil ko'rish"
+                onPress={() => sheetRef.current?.close()}
+                fullWidth
+              />
+              <Button
+                variant="secondary"
+                label="Mijozga qo'ng'iroq qilish"
+                onPress={() => sheetRef.current?.close()}
+                fullWidth
+              />
+              {activeBooking.status !== 'cancelled' && (
+                <Button
+                  variant="destructive"
+                  label={t('confirmation.cancelBooking')}
+                  onPress={handleCancelBooking}
+                  fullWidth
+                />
+              )}
+            </>
+          )}
+        </BottomSheetView>
+      </BottomSheet>
     </ScreenLayout>
   );
 }
@@ -426,6 +872,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  todayBtn: {
+    height: 36,
+    borderRadius: 999,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -454,7 +908,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   weekStrip: {
-    paddingHorizontal: 20,
     paddingVertical: 6,
     flexDirection: 'row',
     gap: 6,
@@ -479,6 +932,12 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
   },
+  weekNavBtn: {
+    width: 28,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   timelineHead: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -494,13 +953,33 @@ const styles = StyleSheet.create({
   },
   hourRow: {
     flexDirection: 'row',
-    minHeight: 64,
+    minHeight: 80,
     borderBottomWidth: StyleSheet.hairlineWidth,
     paddingVertical: 4,
+    position: 'relative',
   },
   bookingBlock: {
     borderRadius: 8,
     padding: 8,
     marginVertical: 2,
+  },
+  nowLine: {
+    position: 'absolute',
+    left: 48,
+    right: 0,
+    height: 1,
+    zIndex: 4,
+  },
+  nowDot: {
+    position: 'absolute',
+    left: -4,
+    top: -3,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

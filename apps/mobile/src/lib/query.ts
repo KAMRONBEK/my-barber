@@ -21,6 +21,7 @@ export const queryClient = new QueryClient({
 export const queryKeys = {
   me: ['me'] as const,
   banner: ['banner'] as const,
+  barbers: ['barbers'] as const,
   bookings: (barberId: string, date: string) =>
     ['bookings', barberId, date] as const,
 };

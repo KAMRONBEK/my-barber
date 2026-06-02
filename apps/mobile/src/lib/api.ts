@@ -127,6 +127,27 @@ export async function getBanner(): Promise<ApiBarber[]> {
   return r.data.data ?? [];
 }
 
+// Full barber list for map / search — includes location, ratings, services.
+// Mirrors BarberResponse from backend/api/models/barber.ts.
+export interface ApiBarberFull extends ApiBarber {
+  location?: { latitude: string; longitude: string };
+  birthDate?: string;
+  workingHours?: string;
+  images?: string[];
+  approvalStatus?: string;
+  approvalMessage?: string;
+}
+
+export async function getBarbers(
+  page = 0,
+  limit = 50,
+): Promise<ApiBarberFull[]> {
+  const r = await api.get<OkData<ApiBarberFull[]>>('/client/barbers', {
+    params: { page, limit },
+  });
+  return r.data.data ?? [];
+}
+
 // Bookings list. The wire format is the legacy `BookingResponse`-ish shape
 // emitted by clientService.getClientBookings — it's not the new
 // BookingContract. The slot grid only needs `timestamp` + service durations.

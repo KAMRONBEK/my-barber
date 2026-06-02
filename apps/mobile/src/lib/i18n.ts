@@ -38,7 +38,7 @@ if (!i18n.isInitialized) {
         uz: { common: uzCommon },
         ru: { common: ruCommon },
       },
-      lng: resolveInitialLocale(),
+      lng: 'uz',
       fallbackLng: DEFAULT_LOCALE,
       defaultNS: 'common',
       ns: ['common'],
