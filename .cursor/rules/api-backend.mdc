@@ -1,0 +1,61 @@
+---
+description: Express API — routes, services, auth, Swagger, tests
+globs: backend/api/**
+alwaysApply: false
+---
+
+# Backend API (`@my-barber/api`)
+
+## Architecture
+
+Express on Vercel. Firestore via `firebase-admin` (SDK only — not Cloud Functions).
+
+```
+routes/       → Express routers with @swagger JSDoc + express-validator
+services/     → Business logic classes (BookingServiceClass, …)
+middleware/   → auth, upload, rate limiting, barberApprovalGate
+models/       → TypeScript interfaces (mirror @my-barber/types where possible)
+config/       → database, config, logging
+utils/        → logger, bookingContract mappers
+tests/        → unit + integration (supertest, mocked Firestore)
+```
+
+## Response format
+
+```typescript
+// Success
+{ ok: true, data: T }
+// Error
+{ ok: false, error: string, details?: ValidationError[] }
+```
+
+## Auth
+
+- Custom **JWT + bcrypt** — `authMiddleware` / `authenticateToken` validates Bearer tokens.
+- JWT payload: `{ id, username, type: 'barber' | 'client' }`.
+- Separate barber/client registration and login under `/auth/{type}/…`.
+- Admin routes: `/admin/*` with `adminAuthMiddleware` (Bearer token or API key).
+
+## Route patterns
+
+- Validate with `express-validator`; use shared `handleValidationErrors` helper.
+- Protected routes: `authenticateToken` middleware.
+- Wire format for bookings: snake_case via `bookingResponseToContract()`.
+- Log errors with Winston `logger`; include request context.
+
+## New endpoints — required
+
+1. **Swagger**: `@swagger` JSDoc block above handler (see `routes/client.ts`). Regenerate: `node scripts/generate-swagger.js`. Commit updated `public/swagger.json`.
+2. **Tests**: Jest integration tests per endpoint — success + auth/validation/not-found failures. Mock Firestore like existing suite.
+
+## Validation & types
+
+- Prefer aligning models with `@my-barber/types` schemas over duplicating shapes.
+- New Firestore collection → add to `packages/config/src/firestore-collections.ts` (target convention).
+- Legacy `config/database.ts` has its own `COLLECTIONS` — migrate toward shared package when touching collections.
+
+## Dev
+
+- `pnpm --filter @my-barber/api dev` (not npm).
+- Environments: dev/staging share staging Firebase; production uses production Firebase.
+- Domains: `api.my-barber.uz` (prod), `staging-api.my-barber.uz` (staging).

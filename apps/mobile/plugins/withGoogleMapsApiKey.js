@@ -1,10 +1,9 @@
 const { withAndroidManifest, withInfoPlist } = require('@expo/config-plugins');
 
 /**
- * Config plugin that injects GOOGLE_API_KEY from process.env into the native
- * AndroidManifest.xml and iOS Info.plist for react-native-maps.
- *
- * This avoids hardcoding the key in app.json while keeping it out of the repo.
+ * @deprecated Use the official `react-native-maps` Expo config plugin in app.config.ts.
+ * This plugin only wrote GMSApiKey to Info.plist and did not install Google Maps
+ * CocoaPods or call GMSServices.provideAPIKey() in AppDelegate — maps stayed blank on iOS.
  */
 function withGoogleMapsApiKey(config) {
   const apiKey = process.env.GOOGLE_API_KEY;

@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@shopify/restyle';
 import { Text } from '../atoms/Text';
+import { BackButton } from '../atoms/BackButton';
 import { Input } from '../atoms/Input';
 import { Button } from '../atoms/Button';
 import { Icon } from '../atoms/Icon';
@@ -98,22 +99,7 @@ export const LoginScreen: React.FC = () => {
       >
         <View style={styles.top}>
           {router.canGoBack() ? (
-            <Pressable
-              onPress={() => router.back()}
-              style={({ pressed }) => [
-                styles.backBtn,
-                {
-                  opacity: pressed ? 0.85 : 1,
-                  backgroundColor: theme.colors.surface2,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.back')}
-              testID="login-back"
-            >
-              <Icon name="back" size={18} color={theme.colors.fg} />
-            </Pressable>
+            <BackButton testID="login-back" />
           ) : (
             <Pressable
               onPress={() => router.push('/select-role')}

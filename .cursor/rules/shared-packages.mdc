@@ -1,0 +1,38 @@
+---
+description: Shared packages — types, config, tsconfig, eslint
+globs: packages/**
+alwaysApply: false
+---
+
+# Shared Packages
+
+## `@my-barber/types` — Zod schemas
+
+- One domain per file in `packages/types/src/`; re-export from `index.ts`.
+- Always export **both** `{Entity}Schema` and `type Entity = z.infer<typeof EntitySchema>`.
+- Reuse primitives from `common.ts`: `IdSchema`, `TimestampSchema`, `PaginationQuerySchema`.
+- Wire vs app shapes: `*ContractSchema` (snake_case API) + `*Schema` (camelCase app) + mapper fn (e.g. `bookingFromContract`).
+- Mirror comments link to backend models: `// Mirrors BookingStatus in backend/api/models/booking.ts`.
+- Pure logic without Zod lives in separate modules (e.g. `duration.ts` → `calculateTotalDuration`).
+
+```typescript
+// ✅ New domain type
+export const FooSchema = z.object({ id: IdSchema, name: z.string() });
+export type Foo = z.infer<typeof FooSchema>;
+```
+
+## `@my-barber/config`
+
+| Import | Safe for | Contents |
+|--------|----------|----------|
+| `@my-barber/config` | All apps | `app-constants`, `env`, `firestore-collections` |
+| `@my-barber/config/firebase` | Node/server only | `getFirebaseAdmin()` |
+
+- Do **not** re-export firebase from root barrel (breaks Metro).
+- Collection names: `COLLECTIONS.users`, not `'users'`.
+- Env: `parseServerEnv()` / `parsePublicEnv()` with Zod; add new vars to `env.ts` + `.env.example`.
+
+## Tooling packages
+
+- **tsconfig**: extend `@my-barber/tsconfig/base.json` (`strict`, `noUncheckedIndexedAccess`).
+- **eslint-config**: `@my-barber/eslint-config/{base,next,expo,node}` — prefer wiring these over ad-hoc configs.

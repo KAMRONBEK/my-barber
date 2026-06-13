@@ -1,0 +1,29 @@
+---
+description: Marketing web app — Next.js static export, Tailwind v4
+globs: apps/web/**
+alwaysApply: false
+---
+
+# Web App (`@my-barber/web`)
+
+## Stack
+
+- Next.js 16 App Router, **static export** (`output: 'export'` in `next.config.ts`).
+- Tailwind v4 CSS-first: `@import "tailwindcss"` in `globals.css`, `@theme inline` tokens — no `tailwind.config.*`.
+- Path alias: `@/*` → `./src/*`.
+- Transpile workspace packages: `@my-barber/types`, `@my-barber/config`.
+
+## Conventions
+
+- **Server Components by default** — no `"use client"` unless interactivity requires it.
+- Named exports for layout chrome: `Header`, `Footer`, `Hero`.
+- Constants from `@my-barber/config`: `APP_NAME`, `SUPPORT_EMAIL`, `SITE_URLS`.
+- Per-page `Metadata` export; root layout uses title template `%s · ${APP_NAME}`.
+- Dark mode via `prefers-color-scheme` (system preference, not class toggle).
+- Fonts: Geist via `next/font/google`.
+
+## Scope
+
+- Landing + legal/contact pages only. No API calls, no auth, no middleware.
+- Keep pages thin; compose from `src/components/`.
+- Build: `next build --webpack` (required for static export with workspace packages).

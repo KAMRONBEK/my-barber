@@ -1,74 +1,36 @@
 ---
-description: 
-globs: 
+description: Backend API development workflow
+globs: backend/api/**
 alwaysApply: false
 ---
-# Development Workflow & Scripts
 
-## Environment Setup
-Refer to [ENVIRONMENTS.md](mdc:ENVIRONMENTS.md) for detailed environment configuration.
+# API Development Workflow
 
-### Local Development
+## Local dev
+
 ```bash
-npm install                    # Install dependencies
-cp env.example .env.development # Copy environment template
-npm run dev                   # Start development server
+pnpm --filter @my-barber/api dev
+cp .env.example .env.development   # from backend/api/
 ```
 
-### Available Scripts
-- **`npm run dev`** - Development server with hot reload
-- **`npm run build`** - Compile TypeScript to `dist/` directory
-- **`npm run start`** - Start production server
-- **`npm run lint`** - Run ESLint code linting
-- **`npm run test`** - Run test suite
+## Scripts (via pnpm filter or package dir)
 
-## Environment Strategy
-**Two-Firebase-Project Setup:**
-- **Development Environment**: Uses staging Firebase project, `.env.development`
-- **Staging Environment**: Uses staging Firebase project, `.env.staging` 
-- **Production Environment**: Uses production Firebase project, `.env.production`
+- `dev` — hot reload
+- `build` — TypeScript → `dist/`
+- `test` — Jest suite
+- `lint` — ESLint
 
-This provides data isolation between production and development/testing while being cost-efficient.
+## Environments
 
-## Deployment Workflow
-Complete deployment instructions in [DEPLOYMENT_GUIDE.md](mdc:DEPLOYMENT_GUIDE.md).
+- Dev + staging → staging Firebase project
+- Production → production Firebase project
+- Domains: `api.my-barber.uz`, `staging-api.my-barber.uz`
 
-### Git Branch Strategy
-- **`development`** → Preview deployments on Vercel
-- **`staging`** → `staging-api.my-barber.uz`
-- **`main`** → `api.my-barber.uz`
+## Verification
 
-### Deployment Commands
 ```bash
-# Staging deployment
-npm run vercel:staging
-vercel alias staging-api.my-barber.uz
-
-# Production deployment  
-npm run vercel:production
-vercel alias api.my-barber.uz
+pnpm turbo run typecheck lint test --filter=@my-barber/api
+node scripts/generate-swagger.js   # before committing route changes
 ```
 
-## Build Process
-- **Source**: TypeScript files in root and subdirectories
-- **Output**: Compiled JavaScript in `dist/` directory
-- **Vercel**: Automatically runs `npm run build` during deployment
-- **Git**: `dist/` folder is ignored (not tracked in version control)
-
-## Monitoring & Debugging
-- **Health Check**: `GET /health` - System status and uptime
-- **Metrics**: `GET /metrics` - Prometheus metrics endpoint
-- **API Docs**: `GET /docs` - Interactive Swagger documentation
-- **Logs**: Use `vercel logs --follow` for real-time log monitoring
-
-## Environment Variables Required
-- **Firebase**: `FIREBASE_PROJECT_ID`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_STORAGE_BUCKET`
-- **Security**: `JWT_SECRET`, `CORS_ORIGIN`
-- **Optional**: `EXPO_ACCESS_TOKEN` (push notifications), `PORT`, `RATE_LIMIT_MAX`
-
-## Testing Endpoints
-All endpoints documented in [README.md](mdc:README.md) under "API Endpoints" section.
-- Authentication: `/auth/barber/login`, `/auth/client/login`
-- Barber Management: `/barber/register`, `/barber/profile`
-- Client Management: `/client/register`, `/client/profile`
-
+Monorepo-wide rules: `.cursor/rules/monorepo-core.mdc`

@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@shopify/restyle';
 import { Text } from '../atoms/Text';
-import { Icon } from '../atoms/Icon';
+import { BackButton, BACK_BUTTON_SIZE } from '../atoms/BackButton';
 import { Avatar } from '../atoms/Avatar';
 import { BookingForm } from '../organisms/BookingForm';
 import { ScreenLayout } from '../templates/ScreenLayout';
@@ -104,19 +104,7 @@ const Header: React.FC<{ onBack: () => void; title: string }> = ({
   const theme = useTheme<AppTheme>();
   return (
     <View style={styles.head}>
-      <Pressable
-        onPress={onBack}
-        style={[
-          styles.iconBtn,
-          {
-            backgroundColor: theme.colors.surface2,
-            borderColor: theme.colors.border,
-          },
-        ]}
-        accessibilityLabel="back"
-      >
-        <Icon name="back" size={18} color={theme.colors.fg} />
-      </Pressable>
+      <BackButton onPress={onBack} />
       <Text
         style={{
           flex: 1,
@@ -128,7 +116,7 @@ const Header: React.FC<{ onBack: () => void; title: string }> = ({
       >
         {title}
       </Text>
-      <View style={{ width: 40 }} />
+      <View style={{ width: BACK_BUTTON_SIZE }} />
     </View>
   );
 };
@@ -140,14 +128,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   barberLine: {
     marginHorizontal: 20,

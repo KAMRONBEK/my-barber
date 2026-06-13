@@ -10,7 +10,7 @@
 //
 // Auth: Bearer JWT injected from the auth store. On 401 we clear the session.
 
-import axios, { AxiosError, type AxiosInstance } from 'axios';
+import axios, { AxiosError, isAxiosError, type AxiosInstance } from 'axios';
 import { DEFAULT_MOBILE_API_BASE_URL } from '@my-barber/config';
 import { useAuthStore } from './auth';
 
@@ -53,6 +53,7 @@ import type {
   BookingCreateRequest,
 } from '@my-barber/types';
 import type { BarberProfile, ClientProfile } from './auth';
+import type { BarberLocationWire } from './maps';
 
 interface OkData<T> {
   ok: true;
@@ -130,7 +131,7 @@ export async function getBanner(): Promise<ApiBarber[]> {
 // Full barber list for map / search — includes location, ratings, services.
 // Mirrors BarberResponse from backend/api/models/barber.ts.
 export interface ApiBarberFull extends ApiBarber {
-  location?: { latitude: string; longitude: string };
+  location?: BarberLocationWire;
   birthDate?: string;
   workingHours?: string;
   images?: string[];
@@ -138,14 +139,35 @@ export interface ApiBarberFull extends ApiBarber {
   approvalMessage?: string;
 }
 
+interface BarberListPayload {
+  barbers: ApiBarberFull[];
+  page?: number;
+  limit?: number;
+  total?: number;
+}
+
 export async function getBarbers(
   page = 0,
   limit = 50,
 ): Promise<ApiBarberFull[]> {
-  const r = await api.get<OkData<ApiBarberFull[]>>('/client/barbers', {
-    params: { page, limit },
-  });
-  return r.data.data ?? [];
+  try {
+    const r = await api.get<OkData<ApiBarberFull[]>>('/client/barbers', {
+      params: { page, limit },
+    });
+    return r.data.data ?? [];
+  } catch (err) {
+    // Staging may not have /client/barbers deployed yet; /barber/ is the legacy list.
+    if (
+      isAxiosError(err) &&
+      (err.response?.status === 404 || err.response?.status === 405)
+    ) {
+      const r = await api.get<OkData<BarberListPayload>>('/barber/', {
+        params: { page, limit },
+      });
+      return r.data.data?.barbers ?? [];
+    }
+    throw err;
+  }
 }
 
 // Bookings list. The wire format is the legacy `BookingResponse`-ish shape

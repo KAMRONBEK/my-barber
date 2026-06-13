@@ -1,7 +1,7 @@
 // Barbers map view. Real MapView with react-native-maps, pins, floating header,
 // filter chips, and a bottom sheet with horizontal scrollable barber cards.
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -17,9 +17,16 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
-import MapView, { Marker, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
+import MapView, { Marker, type Region } from 'react-native-maps';
 import * as Location from 'expo-location';
+import {
+  DEFAULT_MAP_REGION,
+  GOOGLE_DARK_MAP_STYLE,
+  MAP_PROVIDER,
+  parseBarberCoordinate,
+} from '../lib/maps';
 import { Text } from '../atoms/Text';
+import { BackButton, BACK_BUTTON_SIZE } from '../atoms/BackButton';
 import { Icon } from '../atoms/Icon';
 import { ScreenLayout } from '../templates/ScreenLayout';
 import { getBarbers, type ApiBarberFull } from '../lib/api';
@@ -51,60 +58,13 @@ const FILTER_CHIPS: Array<{ key: string; labelKey: string; icon?: boolean }> = [
 ];
 
 // Approximate real-world coordinates for demo barbers (Tashkent / Mirzo-Ulugbek area)
-const FALLBACK_COORDINATES: Array<{ latitude: number; longitude: number }> = [
-  { latitude: 41.315, longitude: 69.284 },
-  { latitude: 41.318, longitude: 69.29 },
-  { latitude: 41.312, longitude: 69.295 },
-  { latitude: 41.308, longitude: 69.28 },
-  { latitude: 41.32, longitude: 69.282 },
-];
+const INITIAL_REGION: Region = DEFAULT_MAP_REGION;
 
-const INITIAL_REGION: Region = {
-  latitude: 41.315,
-  longitude: 69.287,
-  latitudeDelta: 0.02,
-  longitudeDelta: 0.02,
-};
-
-// Dark/warm custom map style JSON for Google Maps
-const DARK_MAP_STYLE = [
-  { elementType: 'geometry', stylers: [{ color: '#1d130b' }] },
-  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#b8a99a' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#1d130b' }] },
-  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#2a1d14' }] },
-  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#9e8e7e' }] },
-  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
-  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#c4b5a5' }] },
-  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#a89888' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1a2e1a' }] },
-  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#6b8f5e' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2e1f14' }] },
-  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9e8e7e' }] },
-  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#3d2a1c' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#4a3323' }] },
-  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#b8a99a' }] },
-  { featureType: 'road.local', elementType: 'geometry', stylers: [{ color: '#2e1f14' }] },
-  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2a1d14' }] },
-  { featureType: 'transit', elementType: 'labels.text.fill', stylers: [{ color: '#8a7a6a' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#14202e' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#4a6a8a' }] },
-];
-
-// Derive a stable coordinate for a barber: prefer API location, then fallback array, then null.
 function getBarberCoordinate(
   barber: ApiBarberFull,
-  index: number
-): { latitude: number; longitude: number } | null {
-  if (barber.location?.latitude && barber.location?.longitude) {
-    const lat = parseFloat(barber.location.latitude);
-    const lng = parseFloat(barber.location.longitude);
-    if (!isNaN(lat) && !isNaN(lng)) {
-      return { latitude: lat, longitude: lng };
-    }
-  }
-  const fallback = FALLBACK_COORDINATES[index % FALLBACK_COORDINATES.length];
-  return fallback ?? null;
+  index: number,
+): { latitude: number; longitude: number } {
+  return parseBarberCoordinate(barber.location, index);
 }
 
 export const BarbersMapScreen: React.FC = () => {
@@ -118,6 +78,9 @@ export const BarbersMapScreen: React.FC = () => {
   const [selectedPin, setSelectedPin] = useState(0);
   const [query, setQuery] = useState('');
   const [activeChip, setActiveChip] = useState('filters');
+  // Custom Marker views flicker while tracksViewChanges stays true during pan/zoom.
+  // Briefly enable it when pins need a visual update, then snapshot to a bitmap.
+  const [tracksViewChanges, setTracksViewChanges] = useState(true);
 
   const barbersQuery = useQuery({
     queryKey: queryKeys.barbers,
@@ -144,6 +107,19 @@ export const BarbersMapScreen: React.FC = () => {
     }
     return list;
   }, [rawBarbers, query]);
+
+  useEffect(() => {
+    if (barbers.length === 0) return;
+    setTracksViewChanges(true);
+    const timer = setTimeout(() => setTracksViewChanges(false), 400);
+    return () => clearTimeout(timer);
+  }, [barbers]);
+
+  useEffect(() => {
+    setTracksViewChanges(true);
+    const timer = setTimeout(() => setTracksViewChanges(false), 400);
+    return () => clearTimeout(timer);
+  }, [selectedPin]);
 
   const tabBarPadding =
     TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
@@ -229,10 +205,10 @@ export const BarbersMapScreen: React.FC = () => {
         {/* Real Map background */}
         <MapView
           ref={mapRef}
-          provider={PROVIDER_GOOGLE}
+          provider={MAP_PROVIDER}
           style={StyleSheet.absoluteFillObject}
           initialRegion={INITIAL_REGION}
-          customMapStyle={DARK_MAP_STYLE}
+          customMapStyle={GOOGLE_DARK_MAP_STYLE}
           showsUserLocation
           showsMyLocationButton={false}
           rotateEnabled={false}
@@ -241,14 +217,13 @@ export const BarbersMapScreen: React.FC = () => {
           {barbers.map((barber, i) => {
             const isActive = selectedPin === i;
             const coord = getBarberCoordinate(barber, i);
-            if (!coord) return null;
             const rating = barber.ratingAverage ?? 0;
             return (
               <Marker
                 key={barber.id}
                 coordinate={coord}
                 onPress={() => handlePinPress(i)}
-                tracksViewChanges={isActive}
+                tracksViewChanges={tracksViewChanges}
               >
                 <View style={styles.markerContainer}>
                   <View
@@ -308,18 +283,7 @@ export const BarbersMapScreen: React.FC = () => {
         {/* Floating header */}
         <View style={[styles.mapHeader, { paddingTop: insets.top + 12 }]}>
           <View style={styles.headerRow}>
-            <Pressable
-              onPress={() => router.back()}
-              style={[
-                styles.headerBtn,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            >
-              <Icon name="back" size={16} color={theme.colors.fg} />
-            </Pressable>
+            <BackButton tone="light" />
             <Text
               style={{
                 fontSize: 17,

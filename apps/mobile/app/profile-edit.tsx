@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../src/atoms/Text';
+import { BackButton, BACK_BUTTON_SIZE } from '../src/atoms/BackButton';
 import { Input } from '../src/atoms/Input';
 import { Button } from '../src/atoms/Button';
 import { Icon } from '../src/atoms/Icon';
@@ -84,15 +85,7 @@ export default function ProfileEditScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.headerBack}
-            accessibilityRole="button"
-          >
-            <Text style={{ color: theme.colors.accent, fontSize: 15 }}>
-              {t('common.back')}
-            </Text>
-          </Pressable>
+          <BackButton />
           <Text
             style={{
               fontSize: 17,
@@ -104,7 +97,7 @@ export default function ProfileEditScreen() {
           >
             {t('profileEdit.title')}
           </Text>
-          <View style={{ width: 60 }} />
+          <View style={{ width: BACK_BUTTON_SIZE }} />
         </View>
 
         {isLoading ? (
@@ -227,7 +220,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerBack: { width: 60 },
   center: {
     flex: 1,
     alignItems: 'center',

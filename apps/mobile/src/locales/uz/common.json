@@ -187,9 +187,15 @@
     "directions": "Yo'nalish",
     "searchPlaceholder": "Sartarosh, stil, xizmat qidiring",
     "locateMe": "Mening joylashuvim",
+    "filters": "Filtrlar",
+    "filterRating": "Reyting",
+    "filterDistance": "Masofa",
+    "filterStyle": "Stil",
     "openNow": "Hozir ochiq",
     "closingSoon": "Tez orada yopiladi",
-    "closed": "Yopiq"
+    "closed": "Yopiq",
+    "openWith": "Xarita ilovasini tanlang",
+    "chooseApp": "Yo'nalish uchun ilovani tanlang"
   },
   "profile": {
     "title": "Profil",
