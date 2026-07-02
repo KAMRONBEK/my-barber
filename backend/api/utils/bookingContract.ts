@@ -3,6 +3,7 @@ import {
   BookingResponse,
   BookingStatus,
 } from '../models/booking';
+import { firestoreDateToIso } from './firestoreDates';
 
 export function normalizeBookingStatus(raw?: string): BookingStatus {
   switch (raw) {
@@ -43,9 +44,8 @@ export function bookingResponseToContract(o: BookingResponse): BookingContract {
     barber_id: o.barberId,
     client_id: o.clientId,
     services,
-    updated_at: (o.updatedAt
-      ? new Date(o.updatedAt as unknown as string | number | Date)
-      : new Date()
-    ).toISOString(),
+    updated_at: o.updatedAt
+      ? firestoreDateToIso(o.updatedAt)
+      : new Date().toISOString(),
   };
 }

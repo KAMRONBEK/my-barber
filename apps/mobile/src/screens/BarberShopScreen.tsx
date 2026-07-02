@@ -2,7 +2,7 @@
 // LinearGradient cover scrim, segmented tab control, portfolio grid, review list.
 
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -22,6 +22,7 @@ import {
 import { shadows } from '@my-barber/ui';
 import { getBarbers, type ApiBarberFull } from '../lib/api';
 import { useFavoriteBarbers } from '../hooks/useFavoriteBarbers';
+import { hapticToggle } from '../lib/haptics';
 import { queryKeys, STALE } from '../lib/query';
 import {
   formatUZS,
@@ -82,7 +83,7 @@ export const BarberShopScreen: React.FC = () => {
   const tabBarPadding = TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
   const { id } = useLocalSearchParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<TabKey>('bio');
-  const { favoriteIds, toggleFavorite } = useFavoriteBarbers();
+  const { favoriteIds, pendingIds, toggleFavorite } = useFavoriteBarbers();
 
   const barbersQuery = useQuery({
     queryKey: queryKeys.barbers,
@@ -171,16 +172,24 @@ export const BarberShopScreen: React.FC = () => {
                 <Icon name="share" size={18} color="#fff" />
               </View>
               <Pressable
-                onPress={() => toggleFavorite(barber.id)}
+                onPress={() => {
+                  hapticToggle();
+                  toggleFavorite(barber.id);
+                }}
+                disabled={pendingIds.has(barber.id)}
                 style={[styles.iconBtn, styles.iconBtnDark]}
                 accessibilityRole="button"
                 accessibilityLabel={t('barber.saveToggle')}
               >
-                <Icon
-                  name="heart"
-                  size={18}
-                  color={favoriteIds.has(barber.id) ? theme.colors.accent : '#fff'}
-                />
+                {pendingIds.has(barber.id) ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Icon
+                    name={favoriteIds.has(barber.id) ? 'heart-filled' : 'heart'}
+                    size={18}
+                    color={favoriteIds.has(barber.id) ? theme.colors.accent : '#fff'}
+                  />
+                )}
               </Pressable>
             </View>
           </View>

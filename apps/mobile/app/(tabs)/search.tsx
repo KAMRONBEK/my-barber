@@ -32,7 +32,7 @@ export default function SearchScreen() {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
-  const { favoriteIds, toggleFavorite } = useFavoriteBarbers();
+  const { favoriteIds, pendingIds, toggleFavorite } = useFavoriteBarbers();
 
   const bannerQuery = useQuery({
     queryKey: queryKeys.banner,
@@ -209,6 +209,7 @@ export default function SearchScreen() {
                 key={b.id}
                 barber={b}
                 isSaved={favoriteIds.has(b.id)}
+                isSaving={pendingIds.has(b.id)}
                 onPress={() => router.push(`/barber/${b.id}`)}
                 onToggleSave={() => toggleFavorite(b.id)}
               />

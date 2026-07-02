@@ -2,6 +2,7 @@ import { db, COLLECTIONS } from '../config/database';
 import { v4 as uuidv4 } from 'uuid';
 import { bookingService } from './bookingService';
 import { normalizeBookingStatus } from '../utils/bookingContract';
+import { firestoreDateToIso } from '../utils/firestoreDates';
 
 export interface ReviewDoc {
   id: string;
@@ -116,10 +117,7 @@ export class ReviewServiceClass {
     };
 
     const data = created.data() as ReviewDoc;
-    const createdAt =
-      data.createdAt instanceof Date
-        ? data.createdAt.toISOString()
-        : new Date(data.createdAt as unknown as string).toISOString();
+    const createdAt = firestoreDateToIso(data.createdAt);
 
     return {
       review: {
@@ -179,10 +177,7 @@ export class ReviewServiceClass {
 
     const items = docs.map(d => {
       const x = d.data() as ReviewDoc;
-      const created =
-        x.createdAt instanceof Date
-          ? x.createdAt.toISOString()
-          : new Date(x.createdAt as unknown as string).toISOString();
+      const created = firestoreDateToIso(x.createdAt);
       return {
         id: x.id,
         booking_id: x.bookingId,
@@ -197,10 +192,7 @@ export class ReviewServiceClass {
     let next_cursor: string | null = null;
     if (hasMore && docs.length > 0) {
       const last = docs[docs.length - 1].data() as ReviewDoc;
-      const created =
-        last.createdAt instanceof Date
-          ? last.createdAt.toISOString()
-          : new Date(last.createdAt as unknown as string).toISOString();
+      const created = firestoreDateToIso(last.createdAt);
       next_cursor = encodeCursor(created, last.id);
     }
 

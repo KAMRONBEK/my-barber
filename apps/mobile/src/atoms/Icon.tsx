@@ -20,6 +20,7 @@ export type IconName =
   | 'star'
   | 'share'
   | 'heart'
+  | 'heart-filled'
   | 'settings'
   | 'phone'
   | 'pin'
@@ -136,6 +137,14 @@ function render(
         <Path
           d="M20 8.5C20 5.5 17.8 4 15.7 4c-1.4 0-2.7.7-3.7 2-1-1.3-2.3-2-3.7-2C6.2 4 4 5.5 4 8.5c0 5 8 11.5 8 11.5s8-6.5 8-11.5z"
           {...common}
+        />
+      );
+    case 'heart-filled':
+      return (
+        <Path
+          d="M20 8.5C20 5.5 17.8 4 15.7 4c-1.4 0-2.7.7-3.7 2-1-1.3-2.3-2-3.7-2C6.2 4 4 5.5 4 8.5c0 5 8 11.5 8 11.5s8-6.5 8-11.5z"
+          {...common}
+          fill={stroke}
         />
       );
     case 'settings':

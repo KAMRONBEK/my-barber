@@ -4,6 +4,7 @@ import {
   getBookingLifecycleDeliveries,
   BookingLifecycleSnapshot,
 } from './bookingLifecycleNotifications';
+import { firestoreDateToIso } from '../utils/firestoreDates';
 
 export type RecipientType = 'barber' | 'client';
 
@@ -164,10 +165,7 @@ export class NotificationInboxService {
 
     const items = docs.map(d => {
       const x = d.data() as NotificationDoc;
-      const created =
-        x.createdAt instanceof Date
-          ? x.createdAt.toISOString()
-          : new Date(x.createdAt as unknown as string).toISOString();
+      const created = firestoreDateToIso(x.createdAt);
       return {
         id: x.id,
         type: x.type,
@@ -182,10 +180,7 @@ export class NotificationInboxService {
     let next_cursor: string | null = null;
     if (hasMore && docs.length > 0) {
       const last = docs[docs.length - 1].data() as NotificationDoc;
-      const created =
-        last.createdAt instanceof Date
-          ? last.createdAt.toISOString()
-          : new Date(last.createdAt as unknown as string).toISOString();
+      const created = firestoreDateToIso(last.createdAt);
       next_cursor = encodeCursor(created, last.id);
     }
 

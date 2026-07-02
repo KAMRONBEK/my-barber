@@ -16,6 +16,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Icon, type IconName } from '../atoms/Icon';
+import { hapticSelection } from '../lib/haptics';
 import type { AppTheme } from '../lib/restyle';
 
 const ROUTE_ICONS: Record<string, IconName> = {
@@ -102,6 +103,7 @@ export const GlassTabBar: React.FC<BottomTabBarProps> = ({
                 canPreventDefault: true,
               });
               if (!isFocused && !event.defaultPrevented) {
+                hapticSelection();
                 navigation.navigate(route.name);
               }
             }

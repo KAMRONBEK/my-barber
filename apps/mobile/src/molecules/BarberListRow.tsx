@@ -3,7 +3,7 @@
 // screen and the saved-barbers (favorites) screen.
 
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { Icon } from '../atoms/Icon';
 import { Avatar } from '../atoms/Avatar';
 import type { ApiBarber } from '../lib/api';
 import { formatUZS } from '../lib/format';
+import { hapticToggle } from '../lib/haptics';
 import type { AppTheme } from '../lib/restyle';
 
 const CARD_GRADIENTS = [
@@ -23,9 +24,10 @@ const CARD_GRADIENTS = [
 export const BarberListRow: React.FC<{
   barber: ApiBarber;
   isSaved: boolean;
+  isSaving?: boolean;
   onPress: () => void;
   onToggleSave: () => void;
-}> = ({ barber, isSaved, onPress, onToggleSave }) => {
+}> = ({ barber, isSaved, isSaving, onPress, onToggleSave }) => {
   const theme = useTheme<AppTheme>();
   const { t } = useTranslation();
   const gradients =
@@ -71,16 +73,22 @@ export const BarberListRow: React.FC<{
         <Pressable
           onPress={(e) => {
             e.stopPropagation();
+            hapticToggle();
             onToggleSave();
           }}
+          disabled={isSaving}
           style={styles.heartBtn}
           hitSlop={8}
         >
-          <Icon
-            name="heart"
-            size={16}
-            color={isSaved ? theme.colors.accent : 'rgba(255,255,255,0.7)'}
-          />
+          {isSaving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Icon
+              name={isSaved ? 'heart-filled' : 'heart'}
+              size={16}
+              color={isSaved ? theme.colors.accent : 'rgba(255,255,255,0.7)'}
+            />
+          )}
         </Pressable>
         {/* Open/closed pill */}
         <View

@@ -70,6 +70,10 @@ export default function BarberPortfolioEditScreen() {
           price: s.price,
           durationMinutes: s.durationMinutes ?? 30,
           isActive: s.isActive ?? true,
+          // Must be carried through — omitting it makes updateBarberServices
+          // generate a fresh id every save, which duplicates the service in
+          // Firestore instead of updating the existing one in place.
+          catalogServiceId: s.catalogServiceId,
         }));
         await updateBarberServices(payload);
       }

@@ -8,6 +8,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
@@ -19,11 +20,31 @@ import { Badge } from '../../../src/atoms/Badge';
 import { Icon, type IconName } from '../../../src/atoms/Icon';
 import { ScreenLayout } from '../../../src/templates/ScreenLayout';
 import { useAuthStore } from '../../../src/lib/auth';
+import { useAppearanceStore, type AppearanceMode } from '../../../src/lib/appearance';
+import { useLocaleStore } from '../../../src/lib/locale';
+import type { SupportedLocale } from '../../../src/lib/i18n';
+import { getBarberMe, getBarberBookings, getBarberEarnings } from '../../../src/lib/api';
 import {
   BARBER_TAB_BAR_PILL_HEIGHT,
   BARBER_TAB_BAR_BOTTOM_OFFSET,
 } from '../../../src/navigation/BarberTabBar';
 import type { AppTheme } from '../../../src/lib/restyle';
+
+// Arbitrarily early lower bound — /barber/earnings requires a date range and
+// there's no "lifetime" mode, so this stands in for "since the account
+// existed" until there's a real account-creation date to use instead.
+const EARNINGS_LIFETIME_FROM = '2020-01-01';
+
+const APPEARANCE_LABEL_KEYS: Record<AppearanceMode, string> = {
+  system: 'profile.appearanceSystem',
+  light: 'profile.appearanceLight',
+  dark: 'profile.appearanceDark',
+};
+
+const LANGUAGE_LABEL_KEYS: Record<SupportedLocale, string> = {
+  uz: 'profile.languageUz',
+  ru: 'profile.languageRu',
+};
 
 export default function BarberProfileScreen() {
   const theme = useTheme<AppTheme>();
@@ -31,6 +52,9 @@ export default function BarberProfileScreen() {
   const { t } = useTranslation();
   const barber = useAuthStore((s) => s.barber);
   const signOut = useAuthStore((s) => s.signOut);
+  const isAuthenticated = !!useAuthStore((s) => s.token);
+  const appearanceMode = useAppearanceStore((s) => s.mode);
+  const locale = useLocaleStore((s) => s.locale);
 
   const insets = useSafeAreaInsets();
   const tabBarPadding =
@@ -42,11 +66,30 @@ export default function BarberProfileScreen() {
     await signOut();
   }
 
-  // Stub counts until API returns them
-  const bookingsCount = 42;
-  const earningsTotal = 1250000;
-  const rating = 4.9;
-  const reviewCount = 128;
+  const barberMeQuery = useQuery({
+    queryKey: ['barber', 'me'],
+    queryFn: getBarberMe,
+    staleTime: 60 * 1000,
+    enabled: isAuthenticated,
+  });
+  const bookingsQuery = useQuery({
+    queryKey: ['barber', 'bookings', 'all'],
+    queryFn: () => getBarberBookings(),
+    staleTime: 60 * 1000,
+    enabled: isAuthenticated,
+  });
+  const earningsQuery = useQuery({
+    queryKey: ['barber', 'earnings', 'lifetime'],
+    queryFn: () =>
+      getBarberEarnings(EARNINGS_LIFETIME_FROM, new Date().toISOString().slice(0, 10)),
+    staleTime: 60 * 1000,
+    enabled: isAuthenticated,
+  });
+
+  const bookingsCount = bookingsQuery.data?.length ?? 0;
+  const earningsTotal = earningsQuery.data?.summary.gross_total ?? 0;
+  const rating = barberMeQuery.data?.barber.ratingAverage ?? 0;
+  const reviewCount = barberMeQuery.data?.barber.ratingCount ?? 0;
 
   return (
     <ScreenLayout>
@@ -122,7 +165,7 @@ export default function BarberProfileScreen() {
                 color: theme.colors.fg,
               }}
             >
-              {rating.toFixed(1)}
+              {rating > 0 ? rating.toFixed(1) : '—'}
             </Text>
             <Text
               style={{
@@ -198,6 +241,22 @@ export default function BarberProfileScreen() {
             icon="settings"
             label={t('profileEdit.title')}
             onPress={() => router.push('/settings')}
+          />
+        </Menu>
+
+        <SectionHeading title={t('profile.section.settings')} />
+        <Menu>
+          <MenuRow
+            icon="moon"
+            label={t('profile.appearance')}
+            value={t(APPEARANCE_LABEL_KEYS[appearanceMode])}
+            onPress={() => router.push('/appearance')}
+          />
+          <MenuRow
+            icon="globe"
+            label={t('profile.language')}
+            value={t(LANGUAGE_LABEL_KEYS[locale])}
+            onPress={() => router.push('/language')}
           />
         </Menu>
 
