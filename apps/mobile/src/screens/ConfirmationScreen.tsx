@@ -28,6 +28,7 @@ import {
 import { shadows } from '@my-barber/ui';
 import { Text } from '../atoms/Text';
 import { Icon } from '../atoms/Icon';
+import { BackButton } from '../atoms/BackButton';
 import { Button } from '../atoms/Button';
 import { BookingTicket } from '../molecules/BookingTicket';
 import { ScreenLayout } from '../templates/ScreenLayout';
@@ -119,11 +120,7 @@ export const ConfirmationScreen: React.FC = () => {
             {t('common.empty')}
           </Text>
           <View style={{ height: 16 }} />
-          <Button
-            label={t('common.back')}
-            variant="secondary"
-            onPress={() => router.replace('/(tabs)')}
-          />
+          <BackButton onPress={() => router.replace('/(tabs)')} />
         </View>
       </ScreenLayout>
     );

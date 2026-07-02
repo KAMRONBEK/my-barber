@@ -1,0 +1,45 @@
+---
+description: Admin dashboard — TailAdmin shell, Next.js, future API wiring
+globs: apps/admin/**
+alwaysApply: false
+---
+
+# Admin App (`@my-barber/admin`)
+
+## Stack
+
+- Next.js 16 App Router, **static export**, dev port **3001**.
+- TailAdmin template: large `@theme` block in `globals.css`, class-based dark mode via `ThemeContext`.
+- Path alias: `@/*` → `./src/*`. SVG icons via `@svgr/webpack`.
+- Origin: TailAdmin free template (see `ATTRIBUTION.md`).
+
+## Structure
+
+```
+src/app/(admin)/           → dashboard shell (sidebar + header)
+src/app/(full-width-pages)/(auth)/  → signin, signup (template UI only)
+src/components/ui/         → Button, Badge, Modal, Table, …
+src/components/form/       → InputField, Checkbox, Select
+src/layout/                → AppSidebar, AppHeader
+src/context/               → ThemeContext, SidebarContext
+src/lib/api.ts             → fetch wrapper (scaffold, not yet wired)
+```
+
+## Conventions
+
+- Route groups `(admin)`, `(auth)` organize layouts without affecting URLs.
+- Default exports for UI primitives; variant props (`size`, `variant`).
+- `"use client"` only where needed (sidebar, charts, forms with state).
+- String-concatenated classNames; `tailwind-merge` sparingly.
+
+## API integration (when wiring up)
+
+- Backend admin routes mount at `/admin/*` (not `/api/admin/*`).
+- Auth: `Authorization: Bearer <token>` via `adminAuthMiddleware`.
+- Update `src/lib/api.ts` paths to match real backend endpoints before use.
+- Follow mobile's pattern: typed helpers, token from auth store, `@my-barber/types` for shapes.
+
+## Current state
+
+- Auth forms are visual templates — no submit handlers or route protection yet.
+- Dashboard pages use TailAdmin demo/mock data, not live API.

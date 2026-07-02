@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../src/atoms/Text';
+import { BackButton, BACK_BUTTON_SIZE } from '../src/atoms/BackButton';
 import { Button } from '../src/atoms/Button';
 import { Icon, type IconName } from '../src/atoms/Icon';
 import { ScreenLayout } from '../src/templates/ScreenLayout';
@@ -94,15 +95,7 @@ export default function NotificationsScreen() {
     <ScreenLayout>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.headerBack}
-          accessibilityRole="button"
-        >
-          <Text style={{ color: theme.colors.accent, fontSize: 15 }}>
-            {t('common.back')}
-          </Text>
-        </Pressable>
+        <BackButton />
         <Text
           style={{
             fontSize: 17,
@@ -313,7 +306,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     minHeight: 48,
   },
-  headerBack: { width: 50 },
   markAllBtn: { width: 80 },
   center: {
     flex: 1,

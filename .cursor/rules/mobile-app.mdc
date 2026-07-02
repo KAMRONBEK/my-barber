@@ -1,0 +1,56 @@
+---
+description: Expo mobile app — atomic design, Restyle, data fetching
+globs: apps/mobile/**
+alwaysApply: false
+---
+
+# Mobile App (`@my-barber/mobile`)
+
+## Structure
+
+```
+src/atoms/      → Button, Text, Input, Icon (primitives)
+src/molecules/  → BarberCard, ServiceRow, SlotChip
+src/organisms/  → BookingForm, SlotGrid, DateStrip
+src/templates/  → ScreenLayout
+src/screens/    → full client screens (LoginScreen, HomeScreen, …)
+src/lib/        → api, auth, query, i18n, format, slots, storage
+app/            → Expo Router routes (thin re-exports or inline barber screens)
+tests/          → render-utils, fixtures, api-mocks, setup
+```
+
+- Client routes: thin re-export from `src/screens/`: `export { LoginScreen as default } from '../../src/screens/LoginScreen'`
+- Root layout (`app/_layout.tsx`) owns providers, auth hydration, role-based redirects.
+
+## Components
+
+- Named exports: `export const Button: React.FC<ButtonProps>` with explicit prop interfaces.
+- Theme from `@my-barber/ui`; Restyle primitives via `src/lib/restyle.ts` (`Box`, `ThemedText`, `AppTheme`).
+- Do not import `@shopify/restyle` directly in components — use `AppTheme` from `../lib/restyle`.
+- Domain types from `@my-barber/types`; wire shapes as `Api*` in `src/lib/api.ts` when needed.
+- Wrap screens in `ScreenLayout`. Add `accessibilityRole`, `accessibilityLabel`, `testID` on interactive elements.
+- File header comments describe purpose and OD design reference.
+
+## State & data
+
+| Concern | Tool |
+|---------|------|
+| Server state | TanStack React Query (`queryKeys`, `STALE` presets in `src/lib/query.ts`) |
+| Auth/session | Zustand `useAuthStore` + `expo-secure-store` |
+| Local UI | `useState` / `useMemo` in screens or organisms |
+
+- No React Context, no `src/hooks/` folder yet.
+- API: axios in `src/lib/api.ts` — interceptors inject JWT, 401 clears session.
+- Response shape: `{ ok: true, data: T }` — unwrap with `r.data.data`.
+- i18n: i18next, locales `uz` (default) + `ru`, namespace `common`. Use `t('auth.signInTitle')`.
+
+## Imports
+
+- **No path aliases** — relative imports only.
+- Order: React/RN → third-party → `@my-barber/*` → local relative.
+
+## Tests
+
+- Jest + `@testing-library/react-native`; render via `renderWithProviders` from `tests/render-utils.tsx`.
+- Fixtures in `tests/fixtures/`; API mocks in `tests/api-mocks.ts`.
+- Mirror source tree under `src/__tests__/`.

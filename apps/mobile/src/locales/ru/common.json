@@ -183,9 +183,15 @@
     "directions": "Маршрут",
     "searchPlaceholder": "Поиск барбера, стиля, услуги",
     "locateMe": "Моё местоположение",
+    "filters": "Фильтры",
+    "filterRating": "Рейтинг",
+    "filterDistance": "Расстояние",
+    "filterStyle": "Стиль",
     "openNow": "Сейчас открыт",
     "closingSoon": "Скоро закроется",
-    "closed": "Закрыт"
+    "closed": "Закрыт",
+    "openWith": "Выберите приложение карт",
+    "chooseApp": "Выберите приложение для маршрута"
   },
   "profile": {
     "title": "Профиль",

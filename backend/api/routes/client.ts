@@ -1189,7 +1189,9 @@ router.post(
 router.get('/barbers', async (req: Request, res: Response) => {
   try {
     const page =
-      typeof req.query.page === 'string' ? parseInt(req.query.page, 10) || 0 : 0;
+      typeof req.query.page === 'string'
+        ? parseInt(req.query.page, 10) || 0
+        : 0;
     const limit =
       typeof req.query.limit === 'string'
         ? parseInt(req.query.limit, 10) || 50

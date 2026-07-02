@@ -16,6 +16,7 @@ import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../src/atoms/Text';
+import { BackButton } from '../../src/atoms/BackButton';
 import { Button } from '../../src/atoms/Button';
 import { Avatar } from '../../src/atoms/Avatar';
 import { Input } from '../../src/atoms/Input';
@@ -119,21 +120,14 @@ export default function BarberPortfolioEditScreen() {
     <ScreenLayout>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.headerBtn}
-          accessibilityRole="button"
-        >
-          <Text style={{ color: theme.colors.accent, fontSize: 15, fontWeight: '500' }}>
-            {t('common.cancel')}
-          </Text>
-        </Pressable>
-
+        <BackButton />
         <Text
           style={{
             fontSize: 17,
             fontWeight: '600',
             color: theme.colors.fg,
+            flex: 1,
+            textAlign: 'center',
           }}
         >
           {t('portfolioEdit.portfolioEditTitle')}

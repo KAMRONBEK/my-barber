@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../../src/atoms/Text';
+import { BackButton } from '../../src/atoms/BackButton';
 import { Button } from '../../src/atoms/Button';
 import { ScreenLayout } from '../../src/templates/ScreenLayout';
 import type { AppTheme } from '../../src/lib/restyle';
@@ -75,6 +76,9 @@ export default function OtpScreen() {
 
   return (
     <ScreenLayout>
+      <View style={styles.top}>
+        <BackButton />
+      </View>
       <View style={styles.head}>
         <Text
           style={{
@@ -154,19 +158,17 @@ export default function OtpScreen() {
           loading={submitting}
           testID="otp-verify"
         />
-        <View style={{ height: 12 }} />
-        <Button
-          fullWidth
-          variant="ghost"
-          label={t('common.back')}
-          onPress={() => router.back()}
-        />
       </View>
     </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
+  top: {
+    paddingTop: 8,
+    paddingHorizontal: 20,
+    alignItems: 'flex-start',
+  },
   head: {
     paddingHorizontal: 24,
     paddingTop: 32,

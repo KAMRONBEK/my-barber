@@ -9,6 +9,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@shopify/restyle';
 import { Text } from '../atoms/Text';
+import { BackButton } from '../atoms/BackButton';
 import { Avatar } from '../atoms/Avatar';
 import { Icon } from '../atoms/Icon';
 import { Button } from '../atoms/Button';
@@ -19,7 +20,7 @@ import {
   TAB_BAR_BOTTOM_OFFSET,
 } from '../navigation/GlassTabBar';
 import { shadows } from '@my-barber/ui';
-import { getBanner, type ApiBarber } from '../lib/api';
+import { getBarbers, type ApiBarberFull } from '../lib/api';
 import { queryKeys, STALE } from '../lib/query';
 import {
   formatUZS,
@@ -30,6 +31,12 @@ import {
   DEFAULT_SERVICE_DURATION_MINUTES,
 } from '@my-barber/types';
 import type { AppTheme } from '../lib/restyle';
+import { BarberMapPreview } from '../molecules/BarberMapPreview';
+import {
+  formatBarberAddress,
+  openBarberDirections,
+  parseBarberCoordinate,
+} from '../lib/maps';
 
 type TabKey = 'bio' | 'services' | 'portfolio' | 'reviews';
 
@@ -75,22 +82,22 @@ export const BarberShopScreen: React.FC = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<TabKey>('bio');
 
-  const bannerQuery = useQuery({
-    queryKey: queryKeys.banner,
-    queryFn: getBanner,
+  const barbersQuery = useQuery({
+    queryKey: queryKeys.barbers,
+    queryFn: () => getBarbers(0, 50),
     staleTime: STALE.banner,
   });
 
-  const barber = useMemo<ApiBarber | undefined>(() => {
-    return (bannerQuery.data ?? []).find((b) => b.id === id);
-  }, [bannerQuery.data, id]);
+  const barber = useMemo<ApiBarberFull | undefined>(() => {
+    return (barbersQuery.data ?? []).find((b) => b.id === id);
+  }, [barbersQuery.data, id]);
 
   const minPrice = useMemo(() => {
     if (!barber?.services?.length) return null;
     return barber.services.reduce((min, s) => (s.price < min ? s.price : min), barber.services[0].price);
   }, [barber]);
 
-  if (bannerQuery.isLoading && !barber) {
+  if (barbersQuery.isLoading && !barber) {
     return (
       <ScreenLayout>
         <View style={styles.center}>
@@ -105,18 +112,21 @@ export const BarberShopScreen: React.FC = () => {
       <ScreenLayout>
         <View style={styles.center}>
           <Text style={{ color: theme.colors.muted }}>{t('common.empty')}</Text>
-          <Pressable onPress={() => router.back()} style={{ marginTop: 16 }}>
-            <Text style={{ color: theme.colors.accent, fontSize: 14 }}>
-              {t('common.back')}
-            </Text>
-          </Pressable>
+          <BackButton />
         </View>
       </ScreenLayout>
     );
   }
 
   const rating = barber.ratingAverage ?? 0;
-  const ratingCount = barber.ratingCount ?? 0;
+  const barberIndex = (barbersQuery.data ?? []).findIndex((b) => b.id === id);
+  const mapCoordinate = parseBarberCoordinate(
+    barber.location,
+    barberIndex >= 0 ? barberIndex : 0,
+  );
+  const addressLabel =
+    formatBarberAddress(barber.location) ??
+    `${barber.firstName} ${barber.lastName}`;
 
   const TABS: Array<{ key: TabKey; label: string }> = [
     { key: 'bio', label: t('barber.about') },
@@ -153,13 +163,7 @@ export const BarberShopScreen: React.FC = () => {
           />
 
           <View style={styles.coverTop}>
-            <Pressable
-              onPress={() => router.back()}
-              style={[styles.iconBtn, styles.iconBtnDark]}
-              accessibilityLabel={t('common.back')}
-            >
-              <Icon name="back" size={18} color="#fff" />
-            </Pressable>
+          <BackButton tone="dark" />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={[styles.iconBtn, styles.iconBtnDark]}>
                 <Icon name="share" size={18} color="#fff" />
@@ -207,7 +211,7 @@ export const BarberShopScreen: React.FC = () => {
                 }}
                 numberOfLines={1}
               >
-                Lochin Barbershop · Amir Temur 26
+                {addressLabel}
               </Text>
             </View>
           </View>
@@ -248,7 +252,7 @@ export const BarberShopScreen: React.FC = () => {
           />
         </View>
 
-        {/* Mini map widget */}
+        {/* Mini map */}
         <View
           style={[
             styles.mapWidget,
@@ -258,43 +262,35 @@ export const BarberShopScreen: React.FC = () => {
             },
           ]}
         >
-          <View style={styles.mapCanvas}>
-            {/* Stylized streets */}
-            <View style={[styles.mapStreet, { top: '38%', left: 0, right: 0, height: 2 }]} />
-            <View style={[styles.mapStreet, { top: 0, bottom: 0, left: '48%', width: 2 }]} />
-            <View style={[styles.mapStreet, { top: '62%', left: 0, right: 0, height: 1, opacity: 0.5 }]} />
-            <View style={[styles.mapStreet, { top: 0, bottom: 0, left: '22%', width: 1, opacity: 0.5 }]} />
-            {/* Pulse ring */}
-            <View style={[styles.locRing, { borderColor: theme.colors.accent }]} />
-            {/* Pin */}
-            <View style={styles.mapPin}>
-              <View style={[styles.mapBubble, { backgroundColor: theme.colors.accent }]}>
-                <Icon name="star" size={10} color={theme.colors.onAccent} />
-                <Text style={{ color: theme.colors.onAccent, fontSize: 12, fontWeight: '600' }}>
-                  {rating ? rating.toFixed(2) : '—'}
-                </Text>
-              </View>
-              <View style={[styles.mapNeedle, { backgroundColor: theme.colors.accent }]} />
-              <View style={[styles.mapDot, { backgroundColor: theme.colors.accent }]} />
-            </View>
-          </View>
+          <BarberMapPreview
+            coordinate={mapCoordinate}
+            rating={rating}
+            height={160}
+          />
           <View style={styles.mapMeta}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
               <Icon name="pin" size={16} color={theme.colors.accent} />
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 14, fontWeight: '500', color: theme.colors.fg }}>
-                  0,6 km {t('barber.distance').toLowerCase()}
+                  {addressLabel}
                 </Text>
-                <Text style={{ fontSize: 12, color: theme.colors.muted, marginTop: 2 }}>
-                  Lochin Barbershop · Amir Temur 26
-                </Text>
+                {barber.workingHours ? (
+                  <Text
+                    style={{ fontSize: 12, color: theme.colors.muted, marginTop: 2 }}
+                    numberOfLines={1}
+                  >
+                    {barber.workingHours}
+                  </Text>
+                ) : null}
               </View>
             </View>
             <Pressable
-              style={[
-                styles.navBtn,
-                { backgroundColor: theme.colors.fg },
-              ]}
+              style={[styles.navBtn, { backgroundColor: theme.colors.fg }]}
+              onPress={() =>
+                void openBarberDirections(mapCoordinate, { title: addressLabel })
+              }
+              accessibilityRole="button"
+              accessibilityLabel={t('barber.directions')}
             >
               <Icon name="arrow-right" size={14} color={theme.colors.bg} />
               <Text style={{ color: theme.colors.bg, fontSize: 13, fontWeight: '600' }}>
@@ -508,6 +504,7 @@ export const BarberShopScreen: React.FC = () => {
           styles.floating,
           shadows.floating,
           {
+            bottom: Math.max(insets.bottom, 16) + 8,
             backgroundColor: theme.colors.surface,
             borderColor: theme.colors.border,
             shadowColor: theme.colors.fg,
@@ -652,63 +649,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  mapCanvas: {
-    height: 160,
-    backgroundColor: '#e8e4de',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  mapStreet: {
-    position: 'absolute',
-    backgroundColor: 'rgba(255,255,255,0.85)',
-  },
-  locRing: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-    marginLeft: -28,
-    marginTop: -28,
-    opacity: 0.25,
-  },
-  mapPin: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    marginLeft: -20,
-    marginTop: -36,
-    alignItems: 'center',
-  },
-  mapBubble: {
-    height: 28,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  mapNeedle: {
-    width: 2,
-    height: 12,
-  },
-  mapDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    shadowColor: '#fff',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 3,
-    elevation: 2,
   },
   mapMeta: {
     flexDirection: 'row',

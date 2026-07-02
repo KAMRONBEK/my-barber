@@ -1,0 +1,49 @@
+---
+description: Monorepo tooling, layout, env, and verification
+alwaysApply: true
+---
+
+# My Barber — Monorepo Core
+
+## Tooling
+
+- **pnpm only** (`pnpm@10.33.2`). Never npm or yarn.
+- **turbo** for cross-package tasks: `pnpm turbo run build|dev|lint|typecheck|test|clean`
+- **Node 20.x** (`.nvmrc`). pnpm linker is **hoisted** — required for Expo Metro; do not switch to isolated without re-testing mobile.
+
+## Layout
+
+| Path | Package | Stack |
+|------|---------|-------|
+| `apps/mobile` | `@my-barber/mobile` | Expo SDK 54+ / Restyle / React Query / Zustand |
+| `apps/web` | `@my-barber/web` | Next.js 16 static export / Tailwind v4 |
+| `apps/admin` | `@my-barber/admin` | Next.js 16 / TailAdmin / port 3001 |
+| `packages/types` | `@my-barber/types` | Zod schemas + inferred types |
+| `packages/config` | `@my-barber/config` | env, constants, Firestore collection names |
+| `backend/api` | `@my-barber/api` | Express + Firestore on Vercel |
+
+## Cross-cutting rules
+
+- Shared API contracts → `@my-barber/types` (import, don't redefine).
+- Firestore collection names → `COLLECTIONS` from `@my-barber/config` (never hardcode).
+- Firebase Admin → `getFirebaseAdmin()` from `@my-barber/config/firebase` (server only).
+- Auth is **custom JWT + bcrypt** — not Firebase Auth ID tokens.
+- `backend/api` is Express on Vercel, not Firebase Cloud Functions.
+- New env vars → `packages/config/src/env.ts` + relevant `.env.example`.
+- Do not hand-edit `packages/ui/` until Open Design MCP has generated components.
+- Never commit real env files or secrets (`.env`, `.env.*.local`).
+
+## Commits & verification
+
+- Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `ci:` (optional scope: `fix(mobile): …`).
+- Before PR: `pnpm install --frozen-lockfile && pnpm turbo run typecheck lint build`
+- Per-app dev: `pnpm --filter=@my-barber/<app> dev`
+
+## QA accounts
+
+| Role | Username | Password |
+|------|----------|----------|
+| Barber | `barber@test.local` | `DevTest12345` |
+| Client | `client@test.local` | `DevTest12345` |
+
+Re-seed: `pnpm --filter @my-barber/api seed`

@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../atoms/Text';
+import { BackButton, BACK_BUTTON_SIZE } from '../atoms/BackButton';
 import { Button } from '../atoms/Button';
 import { ScreenLayout } from '../templates/ScreenLayout';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -108,15 +109,7 @@ export const BookingHistoryScreen: React.FC = () => {
     <ScreenLayout>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.headerBack}
-          accessibilityRole="button"
-        >
-          <Text style={{ color: theme.colors.accent, fontSize: 15 }}>
-            {t('common.back')}
-          </Text>
-        </Pressable>
+        <BackButton />
         <Text
           style={{
             fontSize: 30,
@@ -130,7 +123,7 @@ export const BookingHistoryScreen: React.FC = () => {
         >
           {t('bookings.title')}
         </Text>
-        <View style={{ width: 60 }} />
+        <View style={{ width: BACK_BUTTON_SIZE }} />
       </View>
 
       {/* Segmented control — pill shape */}
@@ -375,9 +368,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  headerBack: {
-    width: 60,
   },
   segmentWrap: {
     flexDirection: 'row',

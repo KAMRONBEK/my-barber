@@ -9,6 +9,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../../src/atoms/Text';
+import { BackButton } from '../../src/atoms/BackButton';
 import { Input } from '../../src/atoms/Input';
 import { Button } from '../../src/atoms/Button';
 import { ScreenLayout } from '../../src/templates/ScreenLayout';
@@ -63,6 +64,9 @@ export default function SignupPasswordScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
       >
+        <View style={styles.top}>
+          <BackButton />
+        </View>
         <View style={styles.head}>
           <Text
             style={{
@@ -161,13 +165,6 @@ export default function SignupPasswordScreen() {
             loading={submitting}
             testID="signup-password-continue"
           />
-          <View style={{ height: 12 }} />
-          <Button
-            fullWidth
-            variant="ghost"
-            label={t('common.back')}
-            onPress={() => router.back()}
-          />
         </View>
       </KeyboardAvoidingView>
     </ScreenLayout>
@@ -176,6 +173,11 @@ export default function SignupPasswordScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  top: {
+    paddingTop: 8,
+    paddingHorizontal: 20,
+    alignItems: 'flex-start',
+  },
   head: {
     paddingHorizontal: 24,
     paddingTop: 32,

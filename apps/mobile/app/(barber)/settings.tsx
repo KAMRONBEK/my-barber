@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Text } from '../../src/atoms/Text';
+import { BackButton } from '../../src/atoms/BackButton';
 import { Input } from '../../src/atoms/Input';
 import { Button } from '../../src/atoms/Button';
 import { Icon } from '../../src/atoms/Icon';
@@ -100,16 +101,14 @@ export default function BarberSettingsScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Button
-              variant="ghost"
-              label={t('common.cancel')}
-              onPress={() => router.back()}
-            />
+            <BackButton />
             <Text
               style={{
                 fontSize: 17,
                 fontWeight: '600',
                 color: theme.colors.fg,
+                flex: 1,
+                textAlign: 'center',
               }}
             >
               {t('profileEdit.title')}

@@ -1,86 +1,34 @@
 ---
-description: 
-globs: 
+description: API response format, auth, and validation standards
+globs: backend/api/**
 alwaysApply: false
 ---
-# API Conventions & Standards
 
-## API Response Format
-All API responses follow a consistent structure:
+# API Conventions
 
-### Success Response
+## Response format
+
 ```json
-{
-  "success": true,
-  "data": { ... },
-  "message": "Operation completed successfully"
-}
+{ "ok": true, "data": { ... } }
+{ "ok": false, "error": "message", "details": [...] }
 ```
 
-### Error Response
-```json
-{
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Human-readable error message"
-  }
-}
-```
+## Auth
 
-## Authentication Conventions
-- **Header**: `Authorization: Bearer <jwt-token>`
-- **JWT Structure**: Contains user ID, user type (barber/client), and expiration
-- **Protected Routes**: Use authentication middleware to validate tokens
-- **User Types**: Separate endpoints and logic for barbers vs clients
+- Header: `Authorization: Bearer <jwt-token>`
+- Custom JWT + bcrypt (not Firebase Auth ID tokens)
+- Payload: `{ id, username, type: 'barber' | 'client' }`
+- Use `authenticateToken` / `authMiddleware` on protected routes
 
-## Endpoint Naming Patterns
-- **Authentication**: `/auth/{userType}/{action}` (e.g., `/auth/barber/login`)
-- **Resource Management**: `/{resource}/{action}` (e.g., `/barber/profile`)
-- **RESTful Verbs**: GET (read), POST (create), PUT (update), DELETE (remove)
-- **System Endpoints**: `/health`, `/metrics`, `/docs`
+## Validation
 
-## Validation Standards
-- **Input Validation**: Use Joi schemas for request validation
-- **Required Fields**: Clearly define required vs optional fields
-- **Error Messages**: Provide specific validation error details
-- **File Uploads**: Validate file types, sizes, and formats
+- `express-validator` in route files with shared `handleValidationErrors` helper
+- Return 400 with `details` array on validation failure
 
-## Logging Conventions
-Structured logging with Winston:
-- **Request ID**: Unique identifier for each request
-- **User Context**: Include user ID and type in logs
-- **Performance**: Log response times and database query times
-- **Error Context**: Include stack traces and request details for errors
+## Logging & security
 
-## Security Standards
-- **Rate Limiting**: Implement per-endpoint and per-user rate limits
-- **Input Sanitization**: Sanitize all user inputs
-- **CORS Policy**: Configure appropriate CORS origins per environment
-- **Security Headers**: Use Helmet middleware for security headers
+- Winston structured logging via `utils/logger`
+- Rate limiting, Helmet, CORS per environment
+- Never log JWT secrets or Firebase private keys
 
-## Database Conventions
-Using Firebase Firestore:
-- **Collections**: Organized by resource type (users, bookings, etc.)
-- **Document Structure**: Consistent field naming and data types
-- **Timestamps**: Use Firebase server timestamps for created/updated fields
-- **References**: Use document references for relationships
-
-## File Upload Standards
-Using Firebase Storage:
-- **Path Structure**: Organized by user type and file purpose
-- **File Validation**: Check file types, sizes, and content
-- **Access Control**: Implement proper read/write permissions
-- **URL Generation**: Generate signed URLs for secure access
-
-## Environment-Specific Behavior
-- **Development**: Verbose logging, permissive CORS, higher rate limits
-- **Staging**: Production-like settings with test data
-- **Production**: Restrictive security, minimal logging, strict rate limits
-
-## Migration Notes
-This API maintains compatibility with the original Go implementation:
-- **Endpoint URLs**: Same path structure as original API
-- **Request/Response Format**: Compatible data structures
-- **Authentication Flow**: Same JWT token format and validation
-
+Full conventions: `.cursor/rules/api-backend.mdc` at repo root.
