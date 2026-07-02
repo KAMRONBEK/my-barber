@@ -32,10 +32,9 @@ import { useLocaleStore } from '../src/lib/locale';
 import { getItem } from '../src/lib/storage';
 import { ONBOARDING_SEEN_KEY } from './onboarding';
 import {
-  registerForPushNotificationsAsync,
-  isArrivalCheckinPush,
-} from '../src/lib/pushNotifications';
-import { updateClientDeviceId, updateBarberDeviceId } from '../src/lib/api';
+  ensureNotificationPermission,
+  isArrivalCheckinNotification,
+} from '../src/lib/arrivalNotifications';
 import { useArrivalCheckStore } from '../src/lib/arrivalCheck';
 import { useArrivalReminderPoll } from '../src/lib/useArrivalReminderPoll';
 import { ArrivalConfirmationSheet } from '../src/molecules/ArrivalConfirmationSheet';
@@ -77,38 +76,27 @@ export default function RootLayout() {
     void hydrateLocale();
   }, [hydrate, hydrateAppearance, hydrateLocale]);
 
-  // Register for push once authenticated — this is what lets the
-  // arrival-confirmation prompt (see ArrivalConfirmationSheet) wake the app
-  // even when it's backgrounded/locked. Denial or an unsupported environment
-  // (e.g. simulator) is fine; the foreground poll below is the backstop.
+  // Request notification permission once authenticated — needed to display
+  // the locally-scheduled arrival-check-in reminder (see
+  // useArrivalReminderPoll.ts / arrivalNotifications.ts). This is entirely
+  // device-scheduled, no server push or cron involved. Denial or an
+  // unsupported environment (e.g. simulator) is fine; the foreground poll
+  // below is the backstop.
   useEffect(() => {
     if (status !== 'authenticated' || !role) return;
-    let cancelled = false;
-    void registerForPushNotificationsAsync().then((token) => {
-      if (cancelled || !token) return;
-      void (role === 'client'
-        ? updateClientDeviceId(token)
-        : updateBarberDeviceId(token));
-    });
-    return () => {
-      cancelled = true;
-    };
+    void ensureNotificationPermission();
   }, [status, role]);
 
-  // Foreground/backgrounded → foregrounded polling backstop for the
-  // arrival-confirmation prompt.
+  // Foreground/backgrounded → foregrounded polling backstop, and periodic
+  // local-notification scheduling, for the arrival-confirmation prompt.
   useArrivalReminderPoll();
 
-  // Push received (foreground) or tapped (background/killed) → open the
-  // non-dismissable arrival sheet directly, bypassing the poll.
+  // Local notification shown (foreground) or tapped (background/killed) →
+  // open the non-dismissable arrival sheet directly, bypassing the poll.
   useEffect(() => {
     const onArrivalCheckinData = (data: unknown) => {
-      if (!isArrivalCheckinPush(data)) return;
-      const currentRole = useAuthStore.getState().role;
-      if (!currentRole) return;
-      useArrivalCheckStore
-        .getState()
-        .open({ id: data.booking_id, role: currentRole });
+      if (!isArrivalCheckinNotification(data)) return;
+      useArrivalCheckStore.getState().open({ id: data.booking_id, role: data.role });
     };
 
     const receivedSub = Notifications.addNotificationReceivedListener((n) => {

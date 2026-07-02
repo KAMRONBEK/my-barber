@@ -1,7 +1,7 @@
 // Non-dismissable "are you here?" / "is the client here?" check-in prompt,
 // shown ~5 minutes before a booking's scheduled time. Mounted once, globally,
 // in app/_layout.tsx, and driven by useArrivalCheckStore (populated either by
-// a push-notification handler or the foreground backstop poll).
+// a locally-scheduled device notification or the foreground backstop poll).
 //
 // "Non-dismissable" means: no swipe-to-close, no backdrop-tap-to-close, and
 // the Android hardware back button is swallowed while this is open — the
@@ -24,6 +24,7 @@ import { Text } from '../atoms/Text';
 import { Button } from '../atoms/Button';
 import { confirmClientArrival, confirmBarberArrival } from '../lib/api';
 import { useArrivalCheckStore } from '../lib/arrivalCheck';
+import { cancelArrivalCheckin } from '../lib/arrivalNotifications';
 import type { AppTheme } from '../lib/restyle';
 
 export const ArrivalConfirmationSheet: React.FC = () => {
@@ -60,6 +61,7 @@ export const ArrivalConfirmationSheet: React.FC = () => {
         : confirmBarberArrival(activeBooking.id, response);
     },
     onSuccess: () => {
+      if (activeBooking) void cancelArrivalCheckin(activeBooking.id);
       clear();
       setTimeout(() => dequeueNext(), 400);
     },
@@ -68,6 +70,7 @@ export const ArrivalConfirmationSheet: React.FC = () => {
       // elsewhere while the sheet was up) — stale-state cleanup, not a
       // user-facing failure. Any other error keeps the sheet up with a retry.
       if (isAxiosError(err) && err.response?.status === 409) {
+        if (activeBooking) void cancelArrivalCheckin(activeBooking.id);
         clear();
         setTimeout(() => dequeueNext(), 400);
       }

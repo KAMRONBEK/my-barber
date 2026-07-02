@@ -263,8 +263,13 @@ export async function getClientArrivalPending(): Promise<BookingContract[]> {
   return r.data.data.bookings ?? [];
 }
 
-export async function updateClientDeviceId(deviceId: string): Promise<void> {
-  await api.put('/client/update-device-id', { deviceId });
+/** Client's own upcoming bookings (any barber) — used to schedule local arrival-check-in reminders ahead of time. */
+export async function getClientUpcomingBookings(): Promise<BookingContract[]> {
+  const r = await api.get<OkData<{ items: BookingContract[] }>>(
+    '/client/bookings',
+    { params: { status: 'upcoming', limit: 20 } },
+  );
+  return r.data.data.items ?? [];
 }
 
 // ---- Barber endpoints ----
@@ -325,10 +330,6 @@ export async function getBarberArrivalPending(): Promise<BookingContract[]> {
     '/barber/bookings/arrival-pending',
   );
   return r.data.data.bookings ?? [];
-}
-
-export async function updateBarberDeviceId(deviceId: string): Promise<void> {
-  await api.put('/barber/update-device-id', { deviceId });
 }
 
 export interface EarningsSummary {
