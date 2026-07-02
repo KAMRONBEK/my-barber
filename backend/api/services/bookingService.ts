@@ -205,6 +205,11 @@ export class BookingServiceClass {
         previousTimestamp: bookingData.previousTimestamp ?? null,
         cancelledBy: bookingData.cancelledBy ?? null,
         completedAt: bookingData.completedAt ?? null,
+        reminderSentAt: bookingData.reminderSentAt ?? null,
+        clientArrivalResponse: bookingData.clientArrivalResponse ?? null,
+        clientArrivalConfirmedAt: bookingData.clientArrivalConfirmedAt ?? null,
+        barberArrivalResponse: bookingData.barberArrivalResponse ?? null,
+        barberArrivalConfirmedAt: bookingData.barberArrivalConfirmedAt ?? null,
         updatedAt: bookingData.updatedAt,
       };
     } catch (error) {
@@ -219,6 +224,10 @@ export class BookingServiceClass {
       status === 'confirmed' ||
       status === 'rescheduled'
     );
+  }
+
+  private isActiveForArrival(status: BookingStatus): boolean {
+    return status === 'confirmed' || status === 'rescheduled';
   }
 
   async patchBarberBookingStatus(
@@ -362,6 +371,59 @@ export class BookingServiceClass {
     );
 
     return this.getBookingById(bookingId);
+  }
+
+  async recordArrivalResponse(
+    party: CancellationParty,
+    userId: string,
+    bookingId: string,
+    response: 'yes' | 'no'
+  ): Promise<BookingResponse | null> {
+    const bookingRow = await this.getBookingById(bookingId);
+    if (!bookingRow) return null;
+
+    if (party === 'barber' && bookingRow.barberId !== userId) return null;
+    if (party === 'client' && bookingRow.clientId !== userId) return null;
+
+    const st = normalizeBookingStatus(bookingRow.status);
+    if (!this.isActiveForArrival(st)) {
+      throw new Error('INVALID_STATE');
+    }
+
+    const confirmedAt = new Date().toISOString();
+    const patch: Partial<Booking> =
+      party === 'client'
+        ? {
+            clientArrivalResponse: response,
+            clientArrivalConfirmedAt: confirmedAt,
+          }
+        : {
+            barberArrivalResponse: response,
+            barberArrivalConfirmedAt: confirmedAt,
+          };
+    patch.updatedAt = new Date();
+
+    await this.firestore
+      .collection(COLLECTIONS.BOOKINGS)
+      .doc(bookingId)
+      .update(patch);
+
+    if (party === 'client' && response === 'no') {
+      void this.dispatchBookingLifecycleNotifications(
+        'booking_client_no_show_signal',
+        bookingId
+      ).catch(() => {});
+    }
+
+    return this.getBookingById(bookingId);
+  }
+
+  /** Public entry point for the arrival-reminder cron (keeps the general dispatcher private). */
+  async sendUpcomingCheckinReminder(bookingId: string): Promise<void> {
+    await this.dispatchBookingLifecycleNotifications(
+      'booking_upcoming_checkin',
+      bookingId
+    );
   }
 
   async completeBooking(
@@ -508,6 +570,93 @@ export class BookingServiceClass {
     }
 
     return { items, next_cursor };
+  }
+
+  /** Bookings for this client that have an unanswered arrival reminder outstanding. */
+  async listArrivalPendingForClient(
+    clientId: string
+  ): Promise<BookingContract[]> {
+    const snapshot = await this.firestore
+      .collection(COLLECTIONS.BOOKINGS)
+      .where('clientId', '==', clientId)
+      .get();
+
+    const pendingDocs = snapshot.docs.filter(d => {
+      const b = d.data() as Booking;
+      const st = normalizeBookingStatus(b.status);
+      return (
+        this.isActiveForArrival(st) &&
+        !!b.reminderSentAt &&
+        !b.clientArrivalResponse
+      );
+    });
+
+    const items: BookingContract[] = [];
+    for (const d of pendingDocs) {
+      const row = await this.getBookingById(d.id);
+      if (row) items.push(bookingResponseToContract(row));
+    }
+    return items;
+  }
+
+  /** Bookings for this barber that have an unanswered arrival reminder outstanding. */
+  async listArrivalPendingForBarber(
+    barberId: string
+  ): Promise<BookingContract[]> {
+    const snapshot = await this.firestore
+      .collection(COLLECTIONS.BOOKINGS)
+      .where('barberId', '==', barberId)
+      .get();
+
+    const pendingDocs = snapshot.docs.filter(d => {
+      const b = d.data() as Booking;
+      const st = normalizeBookingStatus(b.status);
+      return (
+        this.isActiveForArrival(st) &&
+        !!b.reminderSentAt &&
+        !b.barberArrivalResponse
+      );
+    });
+
+    const items: BookingContract[] = [];
+    for (const d of pendingDocs) {
+      const row = await this.getBookingById(d.id);
+      if (row) items.push(bookingResponseToContract(row));
+    }
+    return items;
+  }
+
+  /** Booking IDs starting within `windowEnd` that haven't had a reminder dispatched yet. */
+  async findBookingsDueForReminder(windowEnd: Date): Promise<string[]> {
+    const nowIso = new Date().toISOString();
+    const windowEndIso = windowEnd.toISOString();
+
+    const snapshot = await this.firestore
+      .collection(COLLECTIONS.BOOKINGS)
+      .where('status', 'in', ['confirmed', 'rescheduled'])
+      .where('timestamp', '>=', nowIso)
+      .where('timestamp', '<=', windowEndIso)
+      .get();
+
+    return snapshot.docs
+      .filter(d => !(d.data() as Booking).reminderSentAt)
+      .map(d => d.id);
+  }
+
+  /**
+   * Atomically claims a booking's reminder slot so overlapping cron invocations
+   * can't both dispatch the same reminder. Returns true if this call won the claim.
+   */
+  async claimReminderSlot(bookingId: string): Promise<boolean> {
+    const ref = this.firestore.collection(COLLECTIONS.BOOKINGS).doc(bookingId);
+    return this.firestore.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return false;
+      const data = snap.data() as Booking;
+      if (data.reminderSentAt) return false;
+      tx.update(ref, { reminderSentAt: new Date().toISOString() });
+      return true;
+    });
   }
 }
 

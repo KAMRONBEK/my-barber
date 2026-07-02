@@ -4,5 +4,8 @@
   "installCommand": "corepack enable && pnpm install --frozen-lockfile",
   "env": {
     "NODE_ENV": "production"
-  }
+  },
+  "crons": [
+    { "path": "/cron/booking-reminders", "schedule": "*/5 * * * *" }
+  ]
 }

@@ -305,6 +305,185 @@ describe('bookingService', () => {
 
       expect(await bookingService.completeBooking(barberId, 'no-id')).toBeNull();
     });
+
+    it('recordArrivalResponse updates the right party and validates ownership/state', async () => {
+      seedConfirmedBooking('lc-arrive');
+
+      const out = await bookingService.recordArrivalResponse(
+        'client',
+        clientId,
+        'lc-arrive',
+        'yes'
+      );
+      expect(out?.clientArrivalResponse).toBe('yes');
+      expect(out?.clientArrivalConfirmedAt).toBeTruthy();
+      expect(out?.barberArrivalResponse ?? null).toBeNull();
+
+      const out2 = await bookingService.recordArrivalResponse(
+        'barber',
+        barberId,
+        'lc-arrive',
+        'no'
+      );
+      expect(out2?.barberArrivalResponse).toBe('no');
+
+      expect(
+        await bookingService.recordArrivalResponse(
+          'client',
+          'wrong-client',
+          'lc-arrive',
+          'yes'
+        )
+      ).toBeNull();
+      expect(
+        await bookingService.recordArrivalResponse(
+          'client',
+          clientId,
+          'no-id',
+          'yes'
+        )
+      ).toBeNull();
+    });
+
+    it('recordArrivalResponse rejects bookings not confirmed/rescheduled', async () => {
+      seedPendingBooking('lc-arrive-pending');
+      await expect(
+        bookingService.recordArrivalResponse(
+          'client',
+          clientId,
+          'lc-arrive-pending',
+          'yes'
+        )
+      ).rejects.toThrow('INVALID_STATE');
+    });
+
+    it('recordArrivalResponse allows re-answering (last answer wins)', async () => {
+      seedConfirmedBooking('lc-arrive-twice');
+      await bookingService.recordArrivalResponse(
+        'client',
+        clientId,
+        'lc-arrive-twice',
+        'no'
+      );
+      const out = await bookingService.recordArrivalResponse(
+        'client',
+        clientId,
+        'lc-arrive-twice',
+        'yes'
+      );
+      expect(out?.clientArrivalResponse).toBe('yes');
+    });
+  });
+
+  describe('arrival reminder cron helpers', () => {
+    const barberId = 'rem-b';
+    const clientId = 'rem-c';
+
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-01T12:00:00.000Z'));
+      seedClient(clientId);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('findBookingsDueForReminder only matches confirmed/rescheduled bookings in the window', async () => {
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-in-window', {
+        id: 'rem-in-window',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T12:05:00.000Z',
+        status: 'confirmed',
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-too-far', {
+        id: 'rem-too-far',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T13:00:00.000Z',
+        status: 'confirmed',
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-wrong-status', {
+        id: 'rem-wrong-status',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T12:05:00.000Z',
+        status: 'pending_confirmation',
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-already-sent', {
+        id: 'rem-already-sent',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T12:05:00.000Z',
+        status: 'rescheduled',
+        reminderSentAt: '2026-06-01T11:59:00.000Z',
+        updatedAt: new Date(),
+      });
+
+      const due = await bookingService.findBookingsDueForReminder(
+        new Date('2026-06-01T12:07:00.000Z')
+      );
+      expect(due).toEqual(['rem-in-window']);
+    });
+
+    it('claimReminderSlot only lets one caller win the race', async () => {
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-claim', {
+        id: 'rem-claim',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T12:05:00.000Z',
+        status: 'confirmed',
+        updatedAt: new Date(),
+      });
+
+      const first = await bookingService.claimReminderSlot('rem-claim');
+      const second = await bookingService.claimReminderSlot('rem-claim');
+      expect(first).toBe(true);
+      expect(second).toBe(false);
+    });
+
+    it('listArrivalPendingForClient/Barber only return unanswered, reminder-sent bookings', async () => {
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-pending', {
+        id: 'rem-pending',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T12:05:00.000Z',
+        status: 'confirmed',
+        reminderSentAt: '2026-06-01T11:59:00.000Z',
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-answered', {
+        id: 'rem-answered',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T12:05:00.000Z',
+        status: 'confirmed',
+        reminderSentAt: '2026-06-01T11:59:00.000Z',
+        clientArrivalResponse: 'yes',
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-no-reminder-yet', {
+        id: 'rem-no-reminder-yet',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T12:05:00.000Z',
+        status: 'confirmed',
+        updatedAt: new Date(),
+      });
+
+      const clientPending =
+        await bookingService.listArrivalPendingForClient(clientId);
+      expect(clientPending.map(b => b.id)).toEqual(['rem-pending']);
+
+      const barberPending =
+        await bookingService.listArrivalPendingForBarber(barberId);
+      expect(barberPending.map(b => b.id)).toEqual(
+        expect.arrayContaining(['rem-pending', 'rem-answered'])
+      );
+    });
   });
 
   describe('listBookingHistoryForClient', () => {

@@ -24,6 +24,8 @@ import trustRoutes from './routes/trust';
 import { barberApprovalGate } from './middleware/barberApprovalGate';
 import { adminAuthMiddleware } from './middleware/adminAuth';
 import adminRoutes from './routes/admin';
+import { cronAuthMiddleware } from './middleware/cronAuth';
+import cronRoutes from './routes/cron';
 import { createSharedRedisRateLimitStore } from './middleware/rateLimitRedis';
 
 /**
@@ -164,6 +166,7 @@ export function createApp(): express.Application {
   app.use('/test', testRoutes);
   app.use('/auth', authRoutes);
   app.use('/admin', adminAuthMiddleware, adminRoutes);
+  app.use('/cron', cronAuthMiddleware, cronRoutes);
   app.use(trustRoutes);
   app.use('/notifications', authMiddleware, notificationRoutes);
   // Alias so clients that call /client/notifications also work
