@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../src/atoms/Text';
-import { BackButton, BACK_BUTTON_SIZE } from '../src/atoms/BackButton';
+import { ScreenHeader } from '../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../src/templates/ScreenLayout';
 import type { AppTheme } from '../src/lib/restyle';
 
@@ -15,15 +15,7 @@ export default function SettingsScreen() {
 
   return (
     <ScreenLayout>
-      <View style={styles.header}>
-        <BackButton />
-        <Text
-          style={{ fontSize: 17, fontWeight: '600', color: theme.colors.fg }}
-        >
-          {t('profile.section.settings')}
-        </Text>
-        <View style={{ width: BACK_BUTTON_SIZE }} />
-      </View>
+      <ScreenHeader title={t('profile.section.settings')} />
       <View style={styles.center}>
         <Text style={{ color: theme.colors.muted }}>
           {t('common.loading')}
@@ -34,13 +26,6 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   center: {
     flex: 1,
     alignItems: 'center',

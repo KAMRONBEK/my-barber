@@ -205,7 +205,13 @@
     "marketing": "Маркетинговые сообщения",
     "appearance": "Внешний вид",
     "appearanceSystem": "Система",
+    "appearanceLight": "Светлая",
+    "appearanceDark": "Тёмная",
+    "language": "Язык",
+    "languageUz": "Узбекский",
+    "languageRu": "Русский",
     "help": "Помощь и поддержка",
+    "visitWebsite": "Наш сайт",
     "signOut": "Выйти",
     "section": {
       "account": "Аккаунт",

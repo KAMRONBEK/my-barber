@@ -1,4 +1,8 @@
-// Tabs layout. Four tabs: Home, Search, Bookings, Profile.
+// Tabs layout. Three tabs: Home, Search, Profile. Bookings still exists as
+// a screen (reached from Home's "recent bookings" section via the top-level
+// /bookings route) but isn't a persistent bottom tab — a calendar-style tab
+// for viewing your own bookings isn't something clients need parked in the
+// tab bar at all times.
 // Uses the custom GlassTabBar (floating pill with blur).
 
 import React, { useEffect } from 'react';
@@ -42,6 +46,7 @@ export default function TabsLayout() {
         name="bookings"
         options={{
           title: t('tabs.bookings'),
+          href: null,
         }}
       />
       <Tabs.Screen

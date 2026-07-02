@@ -15,27 +15,63 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../src/atoms/Text';
-import { BackButton, BACK_BUTTON_SIZE } from '../src/atoms/BackButton';
 import { Button } from '../src/atoms/Button';
 import { Icon, type IconName } from '../src/atoms/Icon';
+import { ScreenHeader } from '../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../src/templates/ScreenLayout';
 import { api } from '../src/lib/api';
 import type { AppTheme } from '../src/lib/restyle';
 
+type NotificationType =
+  | 'booking_confirmed'
+  | 'booking_reminder'
+  | 'booking_request'
+  | 'system';
+
 interface NotificationItem {
   id: string;
-  type: 'booking_confirmed' | 'booking_reminder' | 'booking_request' | 'system';
+  type: NotificationType;
   title: string;
   body: string;
   isRead: boolean;
   createdAt: string;
 }
 
+// Raw shape from GET /client/notifications — snake_case fields, and the
+// array lives under `data.items`, not `data` directly (that's a cursor page:
+// { items, next_cursor, unread_count }).
+interface NotificationApiItem {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  read_at: string | null;
+  created_at: string;
+}
+
+const KNOWN_TYPES: NotificationType[] = [
+  'booking_confirmed',
+  'booking_reminder',
+  'booking_request',
+  'system',
+];
+
 async function fetchNotifications(): Promise<NotificationItem[]> {
-  const r = await api.get<{ ok: boolean; data: NotificationItem[] }>(
-    '/client/notifications',
-  );
-  return r.data.data ?? [];
+  const r = await api.get<{
+    ok: boolean;
+    data: { items: NotificationApiItem[] };
+  }>('/client/notifications');
+  const items = r.data.data?.items ?? [];
+  return items.map((item) => ({
+    id: item.id,
+    type: (KNOWN_TYPES as string[]).includes(item.type)
+      ? (item.type as NotificationType)
+      : 'system',
+    title: item.title,
+    body: item.body,
+    isRead: item.read_at !== null,
+    createdAt: item.created_at,
+  }));
 }
 
 function relativeTime(iso: string): string {
@@ -75,7 +111,7 @@ export default function NotificationsScreen() {
 
   async function markAllRead() {
     try {
-      await api.patch('/client/notifications/read-all');
+      await api.post('/client/notifications/read-all');
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch {
       // Fail silently — endpoint may not exist yet
@@ -93,34 +129,19 @@ export default function NotificationsScreen() {
 
   return (
     <ScreenLayout>
-      {/* Header */}
-      <View style={styles.header}>
-        <BackButton />
-        <Text
-          style={{
-            fontSize: 17,
-            fontWeight: '600',
-            color: theme.colors.fg,
-            flex: 1,
-            textAlign: 'center',
-          }}
-        >
-          {t('notifications.title')}
-        </Text>
-        {/* Mark all read */}
-        <Pressable onPress={markAllRead} style={styles.markAllBtn}>
-          <Text
-            style={{
-              color: theme.colors.accent,
-              fontSize: 12,
-              fontWeight: '500',
-              textAlign: 'right',
-            }}
+      <ScreenHeader
+        title={t('notifications.title')}
+        right={
+          <Pressable
+            onPress={markAllRead}
+            style={[styles.markAllBtn, { backgroundColor: theme.colors.surface2 }]}
+            accessibilityRole="button"
+            accessibilityLabel={t('notifications.markAllRead')}
           >
-            {t('notifications.markAllRead')}
-          </Text>
-        </Pressable>
-      </View>
+            <Icon name="check-double" size={17} color={theme.colors.accent} />
+          </Pressable>
+        }
+      />
 
       {isLoading ? (
         <View style={styles.center}>
@@ -298,15 +319,13 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    flexDirection: 'row',
+  markAllBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 999,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 48,
+    justifyContent: 'center',
   },
-  markAllBtn: { width: 80 },
   center: {
     flex: 1,
     alignItems: 'center',

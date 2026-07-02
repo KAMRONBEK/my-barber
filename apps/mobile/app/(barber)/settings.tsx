@@ -13,11 +13,11 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Text } from '../../src/atoms/Text';
-import { BackButton } from '../../src/atoms/BackButton';
 import { Input } from '../../src/atoms/Input';
 import { Button } from '../../src/atoms/Button';
 import { Icon } from '../../src/atoms/Icon';
 import { Avatar } from '../../src/atoms/Avatar';
+import { ScreenHeader } from '../../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../../src/templates/ScreenLayout';
 import { getBarberMe, updateBarberProfile } from '../../src/lib/api';
 import { useAuthStore } from '../../src/lib/auth';
@@ -99,27 +99,17 @@ export default function BarberSettingsScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <BackButton />
-            <Text
-              style={{
-                fontSize: 17,
-                fontWeight: '600',
-                color: theme.colors.fg,
-                flex: 1,
-                textAlign: 'center',
-              }}
-            >
-              {t('profileEdit.title')}
-            </Text>
-            <Button
-              variant="ghost"
-              label={t('common.save')}
-              onPress={onSave}
-              disabled={saving}
-            />
-          </View>
+          <ScreenHeader
+            title={t('profileEdit.title')}
+            right={
+              <Button
+                variant="ghost"
+                label={t('common.save')}
+                onPress={onSave}
+                disabled={saving}
+              />
+            }
+          />
 
           {/* Avatar */}
           <View style={{ alignItems: 'center', marginTop: 12 }}>
@@ -205,13 +195,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
   },
   form: {
     marginHorizontal: 20,

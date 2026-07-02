@@ -74,12 +74,15 @@ function groupByWeek(
   }));
 }
 
+// GET /client/bookings?status=... returns a cursor page — the array lives
+// under data.items, not data directly (matches BookingContract's shape from
+// @my-barber/types, but we only need the fields BookingHistoryItem uses).
 async function fetchBookings(status: Segment): Promise<BookingHistoryItem[]> {
-  const r = await api.get<{ ok: boolean; data: BookingHistoryItem[] }>(
+  const r = await api.get<{ ok: boolean; data: { items: BookingHistoryItem[] } }>(
     '/client/bookings',
     { params: { status } },
   );
-  return r.data.data ?? [];
+  return r.data.data?.items ?? [];
 }
 
 export const BookingHistoryScreen: React.FC = () => {
