@@ -161,6 +161,10 @@ router.get('/getMe', authenticateToken, async (req: Request, res: Response) => {
  *               phone:
  *                 type: string
  *                 example: +998901234567
+ *               location:
+ *                 type: string
+ *                 maxLength: 200
+ *                 example: Tashkent, Uzbekistan
  *     responses:
  *       200:
  *         description: Profile updated successfully
@@ -210,6 +214,10 @@ router.put(
       .optional()
       .isMobilePhone('any')
       .withMessage('Valid phone number is required'),
+    body('location')
+      .optional()
+      .isLength({ max: 200 })
+      .withMessage('Location must be at most 200 characters'),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -225,7 +233,16 @@ router.put(
         });
       }
 
-      await clientService.updateClientProfile(clientId, req.body);
+      // Whitelist fields explicitly — req.body must never be passed through
+      // directly to Firestore .update(), or a caller could overwrite
+      // password/username/id and other fields this endpoint isn't meant to touch.
+      const { firstName, lastName, phone, location } = req.body;
+      await clientService.updateClientProfile(clientId, {
+        firstName,
+        lastName,
+        phone,
+        location,
+      });
 
       res.json({
         ok: true,

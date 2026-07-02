@@ -16,6 +16,7 @@ export interface ClientProfile {
   firstName: string;
   lastName: string;
   phone: string;
+  location?: string;
   avatar?: string;
 }
 

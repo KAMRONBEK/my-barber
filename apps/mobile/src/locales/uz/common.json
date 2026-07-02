@@ -195,7 +195,10 @@
     "closingSoon": "Tez orada yopiladi",
     "closed": "Yopiq",
     "openWith": "Xarita ilovasini tanlang",
-    "chooseApp": "Yo'nalish uchun ilovani tanlang"
+    "chooseApp": "Yo'nalish uchun ilovani tanlang",
+    "selectLocation": "Manzilni tanlang",
+    "confirmLocation": "Manzilni tasdiqlash",
+    "noAddressFound": "Manzil topilmadi"
   },
   "profile": {
     "title": "Profil",

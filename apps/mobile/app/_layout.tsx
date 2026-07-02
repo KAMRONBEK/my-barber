@@ -3,6 +3,12 @@
 // segment groups: (auth) and (tabs). Deep links into /barber/[id] and
 // /booking/[barberId] route into the tabs stack.
 
+// Reactotron must connect before any network calls fire, so it's the very
+// first import — earlier than i18n's own side-effect init below. (Import
+// declarations are hoisted above any other statement, dev-gating happens
+// inside the module itself.)
+import '../src/lib/reactotron';
+
 // react-native-gesture-handler's side-effect bootstrap is no longer required
 // with the new architecture (default in Expo SDK 55) and trips JSI
 // registration. GestureHandlerRootView below handles initialization.
@@ -24,6 +30,7 @@ import { ONBOARDING_SEEN_KEY } from './onboarding';
 
 /* ── dev-only network logger ─────────────────────────────────────────────── */
 let startNetworkLogging: (() => void) | undefined;
+let startReactotronNetworkBridge: (() => void) | undefined;
 let NetworkDebugButton: React.FC<{ onPress: () => void }> | undefined;
 let NetworkDebugSheet: React.ForwardRefExoticComponent<
   React.RefAttributes<{ open: () => void }>
@@ -31,6 +38,7 @@ let NetworkDebugSheet: React.ForwardRefExoticComponent<
 
 if (__DEV__) {
   ({ startNetworkLogging } = require('react-native-network-logger'));
+  ({ startReactotronNetworkBridge } = require('../src/lib/reactotronNetworkBridge'));
   ({ NetworkDebugButton } = require('../src/molecules/NetworkDebugButton'));
   ({ NetworkDebugSheet } = require('../src/molecules/NetworkDebugSheet'));
 }
@@ -76,6 +84,7 @@ export default function RootLayout() {
             segments[0] === 'booking' ||
             segments[0] === 'barbers-map' ||
             segments[0] === 'profile-edit' ||
+            segments[0] === 'location-picker' ||
             segments[0] === 'settings' ||
             segments[0] === 'notifications' ||
             segments[0] === 'bookings';
@@ -103,6 +112,9 @@ export default function RootLayout() {
   useEffect(() => {
     if (__DEV__ && startNetworkLogging) {
       startNetworkLogging();
+      // Must start after network-logger owns the XHR patch — see
+      // reactotronNetworkBridge.ts for why these can't both patch directly.
+      startReactotronNetworkBridge?.();
     }
   }, []);
 
