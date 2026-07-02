@@ -124,6 +124,17 @@
     "footnote": "24 soat oldin bepul bekor qilish mumkin.",
     "ref": "Buyurtma raqami"
   },
+  "arrivalCheck": {
+    "titleClient": "Uchrashuvingiz boshlanmoqda",
+    "questionClient": "Siz sartaroshdamisiz?",
+    "titleBarber": "Uchrashuv boshlanmoqda",
+    "questionBarber": "Mijoz keldimi?",
+    "yes": "Ha",
+    "no": "Yo'q",
+    "errorTitle": "Yuborib bo'lmadi",
+    "errorBody": "Javobingizni yuborishda xatolik yuz berdi. Qayta urinib ko'ring.",
+    "retry": "Qayta urinish"
+  },
   "onboarding": {
     "slide1Title": "Yaqinidagi sartaroshlarni toping",
     "slide1Body": "Mahallangizdagi eng yaxshi baholangan sartaroshlarni kashf eting.",

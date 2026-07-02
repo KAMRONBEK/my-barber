@@ -44,7 +44,14 @@
       "expo-router",
       "expo-secure-store",
       "expo-localization",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/adaptive-icon.png",
+          "color": "#FAF7F2"
+        }
+      ]
     ],
     "extra": {
       "router": {

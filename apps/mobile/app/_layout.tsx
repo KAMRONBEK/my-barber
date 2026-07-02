@@ -23,6 +23,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useColorScheme, View } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { theme, darkTheme } from '@my-barber/ui';
 import { queryClient } from '../src/lib/query';
 import { useAuthStore } from '../src/lib/auth';
@@ -30,6 +31,14 @@ import { useAppearanceStore } from '../src/lib/appearance';
 import { useLocaleStore } from '../src/lib/locale';
 import { getItem } from '../src/lib/storage';
 import { ONBOARDING_SEEN_KEY } from './onboarding';
+import {
+  registerForPushNotificationsAsync,
+  isArrivalCheckinPush,
+} from '../src/lib/pushNotifications';
+import { updateClientDeviceId, updateBarberDeviceId } from '../src/lib/api';
+import { useArrivalCheckStore } from '../src/lib/arrivalCheck';
+import { useArrivalReminderPoll } from '../src/lib/useArrivalReminderPoll';
+import { ArrivalConfirmationSheet } from '../src/molecules/ArrivalConfirmationSheet';
 
 /* ── dev-only network logger ─────────────────────────────────────────────── */
 let startNetworkLogging: (() => void) | undefined;
@@ -57,6 +66,7 @@ export default function RootLayout() {
   // Hydrate the auth store from SecureStore on first mount. We render a tiny
   // splash until hydrate() settles so we don't flash the wrong segment.
   const status = useAuthStore((s) => s.status);
+  const role = useAuthStore((s) => s.role);
   const hydrate = useAuthStore((s) => s.hydrate);
   const segments = useSegments();
   const router = useRouter();
@@ -66,6 +76,53 @@ export default function RootLayout() {
     void hydrateAppearance();
     void hydrateLocale();
   }, [hydrate, hydrateAppearance, hydrateLocale]);
+
+  // Register for push once authenticated — this is what lets the
+  // arrival-confirmation prompt (see ArrivalConfirmationSheet) wake the app
+  // even when it's backgrounded/locked. Denial or an unsupported environment
+  // (e.g. simulator) is fine; the foreground poll below is the backstop.
+  useEffect(() => {
+    if (status !== 'authenticated' || !role) return;
+    let cancelled = false;
+    void registerForPushNotificationsAsync().then((token) => {
+      if (cancelled || !token) return;
+      void (role === 'client'
+        ? updateClientDeviceId(token)
+        : updateBarberDeviceId(token));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [status, role]);
+
+  // Foreground/backgrounded → foregrounded polling backstop for the
+  // arrival-confirmation prompt.
+  useArrivalReminderPoll();
+
+  // Push received (foreground) or tapped (background/killed) → open the
+  // non-dismissable arrival sheet directly, bypassing the poll.
+  useEffect(() => {
+    const onArrivalCheckinData = (data: unknown) => {
+      if (!isArrivalCheckinPush(data)) return;
+      const currentRole = useAuthStore.getState().role;
+      if (!currentRole) return;
+      useArrivalCheckStore
+        .getState()
+        .open({ id: data.booking_id, role: currentRole });
+    };
+
+    const receivedSub = Notifications.addNotificationReceivedListener((n) => {
+      onArrivalCheckinData(n.request.content.data);
+    });
+    const responseSub = Notifications.addNotificationResponseReceivedListener(
+      (r) => onArrivalCheckinData(r.notification.request.content.data),
+    );
+
+    return () => {
+      receivedSub.remove();
+      responseSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (status === 'unknown') return;
@@ -159,6 +216,8 @@ export default function RootLayout() {
                   contentStyle: { backgroundColor: restyleTheme.colors.bg },
                 }}
               />
+
+              <ArrivalConfirmationSheet />
 
               {__DEV__ && NetworkDebugButton && NetworkDebugSheet && (
                 <>
