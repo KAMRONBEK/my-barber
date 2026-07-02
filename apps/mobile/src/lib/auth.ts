@@ -29,6 +29,8 @@ export interface BarberProfile {
   avatar?: string;
   approval_status?: string;
   approval_message?: string | null;
+  ratingAverage?: number;
+  ratingCount?: number;
 }
 
 export type UserRole = 'client' | 'barber';

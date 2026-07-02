@@ -26,7 +26,7 @@ export default function SavedBarbersScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const tabBarPadding = TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
-  const { favorites, favoriteIds, isLoading, toggleFavorite } = useFavoriteBarbers();
+  const { favorites, favoriteIds, pendingIds, isLoading, toggleFavorite } = useFavoriteBarbers();
 
   return (
     <ScreenLayout>
@@ -75,6 +75,7 @@ export default function SavedBarbersScreen() {
                 key={barber.id}
                 barber={barber}
                 isSaved={favoriteIds.has(barber.id)}
+                isSaving={pendingIds.has(barber.id)}
                 onPress={() => router.push(`/barber/${barber.id}`)}
                 onToggleSave={() => toggleFavorite(barber.id)}
               />

@@ -80,8 +80,11 @@ export default function RootLayout() {
         const onBarber = segments[0] === '(barber)';
 
         if (role === 'barber') {
-          // Barbers belong in the barber workspace
-          if (!onBarber) {
+          // Barbers belong in the barber workspace, but appearance/language
+          // are shared top-level screens both roles can reach.
+          const onValidBarberScreen =
+            onBarber || segments[0] === 'appearance' || segments[0] === 'language';
+          if (!onValidBarberScreen) {
             router.replace('/(barber)/calendar' as any);
           }
         } else {

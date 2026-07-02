@@ -15,7 +15,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Text } from '../../src/atoms/Text';
 import { Input } from '../../src/atoms/Input';
 import { Button } from '../../src/atoms/Button';
-import { Icon } from '../../src/atoms/Icon';
 import { Avatar } from '../../src/atoms/Avatar';
 import { ScreenHeader } from '../../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../../src/templates/ScreenLayout';

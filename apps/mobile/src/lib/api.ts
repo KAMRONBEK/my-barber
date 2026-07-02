@@ -132,6 +132,14 @@ export interface ApiService {
   price: number;
   durationMinutes?: number;
   isActive?: boolean;
+  /**
+   * Stable identifier PUT /barber/services uses to match a line item against
+   * an existing one (update) vs. create a new one — see wireToApiService.
+   * Despite the name, upsertBarberServicesLineItems never validates this
+   * against the real services catalog (GET /public/services/catalog), so a
+   * client-generated id works fine for custom (non-catalog) services.
+   */
+  catalogServiceId?: string | null;
 }
 
 export async function getBanner(): Promise<ApiBarber[]> {
@@ -324,18 +332,56 @@ export async function updateBarberProfile(
   return r.data;
 }
 
+// GET/PUT /barber/services speak snake_case with a required
+// catalog_service_id per item — a different wire shape than ApiService
+// (camelCase, used everywhere else). Convert at the boundary so the rest of
+// the app never has to think about it.
+interface BarberServiceWire {
+  id: string;
+  catalog_service_id: string | null;
+  name: string;
+  price: number;
+  duration_minutes: number;
+  is_active: boolean;
+}
+
+function wireToApiService(w: BarberServiceWire, barberId: string): ApiService {
+  return {
+    id: w.id,
+    barberId,
+    name: w.name,
+    price: w.price,
+    durationMinutes: w.duration_minutes,
+    isActive: w.is_active,
+    catalogServiceId: w.catalog_service_id,
+  };
+}
+
 export async function getBarberServices(): Promise<ApiService[]> {
-  const r = await api.get<OkData<{ services: ApiService[] }>>('/barber/services');
-  return r.data.data.services ?? [];
+  const r = await api.get<OkData<{ services: BarberServiceWire[] }>>('/barber/services');
+  const barberId = useAuthStore.getState().barber?.id ?? '';
+  return (r.data.data.services ?? []).map((w) => wireToApiService(w, barberId));
 }
 
 export async function updateBarberServices(
-  services: Omit<ApiService, 'id' | 'barberId'>[],
+  services: Array<Omit<ApiService, 'id' | 'barberId'>>,
 ): Promise<ApiService[]> {
-  const r = await api.put<OkData<{ services: ApiService[] }>>('/barber/services', {
-    services,
+  const payload = services.map((s) => ({
+    // A brand-new service (added client-side, never saved) has no id yet —
+    // fall back to generating one so catalog_service_id.notEmpty() passes
+    // and this same service updates in place on subsequent saves instead of
+    // being duplicated.
+    catalog_service_id: s.catalogServiceId ?? `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: s.name,
+    price: s.price,
+    duration_minutes: s.durationMinutes ?? 30,
+    is_active: s.isActive ?? true,
+  }));
+  const r = await api.put<OkData<{ services: BarberServiceWire[] }>>('/barber/services', {
+    services: payload,
   });
-  return r.data.data.services ?? [];
+  const barberId = useAuthStore.getState().barber?.id ?? '';
+  return (r.data.data.services ?? []).map((w) => wireToApiService(w, barberId));
 }
 
 export async function deleteBarberService(serviceId: string): Promise<ApiService[]> {

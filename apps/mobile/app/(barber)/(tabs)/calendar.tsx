@@ -3,6 +3,7 @@ import {
   Alert,
   FlatList,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -20,6 +21,7 @@ import { Icon } from '../../../src/atoms/Icon';
 import { Button } from '../../../src/atoms/Button';
 import { ScreenLayout } from '../../../src/templates/ScreenLayout';
 import { getBarberBookings, patchBookingStatus } from '../../../src/lib/api';
+import { hapticToggle } from '../../../src/lib/haptics';
 import {
   BARBER_TAB_BAR_PILL_HEIGHT,
   BARBER_TAB_BAR_BOTTOM_OFFSET,
@@ -28,8 +30,17 @@ import type { AppTheme } from '../../../src/lib/restyle';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 9); // 09:00 – 20:00
 
+// Local calendar date, not UTC — .toISOString() converts through UTC first,
+// which rolls a local midnight back to the previous day in any timezone
+// ahead of UTC (e.g. UTC+5). Day cells in the week strip are normalized to
+// local midnight (see getWeekStartNormalized), so using toISOString() here
+// meant re-selecting a day (including "today" after navigating away) could
+// silently query bookings for the wrong date.
 function isoDate(d: Date) {
-  return d.toISOString().split('T')[0];
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function parseTime(iso: string) {
@@ -188,6 +199,17 @@ export default function BarberCalendarScreen() {
   });
 
   const bookings = bookingsQuery.data ?? [];
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    hapticToggle();
+    setRefreshing(true);
+    try {
+      await bookingsQuery.refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [bookingsQuery]);
 
   // Week slider data is computed below in the component body.
 
@@ -459,6 +481,14 @@ export default function BarberCalendarScreen() {
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
         contentContainerStyle={{ paddingBottom: tabBarPadding }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.accent}
+            colors={[theme.colors.accent]}
+          />
+        }
       >
         {/* index 0: Header + Stats (scrollable) */}
         <View>
