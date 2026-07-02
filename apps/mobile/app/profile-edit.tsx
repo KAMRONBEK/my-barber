@@ -1,5 +1,5 @@
 // Profile Edit screen. Fetches current user via GET /client/getMe.
-// PATCH /client/me with changed fields on Save.
+// PUT /client/update with changed fields on Save.
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
+import { isAxiosError } from 'axios';
 import { Text } from '../src/atoms/Text';
 import { BackButton, BACK_BUTTON_SIZE } from '../src/atoms/BackButton';
 import { Input } from '../src/atoms/Input';
@@ -25,6 +26,7 @@ import { ScreenLayout } from '../src/templates/ScreenLayout';
 import { getMe, api } from '../src/lib/api';
 import { useAuthStore } from '../src/lib/auth';
 import { queryKeys, STALE } from '../src/lib/query';
+import { useLocationPickerStore } from '../src/lib/locationPicker';
 import type { AppTheme } from '../src/lib/restyle';
 
 export default function ProfileEditScreen() {
@@ -33,7 +35,7 @@ export default function ProfileEditScreen() {
   const { t } = useTranslation();
   const setClient = useAuthStore((s) => s.setClient);
 
-  const { data: profile, isLoading, isError } = useQuery({
+  const { data: profile, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.me,
     queryFn: getMe,
     staleTime: STALE.me,
@@ -48,6 +50,9 @@ export default function ProfileEditScreen() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const pickedLocation = useLocationPickerStore((s) => s.result);
+  const clearPickedLocation = useLocationPickerStore((s) => s.clear);
+
   // Pre-fill form when profile data arrives
   useEffect(() => {
     if (profile) {
@@ -55,23 +60,37 @@ export default function ProfileEditScreen() {
       setLastName(profile.lastName ?? '');
       setUsername(profile.username ?? '');
       setPhone(profile.phone ?? '');
+      setLocation(profile.location ?? '');
     }
   }, [profile]);
+
+  // Apply an address picked from the map screen, then clear the hand-off.
+  useEffect(() => {
+    if (pickedLocation) {
+      setLocation(pickedLocation.address);
+      clearPickedLocation();
+    }
+  }, [pickedLocation, clearPickedLocation]);
 
   async function onSave() {
     setSaving(true);
     setSaveError(null);
     try {
-      const r = await api.patch<{ ok: boolean; data: typeof profile }>(
-        '/client/me',
-        { firstName, lastName, username, phone, location },
-      );
-      if (r.data.ok && r.data.data) {
-        await setClient(r.data.data as Parameters<typeof setClient>[0]);
+      // Username changes require a password confirmation and go through
+      // /client/update-credentials, not this endpoint — the field here is
+      // display-only.
+      await api.put('/client/update', { firstName, lastName, phone, location });
+      const fresh = await refetch();
+      if (fresh.data) {
+        await setClient(fresh.data);
       }
       router.back();
-    } catch {
-      setSaveError(t('common.error'));
+    } catch (err) {
+      const serverMessage =
+        isAxiosError<{ error?: string }>(err) && err.response?.data?.error
+          ? err.response.data.error
+          : null;
+      setSaveError(serverMessage ?? t('common.error'));
     } finally {
       setSaving(false);
     }
@@ -158,11 +177,12 @@ export default function ProfileEditScreen() {
               <Input
                 label={t('profileEdit.username')}
                 value={username}
-                onChangeText={setUsername}
+                editable={false}
                 autoCapitalize="none"
                 autoCorrect={false}
                 textContentType="username"
                 testID="edit-username"
+                style={{ opacity: 0.6 }}
               />
               <Input
                 label={t('profileEdit.phone')}
@@ -172,12 +192,36 @@ export default function ProfileEditScreen() {
                 textContentType="telephoneNumber"
                 testID="edit-phone"
               />
-              <Input
-                label={t('profileEdit.location')}
-                value={location}
-                onChangeText={setLocation}
-                testID="edit-location"
-              />
+              <View style={styles.wrap}>
+                <Text style={[styles.fieldLabel, { color: theme.colors.muted }]}>
+                  {t('profileEdit.location')}
+                </Text>
+                <Pressable
+                  onPress={() => router.push('/location-picker')}
+                  style={[
+                    styles.locationField,
+                    {
+                      backgroundColor: theme.colors.surface2,
+                      borderColor: theme.colors.border,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('map.selectLocation')}
+                  testID="edit-location"
+                >
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: 15,
+                      color: location ? theme.colors.fg : theme.colors.muted2,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {location || t('map.selectLocation')}
+                  </Text>
+                  <Icon name="map" size={18} color={theme.colors.accent} />
+                </Pressable>
+              </View>
             </View>
 
             {saveError ? (
@@ -247,6 +291,26 @@ const styles = StyleSheet.create({
   form: {
     paddingHorizontal: 24,
     gap: 4,
+  },
+  wrap: {
+    width: '100%',
+    marginBottom: 14,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: 0.4,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  locationField: {
+    height: 52,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   foot: {
     padding: 24,

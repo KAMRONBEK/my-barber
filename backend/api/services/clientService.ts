@@ -305,6 +305,7 @@ export class ClientServiceClass {
       firstName: client.firstName,
       lastName: client.lastName,
       phone: client.phone,
+      location: client.location,
       avatar: avatarResolved,
     };
   }

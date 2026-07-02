@@ -5,6 +5,7 @@ export interface Client {
   firstName: string;
   lastName: string;
   phone: string;
+  location?: string;
   avatar?: string;
   /** Expo push token (`ExponentPushToken[...]`); omit from responses */
   deviceId?: string;
@@ -29,6 +30,7 @@ export interface ClientUpdateRequest {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  location?: string;
 }
 
 export interface ClientCredentialsUpdateRequest {
@@ -46,5 +48,6 @@ export interface ClientResponse {
   firstName: string;
   lastName: string;
   phone: string;
+  location?: string;
   avatar?: string;
 }

@@ -76,6 +76,7 @@ export default function RootLayout() {
             segments[0] === 'booking' ||
             segments[0] === 'barbers-map' ||
             segments[0] === 'profile-edit' ||
+            segments[0] === 'location-picker' ||
             segments[0] === 'settings' ||
             segments[0] === 'notifications' ||
             segments[0] === 'bookings';
