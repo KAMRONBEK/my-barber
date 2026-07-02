@@ -504,6 +504,7 @@ export const BarberShopScreen: React.FC = () => {
           styles.floating,
           shadows.floating,
           {
+            bottom: Math.max(insets.bottom, 16) + 8,
             backgroundColor: theme.colors.surface,
             borderColor: theme.colors.border,
             shadowColor: theme.colors.fg,
