@@ -16,11 +16,11 @@ import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../../src/atoms/Text';
-import { BackButton } from '../../src/atoms/BackButton';
 import { Button } from '../../src/atoms/Button';
 import { Avatar } from '../../src/atoms/Avatar';
 import { Input } from '../../src/atoms/Input';
 import { Icon } from '../../src/atoms/Icon';
+import { ScreenHeader } from '../../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../../src/templates/ScreenLayout';
 import { useAuthStore } from '../../src/lib/auth';
 import {
@@ -118,36 +118,25 @@ export default function BarberPortfolioEditScreen() {
 
   return (
     <ScreenLayout>
-      {/* Header */}
-      <View style={styles.header}>
-        <BackButton />
-        <Text
-          style={{
-            fontSize: 17,
-            fontWeight: '600',
-            color: theme.colors.fg,
-            flex: 1,
-            textAlign: 'center',
-          }}
-        >
-          {t('portfolioEdit.portfolioEditTitle')}
-        </Text>
-
-        <Pressable
-          onPress={() => saveMutation.mutate()}
-          disabled={isSaving}
-          style={styles.headerBtn}
-          accessibilityRole="button"
-        >
-          {isSaving ? (
-            <ActivityIndicator size="small" color={theme.colors.accent} />
-          ) : (
-            <Text style={{ color: theme.colors.accent, fontSize: 15, fontWeight: '600' }}>
-              {t('common.save')}
-            </Text>
-          )}
-        </Pressable>
-      </View>
+      <ScreenHeader
+        title={t('portfolioEdit.portfolioEditTitle')}
+        right={
+          <Pressable
+            onPress={() => saveMutation.mutate()}
+            disabled={isSaving}
+            style={styles.headerBtn}
+            accessibilityRole="button"
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color={theme.colors.accent} />
+            ) : (
+              <Text style={{ color: theme.colors.accent, fontSize: 15, fontWeight: '600' }}>
+                {t('common.save')}
+              </Text>
+            )}
+          </Pressable>
+        }
+      />
 
       <ScrollView
         contentContainerStyle={{
@@ -441,13 +430,6 @@ export default function BarberPortfolioEditScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
   headerBtn: {
     minWidth: 60,
     alignItems: 'center',

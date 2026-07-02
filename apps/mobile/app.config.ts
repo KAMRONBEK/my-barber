@@ -21,6 +21,13 @@ export default ({ config }: ConfigContext) => {
       'expo-secure-store',
       'expo-localization',
       'expo-image',
+      [
+        'expo-image-picker',
+        {
+          photosPermission:
+            'Allow My Barber Shop to access your photos so you can set a profile picture.',
+        },
+      ],
       'react-native-map-link',
       [
         'react-native-maps',

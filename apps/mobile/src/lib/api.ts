@@ -98,6 +98,17 @@ export async function getMe(): Promise<ClientProfile> {
   return r.data.data;
 }
 
+// PUT /client/update-avatar expects JSON with a base64 data URL (or
+// {data, filename, mimeType}) under `avatar`, despite the multipart/form-data
+// swagger doc — see backend/api/middleware/upload.ts's uploadSingle.
+export async function uploadClientAvatar(base64DataUrl: string): Promise<string | undefined> {
+  const r = await api.put<{ ok: boolean; message: string; file?: { url: string } }>(
+    '/client/update-avatar',
+    { avatar: base64DataUrl },
+  );
+  return r.data.file?.url;
+}
+
 // Server returns full barber objects on /client/banner — we keep the parts
 // the UI needs and let extra fields pass through. Mirrors BarberResponse in
 // backend/api/models/barber.ts.

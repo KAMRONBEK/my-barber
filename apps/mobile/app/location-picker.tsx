@@ -12,9 +12,9 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@shopify/restyle';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../src/atoms/Text';
-import { BackButton } from '../src/atoms/BackButton';
 import { Icon } from '../src/atoms/Icon';
 import { Button } from '../src/atoms/Button';
+import { ScreenHeader } from '../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../src/templates/ScreenLayout';
 import { DEFAULT_MAP_REGION, GOOGLE_DARK_MAP_STYLE, MAP_PROVIDER } from '../src/lib/maps';
 import { useLocationPickerStore } from '../src/lib/locationPicker';
@@ -113,11 +113,7 @@ export default function LocationPickerScreen() {
 
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <BackButton tone="light" />
-          <Text style={{ fontSize: 17, fontWeight: '600', color: '#fff' }}>
-            {t('map.selectLocation')}
-          </Text>
-          <View style={{ width: 40 }} />
+          <ScreenHeader title={t('map.selectLocation')} tone="light" titleColor="#fff" />
         </View>
 
         {/* Locate me FAB */}
@@ -183,11 +179,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   pinWrap: {
     position: 'absolute',

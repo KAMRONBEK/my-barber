@@ -24,8 +24,9 @@
       "bundleIdentifier": "uz.my-barber.app",
       "appleTeamId": "7BLQ2AA4R3",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      },
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Allow My Barber Shop to access your photos so you can set a profile picture."
+      }
     },
     "android": {
       "package": "uz.mybarber.app",

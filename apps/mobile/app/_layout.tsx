@@ -20,11 +20,14 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { ThemeProvider } from '@shopify/restyle';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useColorScheme, View } from 'react-native';
 import { theme, darkTheme } from '@my-barber/ui';
 import { queryClient } from '../src/lib/query';
 import { useAuthStore } from '../src/lib/auth';
+import { useAppearanceStore } from '../src/lib/appearance';
+import { useLocaleStore } from '../src/lib/locale';
 import { getItem } from '../src/lib/storage';
 import { ONBOARDING_SEEN_KEY } from './onboarding';
 
@@ -44,8 +47,12 @@ if (__DEV__) {
 }
 
 export default function RootLayout() {
-  const scheme = useColorScheme();
-  const restyleTheme = scheme === 'dark' ? darkTheme : theme;
+  const systemScheme = useColorScheme();
+  const appearanceMode = useAppearanceStore((s) => s.mode);
+  const hydrateAppearance = useAppearanceStore((s) => s.hydrate);
+  const hydrateLocale = useLocaleStore((s) => s.hydrate);
+  const effectiveScheme = appearanceMode === 'system' ? systemScheme : appearanceMode;
+  const restyleTheme = effectiveScheme === 'dark' ? darkTheme : theme;
 
   // Hydrate the auth store from SecureStore on first mount. We render a tiny
   // splash until hydrate() settles so we don't flash the wrong segment.
@@ -56,7 +63,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     void hydrate();
-  }, [hydrate]);
+    void hydrateAppearance();
+    void hydrateLocale();
+  }, [hydrate, hydrateAppearance, hydrateLocale]);
 
   useEffect(() => {
     if (status === 'unknown') return;
@@ -85,6 +94,8 @@ export default function RootLayout() {
             segments[0] === 'barbers-map' ||
             segments[0] === 'profile-edit' ||
             segments[0] === 'location-picker' ||
+            segments[0] === 'appearance' ||
+            segments[0] === 'language' ||
             segments[0] === 'settings' ||
             segments[0] === 'notifications' ||
             segments[0] === 'bookings';
@@ -135,20 +146,22 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider theme={restyleTheme}>
           <QueryClientProvider client={queryClient}>
-            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: restyleTheme.colors.bg },
-              }}
-            />
+            <BottomSheetModalProvider>
+              <StatusBar style={effectiveScheme === 'dark' ? 'light' : 'dark'} />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: restyleTheme.colors.bg },
+                }}
+              />
 
-            {__DEV__ && NetworkDebugButton && NetworkDebugSheet && (
-              <>
-                <NetworkDebugButton onPress={() => sheetRef.current?.open()} />
-                <NetworkDebugSheet ref={sheetRef} />
-              </>
-            )}
+              {__DEV__ && NetworkDebugButton && NetworkDebugSheet && (
+                <>
+                  <NetworkDebugButton onPress={() => sheetRef.current?.open()} />
+                  <NetworkDebugSheet ref={sheetRef} />
+                </>
+              )}
+            </BottomSheetModalProvider>
           </QueryClientProvider>
         </ThemeProvider>
       </SafeAreaProvider>

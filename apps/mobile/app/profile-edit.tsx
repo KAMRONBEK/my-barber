@@ -16,14 +16,16 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { isAxiosError } from 'axios';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Text } from '../src/atoms/Text';
-import { BackButton, BACK_BUTTON_SIZE } from '../src/atoms/BackButton';
 import { Input } from '../src/atoms/Input';
 import { Button } from '../src/atoms/Button';
 import { Icon } from '../src/atoms/Icon';
 import { Avatar } from '../src/atoms/Avatar';
+import { ScreenHeader } from '../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../src/templates/ScreenLayout';
-import { getMe, api } from '../src/lib/api';
+import { getMe, api, uploadClientAvatar } from '../src/lib/api';
 import { useAuthStore } from '../src/lib/auth';
 import { queryKeys, STALE } from '../src/lib/query';
 import { useLocationPickerStore } from '../src/lib/locationPicker';
@@ -49,6 +51,8 @@ export default function ProfileEditScreen() {
   const [location, setLocation] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const pickedLocation = useLocationPickerStore((s) => s.result);
   const clearPickedLocation = useLocationPickerStore((s) => s.clear);
@@ -72,6 +76,14 @@ export default function ProfileEditScreen() {
     }
   }, [pickedLocation, clearPickedLocation]);
 
+  function errorMessage(err: unknown): string {
+    const serverMessage =
+      isAxiosError<{ error?: string }>(err) && err.response?.data?.error
+        ? err.response.data.error
+        : null;
+    return serverMessage ?? t('common.error');
+  }
+
   async function onSave() {
     setSaving(true);
     setSaveError(null);
@@ -86,13 +98,51 @@ export default function ProfileEditScreen() {
       }
       router.back();
     } catch (err) {
-      const serverMessage =
-        isAxiosError<{ error?: string }>(err) && err.response?.data?.error
-          ? err.response.data.error
-          : null;
-      setSaveError(serverMessage ?? t('common.error'));
+      setSaveError(errorMessage(err));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onChangePhoto() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    setSaveError(null);
+    setUploadingAvatar(true);
+    // Resize/compress before upload — source photos can be several MB, well
+    // over the API's 4MB JSON body limit once base64-encoded.
+    setAvatarUri(result.assets[0].uri);
+    try {
+      const manipulated = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 512 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+      );
+      if (!manipulated.base64) {
+        throw new Error('Image processing failed');
+      }
+      const uploadedUrl = await uploadClientAvatar(
+        `data:image/jpeg;base64,${manipulated.base64}`,
+      );
+      const fresh = await refetch();
+      if (fresh.data) {
+        await setClient(fresh.data);
+      }
+      setAvatarUri(uploadedUrl ?? null);
+    } catch (err) {
+      setAvatarUri(null);
+      setSaveError(errorMessage(err));
+    } finally {
+      setUploadingAvatar(false);
     }
   }
 
@@ -102,22 +152,7 @@ export default function ProfileEditScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <BackButton />
-          <Text
-            style={{
-              fontSize: 17,
-              fontWeight: '600',
-              color: theme.colors.fg,
-              flex: 1,
-              textAlign: 'center',
-            }}
-          >
-            {t('profileEdit.title')}
-          </Text>
-          <View style={{ width: BACK_BUTTON_SIZE }} />
-        </View>
+        <ScreenHeader title={t('profileEdit.title')} />
 
         {isLoading ? (
           <View style={styles.center}>
@@ -135,13 +170,18 @@ export default function ProfileEditScreen() {
           >
             {/* Avatar circle with camera overlay */}
             <View style={styles.avatarWrap}>
-              <View>
+              <Pressable onPress={onChangePhoto} disabled={uploadingAvatar}>
                 <Avatar
                   size={88}
-                  uri={profile?.avatar ?? undefined}
+                  uri={avatarUri ?? profile?.avatar ?? undefined}
                   initials={`${firstName[0] ?? ''}${lastName[0] ?? ''}`}
                   ring
                 />
+                {uploadingAvatar ? (
+                  <View style={[StyleSheet.absoluteFillObject, styles.avatarOverlay]}>
+                    <ActivityIndicator color="#fff" />
+                  </View>
+                ) : null}
                 <View
                   style={[
                     styles.cameraBtn,
@@ -150,9 +190,22 @@ export default function ProfileEditScreen() {
                 >
                   <Icon name="verified" size={14} color={theme.colors.onAccent} />
                 </View>
-              </View>
-              <Pressable style={{ marginTop: 10 }} onPress={() => { /* TODO: image picker */ }}>
-                <Text style={{ color: theme.colors.accent, fontSize: 14, fontWeight: '500' }}>
+              </Pressable>
+              <Pressable
+                style={{ marginTop: 14 }}
+                hitSlop={8}
+                onPress={onChangePhoto}
+                disabled={uploadingAvatar}
+              >
+                <Text
+                  style={{
+                    color: theme.colors.accent,
+                    fontSize: 15,
+                    fontWeight: '600',
+                    letterSpacing: -0.1,
+                    textAlign: 'center',
+                  }}
+                >
                   {t('profileEdit.changePhoto')}
                 </Text>
               </Pressable>
@@ -257,13 +310,6 @@ export default function ProfileEditScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -274,7 +320,15 @@ const styles = StyleSheet.create({
   },
   avatarWrap: {
     alignItems: 'center',
-    paddingVertical: 24,
+    justifyContent: 'center',
+    paddingTop: 20,
+    paddingBottom: 24,
+  },
+  avatarOverlay: {
+    borderRadius: 44,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cameraBtn: {
     position: 'absolute',

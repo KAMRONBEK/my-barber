@@ -16,6 +16,7 @@ export type IconName =
   | 'back'
   | 'bell'
   | 'check'
+  | 'check-double'
   | 'star'
   | 'share'
   | 'heart'
@@ -37,7 +38,8 @@ export type IconName =
   | 'mic'
   | 'map'
   | 'list'
-  | 'locate';
+  | 'locate'
+  | 'globe';
 
 export interface IconProps {
   name: IconName;
@@ -112,6 +114,13 @@ function render(
       return <Path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0" {...common} />;
     case 'check':
       return <Path d="M5 12.5l4.5 4.5L20 7" {...common} />;
+    case 'check-double':
+      return (
+        <>
+          <Path d="M1.5 12.5l4.5 4.5L16.5 7" {...common} />
+          <Path d="M8.5 12.5l4.5 4.5L23.5 7" {...common} />
+        </>
+      );
     case 'star':
       return <Path d="M12 3l2.6 5.5 6 .9-4.3 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.4 9.4l6-.9z" {...common} fill={stroke} />;
     case 'share':
@@ -162,6 +171,13 @@ function render(
       );
     case 'moon':
       return <Path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z" {...common} />;
+    case 'globe':
+      return (
+        <>
+          <Circle cx={12} cy={12} r={9} {...common} />
+          <Path d="M3 12h18M12 3c2.5 2.5 2.5 15.5 0 18-2.5-2.5-2.5-15.5 0-18z" {...common} />
+        </>
+      );
     case 'verified':
       return (
         <>

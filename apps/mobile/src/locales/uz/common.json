@@ -209,7 +209,13 @@
     "marketing": "Reklama xabarlari",
     "appearance": "Ko'rinish",
     "appearanceSystem": "Tizim",
+    "appearanceLight": "Yorug'",
+    "appearanceDark": "Qorong'i",
+    "language": "Til",
+    "languageUz": "O'zbekcha",
+    "languageRu": "Ruscha",
     "help": "Yordam va savollar",
+    "visitWebsite": "Bizning veb-saytimiz",
     "signOut": "Chiqish",
     "section": {
       "account": "Akkaunt",
