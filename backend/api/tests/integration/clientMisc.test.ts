@@ -415,4 +415,61 @@ describe('client misc routes', () => {
       expect(Array.isArray(res.body.data)).toBe(true);
     });
   });
+
+  describe('/client/favorites', () => {
+    it('add, list, and remove a favorite barber', async () => {
+      seedApprovedBarber('fav-barber-1');
+      seedClient('fav-cli-1');
+      const token = signClientToken('fav-cli-1', 'c_fav-cli-1');
+
+      await request(app)
+        .post('/client/favorites')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ barberId: 'fav-barber-1' })
+        .expect(200);
+
+      const listRes = await request(app)
+        .get('/client/favorites')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect(listRes.body.ok).toBe(true);
+      expect(Array.isArray(listRes.body.data)).toBe(true);
+      expect(listRes.body.data).toHaveLength(1);
+      expect(listRes.body.data[0].id).toBe('fav-barber-1');
+
+      // Adding the same barber again is a no-op, not a duplicate.
+      await request(app)
+        .post('/client/favorites')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ barberId: 'fav-barber-1' })
+        .expect(200);
+      const listAfterReAdd = await request(app)
+        .get('/client/favorites')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect(listAfterReAdd.body.data).toHaveLength(1);
+
+      await request(app)
+        .delete('/client/favorites/fav-barber-1')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      const listAfterRemove = await request(app)
+        .get('/client/favorites')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect(listAfterRemove.body.data).toHaveLength(0);
+    });
+
+    it('rejects a missing barberId', async () => {
+      seedClient('fav-cli-2');
+      const token = signClientToken('fav-cli-2', 'c_fav-cli-2');
+
+      await request(app)
+        .post('/client/favorites')
+        .set('Authorization', `Bearer ${token}`)
+        .send({})
+        .expect(400);
+    });
+  });
 });

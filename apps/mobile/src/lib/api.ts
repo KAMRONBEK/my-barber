@@ -181,6 +181,21 @@ export async function getBarbers(
   }
 }
 
+// GET/POST/DELETE /client/favorites — returns the same BarberResponse shape
+// as /client/barbers, so favorites reuse the same ApiBarberFull barber cards.
+export async function getFavoriteBarbers(): Promise<ApiBarberFull[]> {
+  const r = await api.get<OkData<ApiBarberFull[]>>('/client/favorites');
+  return r.data.data ?? [];
+}
+
+export async function addFavoriteBarber(barberId: string): Promise<void> {
+  await api.post('/client/favorites', { barberId });
+}
+
+export async function removeFavoriteBarber(barberId: string): Promise<void> {
+  await api.delete(`/client/favorites/${barberId}`);
+}
+
 // Bookings list. The wire format is the legacy `BookingResponse`-ish shape
 // emitted by clientService.getClientBookings — it's not the new
 // BookingContract. The slot grid only needs `timestamp` + service durations.

@@ -21,6 +21,7 @@ import {
 } from '../navigation/GlassTabBar';
 import { shadows } from '@my-barber/ui';
 import { getBarbers, type ApiBarberFull } from '../lib/api';
+import { useFavoriteBarbers } from '../hooks/useFavoriteBarbers';
 import { queryKeys, STALE } from '../lib/query';
 import {
   formatUZS,
@@ -81,6 +82,7 @@ export const BarberShopScreen: React.FC = () => {
   const tabBarPadding = TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
   const { id } = useLocalSearchParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<TabKey>('bio');
+  const { favoriteIds, toggleFavorite } = useFavoriteBarbers();
 
   const barbersQuery = useQuery({
     queryKey: queryKeys.barbers,
@@ -168,9 +170,18 @@ export const BarberShopScreen: React.FC = () => {
               <View style={[styles.iconBtn, styles.iconBtnDark]}>
                 <Icon name="share" size={18} color="#fff" />
               </View>
-              <View style={[styles.iconBtn, styles.iconBtnDark]}>
-                <Icon name="heart" size={18} color="#fff" />
-              </View>
+              <Pressable
+                onPress={() => toggleFavorite(barber.id)}
+                style={[styles.iconBtn, styles.iconBtnDark]}
+                accessibilityRole="button"
+                accessibilityLabel={t('barber.saveToggle')}
+              >
+                <Icon
+                  name="heart"
+                  size={18}
+                  color={favoriteIds.has(barber.id) ? theme.colors.accent : '#fff'}
+                />
+              </Pressable>
             </View>
           </View>
 
