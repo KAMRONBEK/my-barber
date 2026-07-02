@@ -81,18 +81,6 @@ describe('bookingLifecycleNotifications', () => {
     expect(data.kind).toBe('booking_cancelled');
   });
 
-  it('covers upcoming check-in reminder (both sides)', () => {
-    const deliveries = getBookingLifecycleDeliveries(
-      'booking_upcoming_checkin',
-      bookingSnapshot()
-    );
-    expect(deliveries).toHaveLength(2);
-    const barber = deliveries.find(d => d.recipientType === 'barber');
-    const client = deliveries.find(d => d.recipientType === 'client');
-    expect(barber?.body).toBe('Is the client here?');
-    expect(client?.body).toBe('Are you at the barber?');
-  });
-
   it('covers client no-show signal (barber only)', () => {
     const deliveries = getBookingLifecycleDeliveries(
       'booking_client_no_show_signal',

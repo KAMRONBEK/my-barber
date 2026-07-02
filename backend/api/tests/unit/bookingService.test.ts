@@ -375,7 +375,7 @@ describe('bookingService', () => {
     });
   });
 
-  describe('arrival reminder cron helpers', () => {
+  describe('arrival-pending listings (client-driven, time-window based)', () => {
     const barberId = 'rem-b';
     const clientId = 'rem-c';
 
@@ -388,20 +388,36 @@ describe('bookingService', () => {
       jest.useRealTimers();
     });
 
-    it('findBookingsDueForReminder only matches confirmed/rescheduled bookings in the window', async () => {
-      seedDoc(COLLECTIONS.BOOKINGS, 'rem-in-window', {
-        id: 'rem-in-window',
+    it('lists unanswered bookings starting soon or that started recently, excludes the rest', async () => {
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-starting-soon', {
+        id: 'rem-starting-soon',
         barberId,
         clientId,
-        timestamp: '2026-06-01T12:05:00.000Z',
+        timestamp: '2026-06-01T12:05:00.000Z', // 5 min from "now"
         status: 'confirmed',
         updatedAt: new Date(),
       });
-      seedDoc(COLLECTIONS.BOOKINGS, 'rem-too-far', {
-        id: 'rem-too-far',
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-started-recently', {
+        id: 'rem-started-recently',
         barberId,
         clientId,
-        timestamp: '2026-06-01T13:00:00.000Z',
+        timestamp: '2026-06-01T11:50:00.000Z', // started 10 min ago
+        status: 'rescheduled',
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-too-far-future', {
+        id: 'rem-too-far-future',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T13:00:00.000Z', // 1 hour away
+        status: 'confirmed',
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-too-far-past', {
+        id: 'rem-too-far-past',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T11:00:00.000Z', // started an hour ago
         status: 'confirmed',
         updatedAt: new Date(),
       });
@@ -413,75 +429,31 @@ describe('bookingService', () => {
         status: 'pending_confirmation',
         updatedAt: new Date(),
       });
-      seedDoc(COLLECTIONS.BOOKINGS, 'rem-already-sent', {
-        id: 'rem-already-sent',
-        barberId,
-        clientId,
-        timestamp: '2026-06-01T12:05:00.000Z',
-        status: 'rescheduled',
-        reminderSentAt: '2026-06-01T11:59:00.000Z',
-        updatedAt: new Date(),
-      });
-
-      const due = await bookingService.findBookingsDueForReminder(
-        new Date('2026-06-01T12:07:00.000Z')
-      );
-      expect(due).toEqual(['rem-in-window']);
-    });
-
-    it('claimReminderSlot only lets one caller win the race', async () => {
-      seedDoc(COLLECTIONS.BOOKINGS, 'rem-claim', {
-        id: 'rem-claim',
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-already-answered', {
+        id: 'rem-already-answered',
         barberId,
         clientId,
         timestamp: '2026-06-01T12:05:00.000Z',
         status: 'confirmed',
-        updatedAt: new Date(),
-      });
-
-      const first = await bookingService.claimReminderSlot('rem-claim');
-      const second = await bookingService.claimReminderSlot('rem-claim');
-      expect(first).toBe(true);
-      expect(second).toBe(false);
-    });
-
-    it('listArrivalPendingForClient/Barber only return unanswered, reminder-sent bookings', async () => {
-      seedDoc(COLLECTIONS.BOOKINGS, 'rem-pending', {
-        id: 'rem-pending',
-        barberId,
-        clientId,
-        timestamp: '2026-06-01T12:05:00.000Z',
-        status: 'confirmed',
-        reminderSentAt: '2026-06-01T11:59:00.000Z',
-        updatedAt: new Date(),
-      });
-      seedDoc(COLLECTIONS.BOOKINGS, 'rem-answered', {
-        id: 'rem-answered',
-        barberId,
-        clientId,
-        timestamp: '2026-06-01T12:05:00.000Z',
-        status: 'confirmed',
-        reminderSentAt: '2026-06-01T11:59:00.000Z',
         clientArrivalResponse: 'yes',
-        updatedAt: new Date(),
-      });
-      seedDoc(COLLECTIONS.BOOKINGS, 'rem-no-reminder-yet', {
-        id: 'rem-no-reminder-yet',
-        barberId,
-        clientId,
-        timestamp: '2026-06-01T12:05:00.000Z',
-        status: 'confirmed',
+        barberArrivalResponse: null,
         updatedAt: new Date(),
       });
 
       const clientPending =
         await bookingService.listArrivalPendingForClient(clientId);
-      expect(clientPending.map(b => b.id)).toEqual(['rem-pending']);
+      expect(clientPending.map(b => b.id).sort()).toEqual(
+        ['rem-started-recently', 'rem-starting-soon'].sort()
+      );
 
       const barberPending =
         await bookingService.listArrivalPendingForBarber(barberId);
-      expect(barberPending.map(b => b.id)).toEqual(
-        expect.arrayContaining(['rem-pending', 'rem-answered'])
+      expect(barberPending.map(b => b.id).sort()).toEqual(
+        [
+          'rem-already-answered',
+          'rem-started-recently',
+          'rem-starting-soon',
+        ].sort()
       );
     });
   });

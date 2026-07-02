@@ -122,18 +122,6 @@ export function getBookingLifecycleDeliveries(
         body: 'Thank you for your visit.',
       },
     },
-    booking_upcoming_checkin: {
-      barber: {
-        notificationType: 'booking_upcoming_checkin',
-        title: 'Appointment starting soon',
-        body: 'Is the client here?',
-      },
-      client: {
-        notificationType: 'booking_upcoming_checkin',
-        title: 'Appointment starting soon',
-        body: 'Are you at the barber?',
-      },
-    },
     booking_client_no_show_signal: {
       barber: {
         notificationType: 'booking_client_no_show_signal',

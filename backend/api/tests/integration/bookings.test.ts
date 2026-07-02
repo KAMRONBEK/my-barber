@@ -224,7 +224,6 @@ describe('bookings (contract)', () => {
         clientId,
         timestamp: new Date().toISOString(),
         status: 'confirmed',
-        reminderSentAt: new Date().toISOString(),
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -246,7 +245,6 @@ describe('bookings (contract)', () => {
         clientId,
         timestamp: new Date().toISOString(),
         status: 'confirmed',
-        reminderSentAt: new Date().toISOString(),
         createdAt: new Date(),
         updatedAt: new Date(),
       });

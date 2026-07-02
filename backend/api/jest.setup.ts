@@ -2,7 +2,6 @@
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET =
   'test-jwt-secret-key-for-integration-tests-only-32chars-minimum-xx';
-process.env.CRON_API_KEY = 'test-cron-secret-for-integration-tests-only';
 
 jest.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: jest.fn(() => Promise.resolve('https://signed.example/test')),

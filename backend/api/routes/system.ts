@@ -140,11 +140,6 @@ router.get('/', (req: Request, res: Response) => {
       trustAndSafety: {
         endpoints: ['POST /reports', 'POST /blocks', 'DELETE /blocks/:userId'],
       },
-      cron: {
-        base: '/cron',
-        note: 'Machine-to-machine; requires X-Cron-Api-Key header (middleware/cronAuth.ts).',
-        endpoints: ['GET /cron/booking-reminders'],
-      },
     },
     links: {
       documentation: `${req.protocol}://${req.get('host')}/docs`,

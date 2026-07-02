@@ -205,7 +205,6 @@ export class BookingServiceClass {
         previousTimestamp: bookingData.previousTimestamp ?? null,
         cancelledBy: bookingData.cancelledBy ?? null,
         completedAt: bookingData.completedAt ?? null,
-        reminderSentAt: bookingData.reminderSentAt ?? null,
         clientArrivalResponse: bookingData.clientArrivalResponse ?? null,
         clientArrivalConfirmedAt: bookingData.clientArrivalConfirmedAt ?? null,
         barberArrivalResponse: bookingData.barberArrivalResponse ?? null,
@@ -418,14 +417,6 @@ export class BookingServiceClass {
     return this.getBookingById(bookingId);
   }
 
-  /** Public entry point for the arrival-reminder cron (keeps the general dispatcher private). */
-  async sendUpcomingCheckinReminder(bookingId: string): Promise<void> {
-    await this.dispatchBookingLifecycleNotifications(
-      'booking_upcoming_checkin',
-      bookingId
-    );
-  }
-
   async completeBooking(
     barberId: string,
     bookingId: string
@@ -572,7 +563,23 @@ export class BookingServiceClass {
     return { items, next_cursor };
   }
 
-  /** Bookings for this client that have an unanswered arrival reminder outstanding. */
+  /**
+   * The arrival check-in window is entirely client-driven (no server cron):
+   * the mobile app decides when to show the prompt using its own clock, and
+   * this method is just the foreground-poll backstop for "is anything
+   * currently due for *me*". A booking is "due" from a few minutes before
+   * its start until a while after, so a user who was away around the exact
+   * moment still gets asked when they come back to the app.
+   */
+  private isWithinArrivalWindow(timestampIso: string): boolean {
+    const startsAt = new Date(timestampIso).getTime();
+    const now = Date.now();
+    const beforeMs = 10 * 60_000;
+    const afterMs = 20 * 60_000;
+    return startsAt - now <= beforeMs && now - startsAt <= afterMs;
+  }
+
+  /** Bookings for this client that are due for an arrival check-in and unanswered. */
   async listArrivalPendingForClient(
     clientId: string
   ): Promise<BookingContract[]> {
@@ -586,8 +593,8 @@ export class BookingServiceClass {
       const st = normalizeBookingStatus(b.status);
       return (
         this.isActiveForArrival(st) &&
-        !!b.reminderSentAt &&
-        !b.clientArrivalResponse
+        !b.clientArrivalResponse &&
+        this.isWithinArrivalWindow(b.timestamp)
       );
     });
 
@@ -599,7 +606,7 @@ export class BookingServiceClass {
     return items;
   }
 
-  /** Bookings for this barber that have an unanswered arrival reminder outstanding. */
+  /** Bookings for this barber that are due for an arrival check-in and unanswered. */
   async listArrivalPendingForBarber(
     barberId: string
   ): Promise<BookingContract[]> {
@@ -613,8 +620,8 @@ export class BookingServiceClass {
       const st = normalizeBookingStatus(b.status);
       return (
         this.isActiveForArrival(st) &&
-        !!b.reminderSentAt &&
-        !b.barberArrivalResponse
+        !b.barberArrivalResponse &&
+        this.isWithinArrivalWindow(b.timestamp)
       );
     });
 
@@ -624,39 +631,6 @@ export class BookingServiceClass {
       if (row) items.push(bookingResponseToContract(row));
     }
     return items;
-  }
-
-  /** Booking IDs starting within `windowEnd` that haven't had a reminder dispatched yet. */
-  async findBookingsDueForReminder(windowEnd: Date): Promise<string[]> {
-    const nowIso = new Date().toISOString();
-    const windowEndIso = windowEnd.toISOString();
-
-    const snapshot = await this.firestore
-      .collection(COLLECTIONS.BOOKINGS)
-      .where('status', 'in', ['confirmed', 'rescheduled'])
-      .where('timestamp', '>=', nowIso)
-      .where('timestamp', '<=', windowEndIso)
-      .get();
-
-    return snapshot.docs
-      .filter(d => !(d.data() as Booking).reminderSentAt)
-      .map(d => d.id);
-  }
-
-  /**
-   * Atomically claims a booking's reminder slot so overlapping cron invocations
-   * can't both dispatch the same reminder. Returns true if this call won the claim.
-   */
-  async claimReminderSlot(bookingId: string): Promise<boolean> {
-    const ref = this.firestore.collection(COLLECTIONS.BOOKINGS).doc(bookingId);
-    return this.firestore.runTransaction(async tx => {
-      const snap = await tx.get(ref);
-      if (!snap.exists) return false;
-      const data = snap.data() as Booking;
-      if (data.reminderSentAt) return false;
-      tx.update(ref, { reminderSentAt: new Date().toISOString() });
-      return true;
-    });
   }
 }
 

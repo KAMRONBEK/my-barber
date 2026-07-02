@@ -67,11 +67,6 @@ export interface Config {
    * Optional shared secret for scripts (--header X-Admin-Api-Key). Not for end users.
    */
   adminApiKey?: string;
-  /**
-   * Shared secret for the /cron/* scheduler surface (--header X-Cron-Api-Key).
-   * Separate from adminApiKey; without it the cron endpoints are disabled (503).
-   */
-  cronApiKey?: string;
 }
 
 /** Presigned GET lifetime for private S3 objects (seconds); not overridden by env */
@@ -140,7 +135,6 @@ function validateConfig(): Config {
     awsS3KeyPrefixNormalized: awsS3Prefix,
     adminUidAllowlist,
     adminApiKey: process.env.ADMIN_API_KEY?.trim() || undefined,
-    cronApiKey: process.env.CRON_API_KEY?.trim() || undefined,
   };
 }
 

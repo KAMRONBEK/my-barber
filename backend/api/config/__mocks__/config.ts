@@ -28,9 +28,6 @@ export const config = {
   get adminApiKey() {
     return process.env.ADMIN_API_KEY?.trim() || undefined;
   },
-  get cronApiKey() {
-    return process.env.CRON_API_KEY?.trim() || undefined;
-  },
 };
 
 export const AWS_S3_SIGNED_URL_TTL_SECONDS = 3600;

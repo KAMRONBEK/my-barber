@@ -28,8 +28,6 @@ export interface Booking {
   completedAt?: string | null;
   /** Sum of service prices at completion time (minor units, e.g. UZS) */
   serviceTotal?: number | null;
-  /** Set once the arrival-reminder cron has dispatched the check-in prompt; de-dupes overlapping cron ticks */
-  reminderSentAt?: string | null;
   clientArrivalResponse?: 'yes' | 'no' | null;
   clientArrivalConfirmedAt?: string | null;
   barberArrivalResponse?: 'yes' | 'no' | null;
@@ -77,7 +75,6 @@ export interface BookingResponse {
   previousTimestamp?: string | null;
   cancelledBy?: CancellationParty | null;
   completedAt?: string | null;
-  reminderSentAt?: string | null;
   clientArrivalResponse?: 'yes' | 'no' | null;
   clientArrivalConfirmedAt?: string | null;
   barberArrivalResponse?: 'yes' | 'no' | null;
@@ -96,7 +93,6 @@ export interface BookingContract {
   client_id: string;
   services: Array<{ id: string; name: string; price: number }>;
   updated_at: string;
-  reminder_sent_at: string | null;
   client_arrival_response: 'yes' | 'no' | null;
   client_arrival_confirmed_at: string | null;
   barber_arrival_response: 'yes' | 'no' | null;
