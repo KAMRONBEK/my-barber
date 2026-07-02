@@ -81,6 +81,7 @@
     "rating": "Reyting",
     "ratingReviews": "{{count}} sharh",
     "priceLabel": "Narx",
+    "saveToggle": "Saqlash",
     "bio": "Sakkiz yildan beri bosqichli soch olish, soqol shakllari va erkaklar uchun editorial uslubdagi grooming bo'yicha ixtisoslashgan.",
     "more": "Batafsil",
     "directions": "Yo'nalish",
@@ -147,6 +148,15 @@
     "thisWeek": "Shu hafta",
     "nextWeek": "Keyingi hafta",
     "earlier": "Ilgari"
+  },
+  "cutsHistory": {
+    "title": "Soch olish tarixi",
+    "empty": "Hali yakunlangan soch olish yo'q."
+  },
+  "favorites": {
+    "title": "Saqlangan sartaroshlar",
+    "empty": "Saqlangan sartaroshlar yo'q.",
+    "emptyHint": "Sartaroshni saqlash uchun uning profilidagi yurak belgisini bosing."
   },
   "notifications": {
     "title": "Bildirishnomalar",
@@ -223,7 +233,7 @@
       "help": "Yordam"
     },
     "stats": {
-      "cuts": "Soch olish",
+      "cuts": "Yakunlangan",
       "saved": "Saqlangan"
     },
     "role": {

@@ -28,6 +28,8 @@ import { getMe } from '../lib/api';
 import { useAuthStore } from '../lib/auth';
 import { useAppearanceStore, type AppearanceMode } from '../lib/appearance';
 import { useLocaleStore } from '../lib/locale';
+import { useFavoriteBarbers } from '../hooks/useFavoriteBarbers';
+import { COMPLETED_CUTS_QUERY_KEY, fetchCompletedCuts } from '../lib/bookings';
 import type { SupportedLocale } from '../lib/i18n';
 import { queryKeys, STALE } from '../lib/query';
 import type { AppTheme } from '../lib/restyle';
@@ -53,6 +55,7 @@ export const ProfileScreen: React.FC = () => {
   const signOut = useAuthStore((s) => s.signOut);
   const appearanceMode = useAppearanceStore((s) => s.mode);
   const locale = useLocaleStore((s) => s.locale);
+  const { favorites } = useFavoriteBarbers();
 
   const helpSheetRef = useRef<HelpSheetRef>(null);
 
@@ -94,9 +97,19 @@ export const ProfileScreen: React.FC = () => {
     });
   }
 
-  // Stub counts until API returns them
-  const cutsCount = 18;
-  const savedCount = 3;
+  // Count reflects the most recent page (there's no aggregate count
+  // endpoint) — accurate up to the fetch limit, not a true lifetime total
+  // once a client has more than that many completed cuts. Shares its query
+  // key/fetcher with cuts-history.tsx — using a different queryFn under the
+  // same key previously poisoned the cache with mismatched data shapes.
+  const completedCutsQuery = useQuery({
+    queryKey: COMPLETED_CUTS_QUERY_KEY,
+    queryFn: fetchCompletedCuts,
+    staleTime: 60 * 1000,
+    enabled: !!useAuthStore.getState().token,
+  });
+  const cutsCount = completedCutsQuery.data?.length ?? 0;
+  const savedCount = favorites.length;
 
   return (
     <ScreenLayout>
@@ -200,7 +213,11 @@ export const ProfileScreen: React.FC = () => {
             },
           ]}
         >
-          <View style={styles.stat}>
+          <Pressable
+            style={styles.stat}
+            onPress={() => router.push('/cuts-history')}
+            accessibilityRole="button"
+          >
             <Text
               style={{
                 fontSize: 22,
@@ -214,11 +231,15 @@ export const ProfileScreen: React.FC = () => {
             <Text style={{ fontSize: 12, color: theme.colors.muted, marginTop: 2 }}>
               {t('profile.stats.cuts')}
             </Text>
-          </View>
+          </Pressable>
           <View
             style={[styles.statDivider, { backgroundColor: theme.colors.border }]}
           />
-          <View style={styles.stat}>
+          <Pressable
+            style={styles.stat}
+            onPress={() => router.push('/saved-barbers')}
+            accessibilityRole="button"
+          >
             <Text
               style={{
                 fontSize: 22,
@@ -232,7 +253,7 @@ export const ProfileScreen: React.FC = () => {
             <Text style={{ fontSize: 12, color: theme.colors.muted, marginTop: 2 }}>
               {t('profile.stats.saved')}
             </Text>
-          </View>
+          </Pressable>
         </View>
 
         {/* Account */}

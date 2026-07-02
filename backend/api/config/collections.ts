@@ -12,4 +12,5 @@ export const COLLECTIONS = {
   BLOCKS: 'blocks',
   /** CMS-style config docs (e.g. banner under `banner`) */
   CMS: 'cms',
+  FAVORITES: 'favorites',
 } as const;

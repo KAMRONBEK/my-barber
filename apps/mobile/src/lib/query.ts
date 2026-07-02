@@ -22,6 +22,7 @@ export const queryKeys = {
   me: ['me'] as const,
   banner: ['banner'] as const,
   barbers: ['barbers'] as const,
+  favorites: ['favorites'] as const,
   bookings: (barberId: string, date: string) =>
     ['bookings', barberId, date] as const,
 };

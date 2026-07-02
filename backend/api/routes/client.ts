@@ -5,6 +5,7 @@ import { uploadAvatar } from '../middleware/upload';
 import { authenticateToken } from '../middleware/auth';
 import { clientService } from '../services/clientService';
 import { barberService } from '../services/barberService';
+import { favoriteService } from '../services/favoriteService';
 import { bookingService } from '../services/bookingService';
 import { authService } from '../services/authService';
 import { logger } from '../utils/logger';
@@ -584,6 +585,165 @@ router.delete(
       res.json({ ok: true, message: 'Push token cleared' });
     } catch (error) {
       logger.error('Error clearing client push token:', error);
+      res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /client/favorites:
+ *   get:
+ *     summary: List the client's saved (favorited) barbers
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Favorited barbers, newest saved first
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/BarberResponse'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied — client account required
+ *       500:
+ *         description: Internal server error
+ *   post:
+ *     summary: Save a barber as a favorite
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [barberId]
+ *             properties:
+ *               barberId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Saved (idempotent — already-favorited barbers are a no-op)
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied — client account required
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+  '/favorites',
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    try {
+      if ((req as any).user.type !== 'client') {
+        return res.status(403).json({
+          ok: false,
+          error: 'Access denied. Client account required.',
+        });
+      }
+
+      const clientId = (req as any).user.id;
+      const barberIds = await favoriteService.listFavoriteBarberIds(clientId);
+      const results = await Promise.all(
+        barberIds.map(id => barberService.getBarberWithServices(id))
+      );
+      // A favorited barber may since have been deleted/deactivated — drop nulls
+      // rather than surfacing a broken entry.
+      const barbers = results
+        .filter((r): r is NonNullable<typeof r> => r !== null)
+        .map(r => r.barber);
+
+      res.json({ ok: true, data: barbers });
+    } catch (error) {
+      logger.error('Error listing favorites:', error);
+      res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  }
+);
+
+router.post(
+  '/favorites',
+  [authenticateToken, body('barberId').notEmpty().isString()],
+  async (req: Request, res: Response) => {
+    try {
+      if (handleValidationErrors(req, res)) return;
+
+      if ((req as any).user.type !== 'client') {
+        return res.status(403).json({
+          ok: false,
+          error: 'Access denied. Client account required.',
+        });
+      }
+
+      const clientId = (req as any).user.id;
+      await favoriteService.addFavorite(clientId, req.body.barberId);
+      res.json({ ok: true, data: {} });
+    } catch (error) {
+      logger.error('Error adding favorite:', error);
+      res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /client/favorites/{barberId}:
+ *   delete:
+ *     summary: Remove a barber from favorites
+ *     tags: [Client]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: barberId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Removed (idempotent — not-favorited barbers are a no-op)
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied — client account required
+ *       500:
+ *         description: Internal server error
+ */
+router.delete(
+  '/favorites/:barberId',
+  [authenticateToken, param('barberId').notEmpty()],
+  async (req: Request, res: Response) => {
+    try {
+      if (handleValidationErrors(req, res)) return;
+
+      if ((req as any).user.type !== 'client') {
+        return res.status(403).json({
+          ok: false,
+          error: 'Access denied. Client account required.',
+        });
+      }
+
+      const clientId = (req as any).user.id;
+      await favoriteService.removeFavorite(clientId, req.params.barberId);
+      res.json({ ok: true, data: {} });
+    } catch (error) {
+      logger.error('Error removing favorite:', error);
       res.status(500).json({ ok: false, error: 'Internal server error' });
     }
   }
