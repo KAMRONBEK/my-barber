@@ -80,4 +80,13 @@ describe('bookingLifecycleNotifications', () => {
     expect(data.booking_id).toBe('o-x');
     expect(data.kind).toBe('booking_cancelled');
   });
+
+  it('covers client no-show signal (barber only)', () => {
+    const deliveries = getBookingLifecycleDeliveries(
+      'booking_client_no_show_signal',
+      bookingSnapshot()
+    );
+    expect(deliveries).toHaveLength(1);
+    expect(deliveries[0].recipientType).toBe('barber');
+  });
 });

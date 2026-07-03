@@ -245,6 +245,33 @@ export async function cancelBooking(
   return r.data.data.booking;
 }
 
+export async function confirmClientArrival(
+  bookingId: string,
+  response: 'yes' | 'no',
+): Promise<BookingContract> {
+  const r = await api.post<OkData<{ booking: BookingContract }>>(
+    `/client/bookings/${encodeURIComponent(bookingId)}/arrival-confirm`,
+    { response },
+  );
+  return r.data.data.booking;
+}
+
+export async function getClientArrivalPending(): Promise<BookingContract[]> {
+  const r = await api.get<OkData<{ bookings: BookingContract[] }>>(
+    '/client/bookings/arrival-pending',
+  );
+  return r.data.data.bookings ?? [];
+}
+
+/** Client's own upcoming bookings (any barber) — used to schedule local arrival-check-in reminders ahead of time. */
+export async function getClientUpcomingBookings(): Promise<BookingContract[]> {
+  const r = await api.get<OkData<{ items: BookingContract[] }>>(
+    '/client/bookings',
+    { params: { status: 'upcoming', limit: 20 } },
+  );
+  return r.data.data.items ?? [];
+}
+
 // ---- Barber endpoints ----
 
 export interface BarberMeResponse {
@@ -285,6 +312,24 @@ export async function patchBookingStatus(
     { status, reason },
   );
   return r.data.data.booking;
+}
+
+export async function confirmBarberArrival(
+  bookingId: string,
+  response: 'yes' | 'no',
+): Promise<BookingContract> {
+  const r = await api.post<OkData<{ booking: BookingContract }>>(
+    `/barber/bookings/${encodeURIComponent(bookingId)}/arrival-confirm`,
+    { response },
+  );
+  return r.data.data.booking;
+}
+
+export async function getBarberArrivalPending(): Promise<BookingContract[]> {
+  const r = await api.get<OkData<{ bookings: BookingContract[] }>>(
+    '/barber/bookings/arrival-pending',
+  );
+  return r.data.data.bookings ?? [];
 }
 
 export interface EarningsSummary {

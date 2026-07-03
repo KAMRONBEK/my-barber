@@ -101,6 +101,10 @@ export function makeBookingContract(
       { id: 'svc-001', name: 'Soch olish', price: 80000 },
     ],
     updated_at: now,
+    client_arrival_response: null,
+    client_arrival_confirmed_at: null,
+    barber_arrival_response: null,
+    barber_arrival_confirmed_at: null,
     ...overrides,
   };
 }
@@ -121,6 +125,10 @@ export function makeBooking(overrides: Partial<Booking> = {}): Booking {
       { id: 'svc-001', name: 'Soch olish', price: 80000 },
     ],
     updatedAt: now,
+    clientArrivalResponse: null,
+    clientArrivalConfirmedAt: null,
+    barberArrivalResponse: null,
+    barberArrivalConfirmedAt: null,
     ...overrides,
   };
 }

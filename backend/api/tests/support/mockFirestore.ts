@@ -145,7 +145,7 @@ class MockQuery {
   ) {}
 
   where(field: string, op: string, value: unknown): this {
-    if (!['==', '>=', '<'].includes(op)) {
+    if (!['==', '>=', '<=', '<', 'in'].includes(op)) {
       throw new Error(`Mock Firestore: unsupported op ${op}`);
     }
     this.wheres.push({ field, op, value });
@@ -189,8 +189,12 @@ class MockQuery {
         if (v !== w.value) return false;
       } else if (w.op === '>=') {
         if (!(String(v) >= String(w.value))) return false;
+      } else if (w.op === '<=') {
+        if (!(String(v) <= String(w.value))) return false;
       } else if (w.op === '<') {
         if (!(String(v) < String(w.value))) return false;
+      } else if (w.op === 'in') {
+        if (!Array.isArray(w.value) || !w.value.includes(v)) return false;
       }
     }
     return true;
@@ -364,11 +368,11 @@ export function createMockFirestore() {
     },
     collection: (name: string) => createCollectionRef(store, name),
     batch: () => new MockWriteBatch(store),
-    runTransaction: async (
-      fn: (tx: MockTransaction) => Promise<void>
-    ): Promise<void> => {
+    runTransaction: async <T>(
+      fn: (tx: MockTransaction) => Promise<T>
+    ): Promise<T> => {
       const tx = new MockTransaction(store);
-      await fn(tx);
+      return fn(tx);
     },
     listCollections: async (): Promise<unknown[]> => {
       return [];

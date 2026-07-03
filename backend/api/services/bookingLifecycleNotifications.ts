@@ -122,6 +122,13 @@ export function getBookingLifecycleDeliveries(
         body: 'Thank you for your visit.',
       },
     },
+    booking_client_no_show_signal: {
+      barber: {
+        notificationType: 'booking_client_no_show_signal',
+        title: 'Client not arrived yet',
+        body: 'The client says they have not arrived yet.',
+      },
+    },
   };
 
   const t = templates[kind];

@@ -1231,6 +1231,81 @@ router.post(
 );
 
 router.post(
+  '/bookings/:bookingId/arrival-confirm',
+  [
+    authenticateToken,
+    param('bookingId').notEmpty(),
+    body('response').isIn(['yes', 'no']),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      if (handleValidationErrors(req, res)) return;
+
+      const clientId = (req as any).user.id;
+      if ((req as any).user.type !== 'client') {
+        return res.status(403).json({
+          ok: false,
+          error: 'Access denied. Client account required.',
+        });
+      }
+
+      try {
+        const updated = await bookingService.recordArrivalResponse(
+          'client',
+          clientId,
+          req.params.bookingId,
+          req.body.response
+        );
+        if (!updated) {
+          return res
+            .status(404)
+            .json({ ok: false, error: 'Booking not found' });
+        }
+        res.json({
+          ok: true,
+          data: { booking: bookingResponseToContract(updated) },
+        });
+      } catch (e: unknown) {
+        if ((e as Error).message === 'INVALID_STATE') {
+          return res.status(409).json({
+            ok: false,
+            error:
+              'Booking cannot accept an arrival response in its current state',
+          });
+        }
+        throw e;
+      }
+    } catch (error) {
+      logger.error('Error recording client arrival response:', error);
+      res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  }
+);
+
+router.get(
+  '/bookings/arrival-pending',
+  [authenticateToken],
+  async (req: Request, res: Response) => {
+    try {
+      const clientId = (req as any).user.id;
+      if ((req as any).user.type !== 'client') {
+        return res.status(403).json({
+          ok: false,
+          error: 'Access denied. Client account required.',
+        });
+      }
+
+      const bookings =
+        await bookingService.listArrivalPendingForClient(clientId);
+      res.json({ ok: true, data: { bookings } });
+    } catch (error) {
+      logger.error('Error listing arrival-pending bookings (client):', error);
+      res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  }
+);
+
+router.post(
   '/bookings/:bookingId/review',
   [
     authenticateToken,

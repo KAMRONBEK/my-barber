@@ -20,6 +20,9 @@ export const BookingServiceRefSchema = z.object({
 });
 export type BookingServiceRef = z.infer<typeof BookingServiceRefSchema>;
 
+export const ArrivalResponseSchema = z.enum(['yes', 'no']);
+export type ArrivalResponse = z.infer<typeof ArrivalResponseSchema>;
+
 // snake_case mobile contract — mirrors `BookingContract` in
 // backend/api/models/booking.ts. This is the on-the-wire shape.
 export const BookingContractSchema = z.object({
@@ -32,6 +35,10 @@ export const BookingContractSchema = z.object({
   client_id: IdSchema,
   services: z.array(BookingServiceRefSchema),
   updated_at: z.string().datetime(),
+  client_arrival_response: ArrivalResponseSchema.nullable(),
+  client_arrival_confirmed_at: z.string().datetime().nullable(),
+  barber_arrival_response: ArrivalResponseSchema.nullable(),
+  barber_arrival_confirmed_at: z.string().datetime().nullable(),
 });
 export type BookingContract = z.infer<typeof BookingContractSchema>;
 
@@ -46,6 +53,10 @@ export const BookingSchema = z.object({
   clientId: IdSchema,
   services: z.array(BookingServiceRefSchema),
   updatedAt: z.string().datetime(),
+  clientArrivalResponse: ArrivalResponseSchema.nullable(),
+  clientArrivalConfirmedAt: z.string().datetime().nullable(),
+  barberArrivalResponse: ArrivalResponseSchema.nullable(),
+  barberArrivalConfirmedAt: z.string().datetime().nullable(),
 });
 export type Booking = z.infer<typeof BookingSchema>;
 
@@ -67,5 +78,9 @@ export function bookingFromContract(c: BookingContract): Booking {
     clientId: c.client_id,
     services: c.services,
     updatedAt: c.updated_at,
+    clientArrivalResponse: c.client_arrival_response,
+    clientArrivalConfirmedAt: c.client_arrival_confirmed_at,
+    barberArrivalResponse: c.barber_arrival_response,
+    barberArrivalConfirmedAt: c.barber_arrival_confirmed_at,
   };
 }

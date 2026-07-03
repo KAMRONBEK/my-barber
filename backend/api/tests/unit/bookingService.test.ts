@@ -305,6 +305,157 @@ describe('bookingService', () => {
 
       expect(await bookingService.completeBooking(barberId, 'no-id')).toBeNull();
     });
+
+    it('recordArrivalResponse updates the right party and validates ownership/state', async () => {
+      seedConfirmedBooking('lc-arrive');
+
+      const out = await bookingService.recordArrivalResponse(
+        'client',
+        clientId,
+        'lc-arrive',
+        'yes'
+      );
+      expect(out?.clientArrivalResponse).toBe('yes');
+      expect(out?.clientArrivalConfirmedAt).toBeTruthy();
+      expect(out?.barberArrivalResponse ?? null).toBeNull();
+
+      const out2 = await bookingService.recordArrivalResponse(
+        'barber',
+        barberId,
+        'lc-arrive',
+        'no'
+      );
+      expect(out2?.barberArrivalResponse).toBe('no');
+
+      expect(
+        await bookingService.recordArrivalResponse(
+          'client',
+          'wrong-client',
+          'lc-arrive',
+          'yes'
+        )
+      ).toBeNull();
+      expect(
+        await bookingService.recordArrivalResponse(
+          'client',
+          clientId,
+          'no-id',
+          'yes'
+        )
+      ).toBeNull();
+    });
+
+    it('recordArrivalResponse rejects bookings not confirmed/rescheduled', async () => {
+      seedPendingBooking('lc-arrive-pending');
+      await expect(
+        bookingService.recordArrivalResponse(
+          'client',
+          clientId,
+          'lc-arrive-pending',
+          'yes'
+        )
+      ).rejects.toThrow('INVALID_STATE');
+    });
+
+    it('recordArrivalResponse allows re-answering (last answer wins)', async () => {
+      seedConfirmedBooking('lc-arrive-twice');
+      await bookingService.recordArrivalResponse(
+        'client',
+        clientId,
+        'lc-arrive-twice',
+        'no'
+      );
+      const out = await bookingService.recordArrivalResponse(
+        'client',
+        clientId,
+        'lc-arrive-twice',
+        'yes'
+      );
+      expect(out?.clientArrivalResponse).toBe('yes');
+    });
+  });
+
+  describe('arrival-pending listings (client-driven, time-window based)', () => {
+    const barberId = 'rem-b';
+    const clientId = 'rem-c';
+
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-06-01T12:00:00.000Z'));
+      seedClient(clientId);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('lists unanswered bookings starting soon or that started recently, excludes the rest', async () => {
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-starting-soon', {
+        id: 'rem-starting-soon',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T12:05:00.000Z', // 5 min from "now"
+        status: 'confirmed',
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-started-recently', {
+        id: 'rem-started-recently',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T11:50:00.000Z', // started 10 min ago
+        status: 'rescheduled',
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-too-far-future', {
+        id: 'rem-too-far-future',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T13:00:00.000Z', // 1 hour away
+        status: 'confirmed',
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-too-far-past', {
+        id: 'rem-too-far-past',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T11:00:00.000Z', // started an hour ago
+        status: 'confirmed',
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-wrong-status', {
+        id: 'rem-wrong-status',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T12:05:00.000Z',
+        status: 'pending_confirmation',
+        updatedAt: new Date(),
+      });
+      seedDoc(COLLECTIONS.BOOKINGS, 'rem-already-answered', {
+        id: 'rem-already-answered',
+        barberId,
+        clientId,
+        timestamp: '2026-06-01T12:05:00.000Z',
+        status: 'confirmed',
+        clientArrivalResponse: 'yes',
+        barberArrivalResponse: null,
+        updatedAt: new Date(),
+      });
+
+      const clientPending =
+        await bookingService.listArrivalPendingForClient(clientId);
+      expect(clientPending.map(b => b.id).sort()).toEqual(
+        ['rem-started-recently', 'rem-starting-soon'].sort()
+      );
+
+      const barberPending =
+        await bookingService.listArrivalPendingForBarber(barberId);
+      expect(barberPending.map(b => b.id).sort()).toEqual(
+        [
+          'rem-already-answered',
+          'rem-started-recently',
+          'rem-starting-soon',
+        ].sort()
+      );
+    });
   });
 
   describe('listBookingHistoryForClient', () => {

@@ -47,5 +47,9 @@ export function bookingResponseToContract(o: BookingResponse): BookingContract {
     updated_at: o.updatedAt
       ? firestoreDateToIso(o.updatedAt)
       : new Date().toISOString(),
+    client_arrival_response: o.clientArrivalResponse ?? null,
+    client_arrival_confirmed_at: o.clientArrivalConfirmedAt ?? null,
+    barber_arrival_response: o.barberArrivalResponse ?? null,
+    barber_arrival_confirmed_at: o.barberArrivalConfirmedAt ?? null,
   };
 }

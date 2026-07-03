@@ -205,6 +205,10 @@ export class BookingServiceClass {
         previousTimestamp: bookingData.previousTimestamp ?? null,
         cancelledBy: bookingData.cancelledBy ?? null,
         completedAt: bookingData.completedAt ?? null,
+        clientArrivalResponse: bookingData.clientArrivalResponse ?? null,
+        clientArrivalConfirmedAt: bookingData.clientArrivalConfirmedAt ?? null,
+        barberArrivalResponse: bookingData.barberArrivalResponse ?? null,
+        barberArrivalConfirmedAt: bookingData.barberArrivalConfirmedAt ?? null,
         updatedAt: bookingData.updatedAt,
       };
     } catch (error) {
@@ -219,6 +223,10 @@ export class BookingServiceClass {
       status === 'confirmed' ||
       status === 'rescheduled'
     );
+  }
+
+  private isActiveForArrival(status: BookingStatus): boolean {
+    return status === 'confirmed' || status === 'rescheduled';
   }
 
   async patchBarberBookingStatus(
@@ -360,6 +368,51 @@ export class BookingServiceClass {
     void this.dispatchBookingLifecycleNotifications('no_show', bookingId).catch(
       () => {}
     );
+
+    return this.getBookingById(bookingId);
+  }
+
+  async recordArrivalResponse(
+    party: CancellationParty,
+    userId: string,
+    bookingId: string,
+    response: 'yes' | 'no'
+  ): Promise<BookingResponse | null> {
+    const bookingRow = await this.getBookingById(bookingId);
+    if (!bookingRow) return null;
+
+    if (party === 'barber' && bookingRow.barberId !== userId) return null;
+    if (party === 'client' && bookingRow.clientId !== userId) return null;
+
+    const st = normalizeBookingStatus(bookingRow.status);
+    if (!this.isActiveForArrival(st)) {
+      throw new Error('INVALID_STATE');
+    }
+
+    const confirmedAt = new Date().toISOString();
+    const patch: Partial<Booking> =
+      party === 'client'
+        ? {
+            clientArrivalResponse: response,
+            clientArrivalConfirmedAt: confirmedAt,
+          }
+        : {
+            barberArrivalResponse: response,
+            barberArrivalConfirmedAt: confirmedAt,
+          };
+    patch.updatedAt = new Date();
+
+    await this.firestore
+      .collection(COLLECTIONS.BOOKINGS)
+      .doc(bookingId)
+      .update(patch);
+
+    if (party === 'client' && response === 'no') {
+      void this.dispatchBookingLifecycleNotifications(
+        'booking_client_no_show_signal',
+        bookingId
+      ).catch(() => {});
+    }
 
     return this.getBookingById(bookingId);
   }
@@ -508,6 +561,76 @@ export class BookingServiceClass {
     }
 
     return { items, next_cursor };
+  }
+
+  /**
+   * The arrival check-in window is entirely client-driven (no server cron):
+   * the mobile app decides when to show the prompt using its own clock, and
+   * this method is just the foreground-poll backstop for "is anything
+   * currently due for *me*". A booking is "due" from a few minutes before
+   * its start until a while after, so a user who was away around the exact
+   * moment still gets asked when they come back to the app.
+   */
+  private isWithinArrivalWindow(timestampIso: string): boolean {
+    const startsAt = new Date(timestampIso).getTime();
+    const now = Date.now();
+    const beforeMs = 10 * 60_000;
+    const afterMs = 20 * 60_000;
+    return startsAt - now <= beforeMs && now - startsAt <= afterMs;
+  }
+
+  /** Bookings for this client that are due for an arrival check-in and unanswered. */
+  async listArrivalPendingForClient(
+    clientId: string
+  ): Promise<BookingContract[]> {
+    const snapshot = await this.firestore
+      .collection(COLLECTIONS.BOOKINGS)
+      .where('clientId', '==', clientId)
+      .get();
+
+    const pendingDocs = snapshot.docs.filter(d => {
+      const b = d.data() as Booking;
+      const st = normalizeBookingStatus(b.status);
+      return (
+        this.isActiveForArrival(st) &&
+        !b.clientArrivalResponse &&
+        this.isWithinArrivalWindow(b.timestamp)
+      );
+    });
+
+    const items: BookingContract[] = [];
+    for (const d of pendingDocs) {
+      const row = await this.getBookingById(d.id);
+      if (row) items.push(bookingResponseToContract(row));
+    }
+    return items;
+  }
+
+  /** Bookings for this barber that are due for an arrival check-in and unanswered. */
+  async listArrivalPendingForBarber(
+    barberId: string
+  ): Promise<BookingContract[]> {
+    const snapshot = await this.firestore
+      .collection(COLLECTIONS.BOOKINGS)
+      .where('barberId', '==', barberId)
+      .get();
+
+    const pendingDocs = snapshot.docs.filter(d => {
+      const b = d.data() as Booking;
+      const st = normalizeBookingStatus(b.status);
+      return (
+        this.isActiveForArrival(st) &&
+        !b.barberArrivalResponse &&
+        this.isWithinArrivalWindow(b.timestamp)
+      );
+    });
+
+    const items: BookingContract[] = [];
+    for (const d of pendingDocs) {
+      const row = await this.getBookingById(d.id);
+      if (row) items.push(bookingResponseToContract(row));
+    }
+    return items;
   }
 }
 
