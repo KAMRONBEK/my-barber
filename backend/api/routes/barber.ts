@@ -748,6 +748,93 @@ router.post(
 
 /**
  * @swagger
+ * /barber/images/{index}:
+ *   delete:
+ *     summary: Remove a portfolio image from barber profile
+ *     tags: [Barber]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: index
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Position of the image in the barber's images array (as returned by GET /barber/getMe)
+ *     responses:
+ *       200:
+ *         description: Image removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Invalid image index
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+// Remove barber portfolio image
+router.delete(
+  '/images/:index',
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    try {
+      const barberId = (req as any).user.id;
+      const userType = (req as any).user.type;
+
+      if (userType !== 'barber') {
+        return res.status(403).json({
+          ok: false,
+          error: 'Access denied. Barber account required.',
+        });
+      }
+
+      const index = Number(req.params.index);
+      if (!Number.isInteger(index) || index < 0) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Invalid image index',
+        });
+      }
+
+      await barberService.removeBarberImage(barberId, index);
+
+      res.json({
+        ok: true,
+        message: 'Image removed successfully',
+      });
+    } catch (error) {
+      logger.error('Error removing barber image:', error);
+      res.status(500).json({
+        ok: false,
+        error: 'Internal server error',
+      });
+    }
+  }
+);
+
+/**
+ * @swagger
  * /barber/add-service:
  *   post:
  *     summary: Add service(s) to barber profile

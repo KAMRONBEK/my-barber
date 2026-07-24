@@ -27,6 +27,7 @@ export interface BarberProfile {
   lastName: string;
   phone: string;
   avatar?: string;
+  images?: string[];
   approval_status?: string;
   approval_message?: string | null;
   ratingAverage?: number;

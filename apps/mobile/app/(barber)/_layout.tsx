@@ -22,6 +22,7 @@ export default function BarberLayout() {
       <Stack.Screen name="portfolio-edit" />
       <Stack.Screen name="pending" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="bookings-history" />
     </Stack>
   );
 }

@@ -15,6 +15,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Text } from '../../src/atoms/Text';
 import { Button } from '../../src/atoms/Button';
 import { Avatar } from '../../src/atoms/Avatar';
@@ -24,9 +27,12 @@ import { ScreenHeader } from '../../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../../src/templates/ScreenLayout';
 import { useAuthStore } from '../../src/lib/auth';
 import {
+  getBarberMe,
   getBarberServices,
   updateBarberServices,
   updateBarberProfile,
+  uploadBarberPortfolioImages,
+  deleteBarberPortfolioImage,
   type ApiService,
 } from '../../src/lib/api';
 import type { AppTheme } from '../../src/lib/restyle';
@@ -58,6 +64,52 @@ export default function BarberPortfolioEditScreen() {
       setServices(servicesQuery.data);
     }
   }, [servicesQuery.data]);
+
+  // Shares its query key with (barber)/(tabs)/profile.tsx and
+  // (barber)/settings.tsx so an upload/delete here invalidates their cached
+  // copy too.
+  const barberMeQuery = useQuery({
+    queryKey: ['barber', 'me'],
+    queryFn: getBarberMe,
+    staleTime: 60 * 1000,
+  });
+  const photos = barberMeQuery.data?.barber.images ?? [];
+
+  const uploadPhotoMutation = useMutation({
+    mutationFn: (base64DataUrl: string) =>
+      uploadBarberPortfolioImages([base64DataUrl]),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['barber', 'me'] }),
+  });
+
+  const deletePhotoMutation = useMutation({
+    mutationFn: (index: number) => deleteBarberPortfolioImage(index),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['barber', 'me'] }),
+  });
+
+  async function onAddPhoto() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    // Resize/compress before upload — same rationale as the client avatar
+    // flow in profile-edit.tsx: raw photos can be several MB, well over the
+    // API's JSON body limit once base64-encoded.
+    const manipulated = await ImageManipulator.manipulateAsync(
+      result.assets[0].uri,
+      [{ resize: { width: 1080 } }],
+      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+    );
+    if (!manipulated.base64) return;
+
+    uploadPhotoMutation.mutate(`data:image/jpeg;base64,${manipulated.base64}`);
+  }
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -123,7 +175,7 @@ export default function BarberPortfolioEditScreen() {
   return (
     <ScreenLayout>
       <ScreenHeader
-        title={t('portfolioEdit.portfolioEditTitle')}
+        title={t('barber.portfolio')}
         right={
           <Pressable
             onPress={() => saveMutation.mutate()}
@@ -401,31 +453,69 @@ export default function BarberPortfolioEditScreen() {
           </Text>
 
           <View style={styles.photoGrid}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.photoCell,
-                  {
-                    backgroundColor: theme.colors.surface2,
-                    borderColor: theme.colors.border,
-                  },
-                ]}
-              >
-                <Icon name="user" size={20} color={theme.colors.muted} />
-                {i === 0 ? (
-                  <Pressable
-                    style={[
-                      styles.photoDelete,
-                      { backgroundColor: theme.colors.danger },
-                    ]}
-                    accessibilityRole="button"
-                  >
-                    <Icon name="back" size={10} color="#fff" />
-                  </Pressable>
-                ) : null}
-              </View>
-            ))}
+            {photos.map((uri, idx) => {
+              const isDeleting =
+                deletePhotoMutation.isPending &&
+                deletePhotoMutation.variables === idx;
+              return (
+                <View
+                  key={uri}
+                  style={[
+                    styles.photoCell,
+                    {
+                      backgroundColor: theme.colors.surface2,
+                      borderColor: theme.colors.border,
+                    },
+                  ]}
+                >
+                  <Image
+                    source={{ uri }}
+                    style={styles.photoImage}
+                    contentFit="cover"
+                    transition={120}
+                  />
+                  {isDeleting ? (
+                    <View style={[StyleSheet.absoluteFillObject, styles.photoOverlay]}>
+                      <ActivityIndicator size="small" color="#fff" />
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={() => deletePhotoMutation.mutate(idx)}
+                      disabled={deletePhotoMutation.isPending}
+                      style={[
+                        styles.photoDelete,
+                        { backgroundColor: theme.colors.danger },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('portfolioEdit.removePhoto')}
+                    >
+                      <Icon name="x" size={10} color="#fff" />
+                    </Pressable>
+                  )}
+                </View>
+              );
+            })}
+
+            <Pressable
+              onPress={onAddPhoto}
+              disabled={uploadPhotoMutation.isPending}
+              style={[
+                styles.photoCell,
+                {
+                  backgroundColor: theme.colors.surface2,
+                  borderColor: theme.colors.border,
+                  borderStyle: 'dashed',
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t('portfolioEdit.addPhoto')}
+            >
+              {uploadPhotoMutation.isPending ? (
+                <ActivityIndicator size="small" color={theme.colors.accent} />
+              ) : (
+                <Icon name="plus" size={20} color={theme.colors.muted} />
+              )}
+            </Pressable>
           </View>
         </View>
       </ScrollView>
@@ -523,6 +613,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    overflow: 'hidden',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  photoOverlay: {
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   photoDelete: {
     position: 'absolute',

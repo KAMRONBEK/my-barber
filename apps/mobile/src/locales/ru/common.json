@@ -298,7 +298,9 @@
     "duration": "Длительность (мин)",
     "addService": "Добавить услугу",
     "removeService": "Удалить",
-    "photos": "Фото портфолио"
+    "photos": "Фото портфолио",
+    "addPhoto": "Добавить фото",
+    "removePhoto": "Удалить фото"
   },
   "weekday": {
     "short": {

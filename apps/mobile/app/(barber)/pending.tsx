@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Text } from '../../src/atoms/Text';
 import { Icon } from '../../src/atoms/Icon';
 import { Badge } from '../../src/atoms/Badge';
+import { ScreenHeader } from '../../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../../src/templates/ScreenLayout';
 import { getBarberBookings } from '../../src/lib/api';
 import {
@@ -92,23 +93,10 @@ export default function BarberPendingScreen() {
 
   return (
     <ScreenLayout>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: tabBarPadding }}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text
-            style={{
-              fontSize: 28,
-              fontWeight: '700',
-              color: theme.colors.fg,
-              letterSpacing: -0.6,
-            }}
-          >
-            {t('pending.title')}
-          </Text>
-          {sorted.length > 0 && (
+      <ScreenHeader
+        title={t('pending.title')}
+        right={
+          sorted.length > 0 ? (
             <View
               style={[
                 styles.pill,
@@ -134,8 +122,13 @@ export default function BarberPendingScreen() {
                 {sorted.length} ta band
               </Text>
             </View>
-          )}
-        </View>
+          ) : undefined
+        }
+      />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: tabBarPadding }}
+      >
         <Text
           style={{
             paddingHorizontal: 20,
@@ -461,13 +454,6 @@ export default function BarberPendingScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-  },
   pill: {
     height: 28,
     paddingHorizontal: 12,

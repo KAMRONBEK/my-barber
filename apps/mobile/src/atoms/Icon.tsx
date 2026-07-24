@@ -40,7 +40,8 @@ export type IconName =
   | 'map'
   | 'list'
   | 'locate'
-  | 'globe';
+  | 'globe'
+  | 'plus';
 
 export interface IconProps {
   name: IconName;
@@ -275,6 +276,8 @@ function render(
           <Path d="M12 2v4M12 18v4M2 12h4M18 12h4" {...common} />
         </>
       );
+    case 'plus':
+      return <Path d="M12 5v14M5 12h14" {...common} />;
     default:
       return null;
   }

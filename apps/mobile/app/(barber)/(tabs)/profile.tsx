@@ -1,7 +1,7 @@
 // Barber Profile tab screen.
 // Full profile with info card, rating, stats, menu items.
 
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -19,6 +19,7 @@ import { Avatar } from '../../../src/atoms/Avatar';
 import { Badge } from '../../../src/atoms/Badge';
 import { Icon, type IconName } from '../../../src/atoms/Icon';
 import { ScreenLayout } from '../../../src/templates/ScreenLayout';
+import { HelpSheet, type HelpSheetRef } from '../../../src/molecules/HelpSheet';
 import { useAuthStore } from '../../../src/lib/auth';
 import { useAppearanceStore, type AppearanceMode } from '../../../src/lib/appearance';
 import { useLocaleStore } from '../../../src/lib/locale';
@@ -30,10 +31,20 @@ import {
 } from '../../../src/navigation/BarberTabBar';
 import type { AppTheme } from '../../../src/lib/restyle';
 
-// Arbitrarily early lower bound — /barber/earnings requires a date range and
-// there's no "lifetime" mode, so this stands in for "since the account
-// existed" until there's a real account-creation date to use instead.
-const EARNINGS_LIFETIME_FROM = '2020-01-01';
+function startOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+function endOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+}
+
+function formatISODate(d: Date) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 const APPEARANCE_LABEL_KEYS: Record<AppearanceMode, string> = {
   system: 'profile.appearanceSystem',
@@ -55,6 +66,8 @@ export default function BarberProfileScreen() {
   const isAuthenticated = !!useAuthStore((s) => s.token);
   const appearanceMode = useAppearanceStore((s) => s.mode);
   const locale = useLocaleStore((s) => s.locale);
+
+  const helpSheetRef = useRef<HelpSheetRef>(null);
 
   const insets = useSafeAreaInsets();
   const tabBarPadding =
@@ -78,15 +91,22 @@ export default function BarberProfileScreen() {
     staleTime: 60 * 1000,
     enabled: isAuthenticated,
   });
+
+  const monthStart = startOfMonth(new Date());
+  const monthEnd = endOfMonth(new Date());
   const earningsQuery = useQuery({
-    queryKey: ['barber', 'earnings', 'lifetime'],
-    queryFn: () =>
-      getBarberEarnings(EARNINGS_LIFETIME_FROM, new Date().toISOString().slice(0, 10)),
+    queryKey: ['barber', 'earnings', formatISODate(monthStart), formatISODate(monthEnd)],
+    queryFn: () => getBarberEarnings(formatISODate(monthStart), formatISODate(monthEnd)),
     staleTime: 60 * 1000,
     enabled: isAuthenticated,
   });
 
-  const bookingsCount = bookingsQuery.data?.length ?? 0;
+  // "This month" — same window as /earnings' default view, so the number
+  // shown here matches what tapping through to it shows.
+  const bookingsCount = (bookingsQuery.data ?? []).filter((b) => {
+    const d = new Date(b.timestamp);
+    return d >= monthStart && d <= monthEnd;
+  }).length;
   const earningsTotal = earningsQuery.data?.summary.gross_total ?? 0;
   const rating = barberMeQuery.data?.barber.ratingAverage ?? 0;
   const reviewCount = barberMeQuery.data?.barber.ratingCount ?? 0;
@@ -189,7 +209,11 @@ export default function BarberProfileScreen() {
             },
           ]}
         >
-          <View style={styles.stat}>
+          <Pressable
+            style={styles.stat}
+            onPress={() => router.push('/bookings-history')}
+            accessibilityRole="button"
+          >
             <Text
               style={{
                 fontSize: 22,
@@ -203,11 +227,15 @@ export default function BarberProfileScreen() {
             <Text style={{ fontSize: 12, color: theme.colors.muted, marginTop: 2 }}>
               {t('bookings.title')}
             </Text>
-          </View>
+          </Pressable>
           <View
             style={[styles.statDivider, { backgroundColor: theme.colors.border }]}
           />
-          <View style={styles.stat}>
+          <Pressable
+            style={styles.stat}
+            onPress={() => router.push('/earnings')}
+            accessibilityRole="button"
+          >
             <Text
               style={{
                 fontSize: 22,
@@ -221,7 +249,7 @@ export default function BarberProfileScreen() {
             <Text style={{ fontSize: 12, color: theme.colors.muted, marginTop: 2 }}>
               {t('tabs.earnings')}
             </Text>
-          </View>
+          </Pressable>
         </View>
 
         {/* Menu sections */}
@@ -236,11 +264,6 @@ export default function BarberProfileScreen() {
             icon="user"
             label={t('barber.portfolio')}
             onPress={() => router.push('/portfolio-edit')}
-          />
-          <MenuRow
-            icon="settings"
-            label={t('profileEdit.title')}
-            onPress={() => router.push('/settings')}
           />
         </Menu>
 
@@ -262,7 +285,11 @@ export default function BarberProfileScreen() {
 
         <SectionHeading title={t('profile.section.help')} />
         <Menu>
-          <MenuRow icon="mail" label={t('profile.help')} />
+          <MenuRow
+            icon="mail"
+            label={t('profile.help')}
+            onPress={() => helpSheetRef.current?.open()}
+          />
           <Pressable
             onPress={onSignOut}
             style={[styles.menuRow, { borderTopColor: theme.colors.border }]}
@@ -293,6 +320,7 @@ export default function BarberProfileScreen() {
           </Pressable>
         </Menu>
       </ScrollView>
+      <HelpSheet ref={helpSheetRef} />
     </ScreenLayout>
   );
 }
