@@ -69,7 +69,7 @@
   "barber": {
     "verified": "Tasdiqlangan",
     "services": "Xizmatlar",
-    "portfolio": "Ishlar",
+    "portfolio": "Portfolio",
     "reviews": "Sharhlar",
     "about": "Haqida",
     "bookSeat": "O'rindiq band qilish",
@@ -303,7 +303,9 @@
     "duration": "Davomiyligi (min)",
     "addService": "Xizmat qo'shish",
     "removeService": "O'chirish",
-    "photos": "Portfolio rasmlari"
+    "photos": "Portfolio rasmlari",
+    "addPhoto": "Rasm qo'shish",
+    "removePhoto": "Rasmni o'chirish"
   },
   "weekday": {
     "short": {

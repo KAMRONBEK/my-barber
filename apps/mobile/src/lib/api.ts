@@ -284,6 +284,27 @@ export async function getBarberMe(): Promise<BarberMeResponse> {
   return r.data.data;
 }
 
+// POST /barber/add-image expects JSON { images: string[] } of base64 data
+// URLs (or {data, filename, mimeType} objects) — up to 5 per call, mirrors
+// uploadClientAvatar's JSON-not-multipart contract. Returns the newly
+// uploaded photos' signed URLs, in the same order as the request.
+export async function uploadBarberPortfolioImages(
+  base64DataUrls: string[],
+): Promise<string[]> {
+  const r = await api.post<{ ok: boolean; message: string; files?: { url: string }[] }>(
+    '/barber/add-image',
+    { images: base64DataUrls },
+  );
+  return (r.data.files ?? []).map((f) => f.url);
+}
+
+// DELETE /barber/images/:index removes the photo at that position in the
+// barber's `images` array (the same order GET /barber/getMe returns them in)
+// and deletes the underlying S3 object.
+export async function deleteBarberPortfolioImage(index: number): Promise<void> {
+  await api.delete(`/barber/images/${index}`);
+}
+
 export interface BarberBookingDetail {
   bookingId: string;
   clientFirstName: string;

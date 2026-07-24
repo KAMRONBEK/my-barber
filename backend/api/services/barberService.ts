@@ -374,6 +374,45 @@ export class BarberServiceClass {
     }
   }
 
+  async removeBarberImage(id: string, index: number): Promise<void> {
+    try {
+      const barber = await this.getBarberById(id);
+      if (!barber) {
+        throw new Error('Barber not found');
+      }
+
+      if (index < 0 || index >= barber.images.length) {
+        throw new Error('Image index out of range');
+      }
+
+      const updatedImages = barber.images.filter((_, i) => i !== index);
+      const [removedKey] = barber.images.slice(index, index + 1);
+
+      // Best-effort — the Firestore array is the source of truth for what
+      // the barber sees, so a stray S3 object left behind on failure here
+      // shouldn't block the removal from taking effect.
+      try {
+        await fileStorageService.deleteStoredReference(removedKey);
+      } catch (deleteError) {
+        logger.warn('Failed to delete barber image from S3:', {
+          barberId: id,
+          storageKey: removedKey,
+          error: deleteError,
+        });
+      }
+
+      await this.firestore.collection(COLLECTIONS.BARBERS).doc(id).update({
+        images: updatedImages,
+        updatedAt: new Date(),
+      });
+
+      logger.info('Barber image removed successfully', { barberId: id, index });
+    } catch (error) {
+      logger.error('Error removing barber image:', error);
+      throw error;
+    }
+  }
+
   async updateBarberAvatar(id: string, avatarUrl: string): Promise<void> {
     try {
       // Get current barber data to check for existing avatar

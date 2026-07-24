@@ -1,6 +1,7 @@
 import { db, COLLECTIONS } from '../config/database';
 import { Booking, BookingStatus } from '../models/booking';
 import { normalizeBookingStatus } from '../utils/bookingContract';
+import { firestoreDateToIso } from '../utils/firestoreDates';
 
 function parseDayUtc(iso: string): string {
   const d = new Date(iso);
@@ -77,9 +78,7 @@ export class EarningsServiceClass {
 
       const completedAt = b.completedAt;
       const updatedAt = b.updatedAt
-        ? new Date(
-            b.updatedAt as unknown as string | number | Date
-          ).toISOString()
+        ? firestoreDateToIso(b.updatedAt)
         : b.timestamp;
 
       let includeInSummary = false;

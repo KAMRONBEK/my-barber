@@ -32,7 +32,10 @@ export const BackButton: React.FC<BackButtonProps> = ({
 
   return (
     <Pressable
-      onPress={onPress ?? (() => router.back())}
+      onPress={
+        onPress ??
+        (() => (router.canGoBack() ? router.back() : router.replace('/')))
+      }
       style={({ pressed }) => [
         styles.btn,
         {
