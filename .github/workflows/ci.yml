@@ -9,12 +9,23 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Only run tasks for packages affected since the base commit (turbo --affected),
+  # so a change scoped to one app/package doesn't lint/typecheck/test the whole repo.
+  # PRs diff against their base commit; main pushes diff against the previous main tip.
+  # An unresolvable/empty base makes turbo fall back to running everything (fail-safe).
+  TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+  TURBO_SCM_HEAD: ${{ github.sha }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          # turbo --affected needs history back to the base commit to compute the diff.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -28,11 +39,13 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # --affected keeps this job (a required check) green even when nothing changed:
+      # turbo just runs zero tasks and exits 0, so branch protection still passes.
       - name: Lint
-        run: pnpm turbo run lint
+        run: pnpm turbo run lint --affected
 
       - name: Typecheck
-        run: pnpm turbo run typecheck
+        run: pnpm turbo run typecheck --affected
 
       - name: Test
-        run: pnpm turbo run test
+        run: pnpm turbo run test --affected
