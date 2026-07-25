@@ -19,17 +19,15 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
-import { YandexMapView, Marker, type YandexMapViewRef } from 'expo-yandex-mapkit';
+import { YandexMapView, type YandexMapViewRef } from 'expo-yandex-mapkit';
 import * as Location from 'expo-location';
 import {
-  BARBER_MARKER_ICON,
-  BARBER_MARKER_ICON_ACTIVE,
   DEFAULT_CAMERA,
   FOCUS_ZOOM,
-  MARKER_ANCHOR,
   WARM_DARK_MAP_STYLE,
   parseBarberCoordinate,
 } from '../lib/maps';
+import { BarberMapMarker } from '../molecules/BarberMapMarker';
 import { Text } from '../atoms/Text';
 import { BackButton, BACK_BUTTON_SIZE } from '../atoms/BackButton';
 import { Icon } from '../atoms/Icon';
@@ -189,22 +187,17 @@ export const BarbersMapScreen: React.FC = () => {
           tiltGesturesEnabled={false}
           onMapLoaded={() => setMapLoaded(true)}
         >
-          {barbers.map((barber, i) => {
-            const isSelected = selectedPin === i;
-            return (
-              <Marker
-                key={barber.id}
-                point={getBarberCoordinate(barber, i)}
-                source={isSelected ? BARBER_MARKER_ICON_ACTIVE : BARBER_MARKER_ICON}
-                anchor={MARKER_ANCHOR}
-                scale={isSelected ? 1.15 : 1}
-                zIndex={isSelected ? 1 : 0}
-                identifier={barber.id}
-                handled
-                onPress={() => handleCardPress(i)}
-              />
-            );
-          })}
+          {barbers.map((barber, i) => (
+            <BarberMapMarker
+              key={barber.id}
+              point={getBarberCoordinate(barber, i)}
+              avatarUri={barber.avatar}
+              initials={`${barber.firstName?.[0] ?? ''}${barber.lastName?.[0] ?? ''}`}
+              selected={selectedPin === i}
+              identifier={barber.id}
+              onPress={() => handleCardPress(i)}
+            />
+          ))}
         </YandexMapView>
 
         {/* Floating header */}

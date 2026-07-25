@@ -1,22 +1,22 @@
-// Embedded Yandex map preview with a single barber pin (profile / detail screens).
+// Embedded Yandex map preview with a single barber avatar marker (profile / detail screens).
 
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { YandexMapView, Marker } from 'expo-yandex-mapkit';
-import {
-  BARBER_MARKER_ICON,
-  MARKER_ANCHOR,
-  WARM_DARK_MAP_STYLE,
-  cameraForCoordinate,
-} from '../lib/maps';
+import { YandexMapView } from 'expo-yandex-mapkit';
+import { WARM_DARK_MAP_STYLE, cameraForCoordinate } from '../lib/maps';
+import { BarberMapMarker } from './BarberMapMarker';
 
 export interface BarberMapPreviewProps {
   coordinate: { latitude: number; longitude: number };
+  avatarUri?: string | null;
+  initials?: string;
   height?: number;
 }
 
 export const BarberMapPreview: React.FC<BarberMapPreviewProps> = ({
   coordinate,
+  avatarUri,
+  initials,
   height = 160,
 }) => {
   return (
@@ -29,7 +29,7 @@ export const BarberMapPreview: React.FC<BarberMapPreviewProps> = ({
         mapStyle={WARM_DARK_MAP_STYLE}
         interactiveDisabled
       >
-        <Marker point={coordinate} source={BARBER_MARKER_ICON} anchor={MARKER_ANCHOR} />
+        <BarberMapMarker point={coordinate} avatarUri={avatarUri} initials={initials} selected />
       </YandexMapView>
     </View>
   );
