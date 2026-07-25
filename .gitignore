@@ -43,4 +43,5 @@ coverage/
 .cache/
 .claude-flow/
 .claude/
+.swarm/
 cspell.json
