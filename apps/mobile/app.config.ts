@@ -1,18 +1,29 @@
 import type { ConfigContext } from 'expo/config';
 
 /**
- * Expo config. Loads GOOGLE_API_KEY from .env at prebuild time and wires the
- * official react-native-maps plugin (Google Maps pods + AppDelegate init on iOS).
- * The custom withGoogleMapsApiKey plugin only set Info.plist and was insufficient.
+ * Expo config. Loads YANDEX_MAPKIT_API_KEY from .env at prebuild time and wires
+ * the expo-yandex-mapkit config plugin (MapKit pods on iOS, SDK + minSdk on
+ * Android). A build-time apiKey auto-initializes MapKit at startup — no
+ * AppDelegate / AndroidManifest edits and no runtime initialize() call needed.
  */
 export default ({ config }: ConfigContext) => {
-  const googleMapsApiKey = process.env.GOOGLE_API_KEY ?? '';
+  // Sourced from EAS environment variables (`eas env:pull`); the stored name is
+  // YANDEX_MAPS_API_KEY. Falls back to a MapKit-specific alias if ever set.
+  const yandexMapKitApiKey =
+    process.env.YANDEX_MAPS_API_KEY ?? process.env.YANDEX_MAPKIT_API_KEY ?? '';
 
-  if (!googleMapsApiKey) {
+  if (!yandexMapKitApiKey) {
     console.warn(
-      '[app.config] GOOGLE_API_KEY is not set — Google Maps will not work on iOS or Android.',
+      '[app.config] YANDEX_MAPS_API_KEY is not set — the Yandex map will render empty until a key is provided.',
     );
   }
+
+  // The config plugin rejects an empty apiKey, so only pass it when set;
+  // otherwise register the plugin bare (key can be supplied at runtime via
+  // initialize(), or by a build with YANDEX_MAPS_API_KEY present).
+  const yandexMapKitPlugin = yandexMapKitApiKey
+    ? (['expo-yandex-mapkit', { apiKey: yandexMapKitApiKey }] as const)
+    : ('expo-yandex-mapkit' as const);
 
   return {
     ...config,
@@ -29,13 +40,7 @@ export default ({ config }: ConfigContext) => {
         },
       ],
       'react-native-map-link',
-      [
-        'react-native-maps',
-        {
-          iosGoogleMapsApiKey: googleMapsApiKey,
-          androidGoogleMapsApiKey: googleMapsApiKey,
-        },
-      ],
+      yandexMapKitPlugin,
       [
         'expo-location',
         {

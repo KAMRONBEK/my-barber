@@ -1,0 +1,232 @@
+diff --git a/android/src/main/java/expo/modules/yandexmapkit/ExpoYandexMapKitMarkerView.kt b/android/src/main/java/expo/modules/yandexmapkit/ExpoYandexMapKitMarkerView.kt
+index 79c9d2f91d3f33fe98707d9bfd67f4197f9745de..5b429bf35a0f5fd64db360772c036e4bb1696905 100644
+--- a/android/src/main/java/expo/modules/yandexmapkit/ExpoYandexMapKitMarkerView.kt
++++ b/android/src/main/java/expo/modules/yandexmapkit/ExpoYandexMapKitMarkerView.kt
+@@ -35,7 +35,12 @@ class MarkerAnchorRecord : Record {
+ // point are present.
+ class ExpoYandexMapKitMarkerView(context: Context, appContext: AppContext) :
+   ExpoView(context, appContext), MapObjectTapListener {
+-  private val onPress by EventDispatcher<Map<String, Any?>>()
++  // Not "onPress": React Native reserves the top-level `topPress` name as a bubbling event and
++  // Expo's view interop registers view events as direct, so an "onPress" event collides
++  // ("Event cannot be both direct and bubbling: topPress") and crashes on the first marker mount.
++  // `onMarkerPress` maps to the free `topMarkerPress`. The JS `Marker` keeps its public `onPress`
++  // prop and forwards it to this event.
++  private val onMarkerPress by EventDispatcher<Map<String, Any?>>()
+ 
+   private var placemark: PlacemarkMapObject? = null
+   private var point: Point? = null
+@@ -127,24 +132,28 @@ class ExpoYandexMapKitMarkerView(context: Context, appContext: AppContext) :
+     val point = point ?: return
+     placemark.geometry = point
+     placemark.zIndex = zIndexValue
+-    placemark.setIconStyle(buildIconStyle())
+ 
++    // setIconStyle is only valid once the placemark carries an icon (MapKit rejects styling an
++    // icon-less placemark), so style only after the icon is set: on an icon change, inside the
++    // load callback; on an unchanged icon, directly (it is already present).
+     val source = iconSource
+     if (source.isNullOrEmpty()) {
+       return
+     }
+-    if (source == appliedIconSource) {
+-      return
+-    }
+-    appliedIconSource = source
+-    MarkerImageLoader.load(context, source) { bitmap ->
+-      val current = this.placemark
+-      // Ignore a late load if the marker was detached or the icon changed again meanwhile.
+-      if (bitmap != null && current != null && current.isValid && source == appliedIconSource) {
+-        current.setIcon(ImageProvider.fromBitmap(bitmap))
+-        // Re-apply the style so scale/anchor/visibility stick after the icon swap.
+-        current.setIconStyle(buildIconStyle())
++    if (source != appliedIconSource) {
++      appliedIconSource = source
++      MarkerImageLoader.load(context, source) { bitmap ->
++        val current = this.placemark
++        // Ignore a late load if the marker was detached or the icon changed again meanwhile.
++        if (bitmap != null && current != null && current.isValid && source == appliedIconSource) {
++          current.setIcon(ImageProvider.fromBitmap(bitmap))
++          // Style after the icon is set so scale/anchor/visibility/rotation stick.
++          current.setIconStyle(buildIconStyle())
++        }
+       }
++    } else {
++      // Same icon already applied — this is a style-only change (scale/anchor/visible/rotated).
++      placemark.setIconStyle(buildIconStyle())
+     }
+   }
+ 
+@@ -158,7 +167,7 @@ class ExpoYandexMapKitMarkerView(context: Context, appContext: AppContext) :
+   }
+ 
+   override fun onMapObjectTap(mapObject: MapObject, point: Point): Boolean {
+-    onPress(
++    onMarkerPress(
+       mapOf(
+         "identifier" to identifier,
+         "point" to mapOf("latitude" to point.latitude, "longitude" to point.longitude)
+diff --git a/android/src/main/java/expo/modules/yandexmapkit/ExpoYandexMapKitModule.kt b/android/src/main/java/expo/modules/yandexmapkit/ExpoYandexMapKitModule.kt
+index 3f620ab9c050c2a048c2a869a3fed9b819ea8a56..90b29a916764eace357b38d2155967cc7d8d2f30 100644
+--- a/android/src/main/java/expo/modules/yandexmapkit/ExpoYandexMapKitModule.kt
++++ b/android/src/main/java/expo/modules/yandexmapkit/ExpoYandexMapKitModule.kt
+@@ -169,7 +169,7 @@ class ExpoYandexMapKitModule : Module() {
+     // 'ExpoYandexMapKitMarkerView'); the map view above stays the module's default view.
+     View(ExpoYandexMapKitMarkerView::class) {
+       Name("ExpoYandexMapKitMarkerView")
+-      Events("onPress")
++      Events("onMarkerPress")
+ 
+       Prop("point") { view: ExpoYandexMapKitMarkerView, point: PointRecord ->
+         view.setPoint(Point(point.latitude, point.longitude))
+diff --git a/build/ExpoYandexMapKitMarkerView.js b/build/ExpoYandexMapKitMarkerView.js
+index 153c2dfb53d2fa1584ffbdb8b0f6c00bc4549c1b..c2324f0cc98b3135eb9c3b6e12c965c8e0792287 100644
+--- a/build/ExpoYandexMapKitMarkerView.js
++++ b/build/ExpoYandexMapKitMarkerView.js
+@@ -11,7 +11,7 @@ const NativeMarkerView = requireNativeView('ExpoYandexMapKit', 'ExpoYandexMapKit
+  * </YandexMapView>
+  * ```
+  */
+-export const Marker = React.forwardRef(({ source, zIndex, ...props }, ref) => {
++export const Marker = React.forwardRef(({ source, zIndex, onPress, ...props }, ref) => {
+     const nativeRef = React.useRef(null);
+     // Turn an ImageSourcePropType (require(...) number or { uri }) into the URI the native side
+     // loads. `undefined` leaves the marker on MapKit's default pin.
+@@ -23,7 +23,7 @@ export const Marker = React.forwardRef(({ source, zIndex, ...props }, ref) => {
+         animatedMoveTo: (point, durationMs) => nativeRef.current?.animatedMoveTo(point, durationMs) ?? Promise.resolve(),
+         animatedRotateTo: (angle, durationMs) => nativeRef.current?.animatedRotateTo(angle, durationMs) ?? Promise.resolve(),
+     }), []);
+-    return <NativeMarkerView {...props} source={uri} zI={zIndex} ref={nativeRef}/>;
++    return <NativeMarkerView {...props} source={uri} zI={zIndex} onMarkerPress={onPress} ref={nativeRef}/>;
+ });
+ Marker.displayName = 'YandexMarker';
+ //# sourceMappingURL=ExpoYandexMapKitMarkerView.js.map
+\ No newline at end of file
+diff --git a/ios/ExpoYandexMapKitMarkerView.swift b/ios/ExpoYandexMapKitMarkerView.swift
+index ac06c2ec184a0c792b9141a24d0ed2dd37e3fdcf..20f2757d7ea687da9f857cd42a770d5456bcd4a1 100644
+--- a/ios/ExpoYandexMapKitMarkerView.swift
++++ b/ios/ExpoYandexMapKitMarkerView.swift
+@@ -20,7 +20,12 @@ class ExpoYandexMapKitMarkerView: ExpoView {
+   // Frame rate for the imperative move/rotate animations.
+   private static let framesPerSecond = 60.0
+ 
+-  let onPress = EventDispatcher()
++  // Event registration name is deliberately NOT "onPress": React Native reserves the top-level
++  // `topPress` name as a bubbling event, and Expo's view interop registers view events as direct,
++  // so an "onPress" event collides ("Event cannot be both direct and bubbling: topPress") and
++  // crashes on the first marker mount. `onMarkerPress` maps to `topMarkerPress`, which is free.
++  // The JS `Marker` keeps its public `onPress` prop and forwards it to this event.
++  let onMarkerPress = EventDispatcher()
+ 
+   private var placemark: YMKPlacemarkMapObject?
+   // MapKit holds the tap listener; keep it strongly retained here (this view is itself kept alive
+@@ -117,21 +122,30 @@ class ExpoYandexMapKitMarkerView: ExpoView {
+     }
+     placemark.geometry = point
+     placemark.zIndex = zIndexValue
+-    placemark.setIconStyleWith(buildIconStyle())
+ 
+-    guard let source = iconSource, !source.isEmpty, source != appliedIconSource else {
++    // `setIconStyleWith` asserts ("Supported for single, animated icon and view only") unless the
++    // placemark already carries an icon, so an icon-less placemark must never be styled. When the
++    // icon source changes, load it and apply the style inside the callback (after `setIconWith`);
++    // when it is unchanged, the icon is already present so a style-only refresh is safe.
++    guard let source = iconSource, !source.isEmpty else {
+       return
+     }
+-    appliedIconSource = source
+-    MarkerImageLoader.load(source) { [weak self] image in
+-      guard let self = self, let image = image, let current = self.placemark, current.isValid,
+-        source == self.appliedIconSource
+-      else {
+-        return
++
++    if source != appliedIconSource {
++      appliedIconSource = source
++      MarkerImageLoader.load(source) { [weak self] image in
++        guard let self = self, let image = image, let current = self.placemark, current.isValid,
++          source == self.appliedIconSource
++        else {
++          return
++        }
++        current.setIconWith(image)
++        // Style after the icon is set so scale/anchor/visibility/rotation stick.
++        current.setIconStyleWith(self.buildIconStyle())
+       }
+-      current.setIconWith(image)
+-      // Re-apply the style so scale/anchor/visibility stick after the icon swap.
+-      current.setIconStyleWith(self.buildIconStyle())
++    } else {
++      // Same icon already applied — this is a style-only change (scale/anchor/visible/rotated).
++      placemark.setIconStyleWith(buildIconStyle())
+     }
+   }
+ 
+@@ -148,7 +162,7 @@ class ExpoYandexMapKitMarkerView: ExpoView {
+ 
+   fileprivate func handleTap(_ point: YMKPoint) -> Bool {
+     // NSNull (not `nil as Any`) when unset, so the payload matches Android's null identifier.
+-    onPress([
++    onMarkerPress([
+       "identifier": identifier.map { $0 as Any } ?? NSNull(),
+       "point": ["latitude": point.latitude, "longitude": point.longitude],
+     ])
+diff --git a/ios/ExpoYandexMapKitModule.swift b/ios/ExpoYandexMapKitModule.swift
+index abd2805cdbf12b96f8a01d827b112a2efb030eb8..fbfecd83d5dab77fb60cd21b1333a72bff64dd4e 100644
+--- a/ios/ExpoYandexMapKitModule.swift
++++ b/ios/ExpoYandexMapKitModule.swift
+@@ -149,7 +149,7 @@ public class ExpoYandexMapKitModule: Module {
+     // above stays the module's default view.
+     View(ExpoYandexMapKitMarkerView.self) {
+       ViewName("ExpoYandexMapKitMarkerView")
+-      Events("onPress")
++      Events("onMarkerPress")
+ 
+       Prop("point") { (view: ExpoYandexMapKitMarkerView, point: PointRecord) in
+         view.setPoint(point)
+diff --git a/src/ExpoYandexMapKitMarkerView.tsx b/src/ExpoYandexMapKitMarkerView.tsx
+index 322ddb6540ae26c9908da52500e4a7fc4ee62076..28eb8a919a366c9cf73934ca0c61b51e5a416afe 100644
+--- a/src/ExpoYandexMapKitMarkerView.tsx
++++ b/src/ExpoYandexMapKitMarkerView.tsx
+@@ -8,9 +8,14 @@ import { MarkerProps, MarkerRef, Point } from './ExpoYandexMapKit.types';
+ // so it is required by name; the map view stays the module's default view. `source` is resolved
+ // to a plain URI string here — the native side only deals in URIs. `zIndex` is sent as `zI` so
+ // React Native's own layout `zIndex` doesn't intercept it (the marker owns no laid-out view).
+-type NativeMarkerProps = Omit<MarkerProps, 'source' | 'zIndex'> & {
++// The public `onPress` is forwarded as `onMarkerPress`: React Native reserves the top-level
++// `topPress` name as a bubbling event, so a native "onPress" event collides with it ("Event
++// cannot be both direct and bubbling: topPress") and crashes on mount. `onMarkerPress` maps to
++// the free `topMarkerPress`, keeping the public prop name `onPress`.
++type NativeMarkerProps = Omit<MarkerProps, 'source' | 'zIndex' | 'onPress'> & {
+   source?: string;
+   zI?: number;
++  onMarkerPress?: MarkerProps['onPress'];
+   ref?: React.Ref<unknown>;
+ };
+ 
+@@ -29,7 +34,7 @@ const NativeMarkerView: React.ComponentType<NativeMarkerProps> = requireNativeVi
+  * ```
+  */
+ export const Marker = React.forwardRef<MarkerRef, MarkerProps>(
+-  ({ source, zIndex, ...props }, ref) => {
++  ({ source, zIndex, onPress, ...props }, ref) => {
+     const nativeRef = React.useRef<any>(null);
+ 
+     // Turn an ImageSourcePropType (require(...) number or { uri }) into the URI the native side
+@@ -52,7 +57,15 @@ export const Marker = React.forwardRef<MarkerRef, MarkerProps>(
+       []
+     );
+ 
+-    return <NativeMarkerView {...props} source={uri} zI={zIndex} ref={nativeRef} />;
++    return (
++      <NativeMarkerView
++        {...props}
++        source={uri}
++        zI={zIndex}
++        onMarkerPress={onPress}
++        ref={nativeRef}
++      />
++    );
+   }
+ );
+ 
