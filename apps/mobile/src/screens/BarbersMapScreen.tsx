@@ -1,5 +1,7 @@
-// Barbers map view. Real MapView with react-native-maps, pins, floating header,
-// filter chips, and a bottom sheet with horizontal scrollable barber cards.
+// Barbers map view. YandexMapView background with one marker per barber, a
+// floating header, filter chips, and a bottom sheet with horizontal scrollable
+// barber cards. Tapping a pin or a card selects that barber (active pin + camera
+// focus); the camera auto-fits all pins on first load.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -17,12 +19,15 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
-import MapView, { Marker, type Region } from 'react-native-maps';
+import { YandexMapView, Marker, type YandexMapViewRef } from 'expo-yandex-mapkit';
 import * as Location from 'expo-location';
 import {
-  DEFAULT_MAP_REGION,
-  GOOGLE_DARK_MAP_STYLE,
-  MAP_PROVIDER,
+  BARBER_MARKER_ICON,
+  BARBER_MARKER_ICON_ACTIVE,
+  DEFAULT_CAMERA,
+  FOCUS_ZOOM,
+  MARKER_ANCHOR,
+  WARM_DARK_MAP_STYLE,
   parseBarberCoordinate,
 } from '../lib/maps';
 import { Text } from '../atoms/Text';
@@ -57,9 +62,6 @@ const FILTER_CHIPS: Array<{ key: string; labelKey: string; icon?: boolean }> = [
   { key: 'open', labelKey: 'map.openNow' },
 ];
 
-// Approximate real-world coordinates for demo barbers (Tashkent / Mirzo-Ulugbek area)
-const INITIAL_REGION: Region = DEFAULT_MAP_REGION;
-
 function getBarberCoordinate(
   barber: ApiBarberFull,
   index: number,
@@ -73,14 +75,13 @@ export const BarbersMapScreen: React.FC = () => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheet>(null);
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<YandexMapViewRef>(null);
   const scrollRef = useRef<ScrollView>(null);
   const [selectedPin, setSelectedPin] = useState(0);
   const [query, setQuery] = useState('');
   const [activeChip, setActiveChip] = useState('filters');
-  // Custom Marker views flicker while tracksViewChanges stays true during pan/zoom.
-  // Briefly enable it when pins need a visual update, then snapshot to a bitmap.
-  const [tracksViewChanges, setTracksViewChanges] = useState(true);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const didFitRef = useRef(false);
 
   const barbersQuery = useQuery({
     queryKey: queryKeys.barbers,
@@ -108,55 +109,28 @@ export const BarbersMapScreen: React.FC = () => {
     return list;
   }, [rawBarbers, query]);
 
+  // Once the map has loaded and barbers are in, frame every pin so the user
+  // sees the whole set instead of the default Tashkent camera. Runs once.
   useEffect(() => {
-    if (barbers.length === 0) return;
-    setTracksViewChanges(true);
-    const timer = setTimeout(() => setTracksViewChanges(false), 400);
-    return () => clearTimeout(timer);
-  }, [barbers]);
-
-  useEffect(() => {
-    setTracksViewChanges(true);
-    const timer = setTimeout(() => setTracksViewChanges(false), 400);
-    return () => clearTimeout(timer);
-  }, [selectedPin]);
+    if (!mapLoaded || didFitRef.current || barbers.length < 2) return;
+    didFitRef.current = true;
+    const points = barbers.map((b, i) => getBarberCoordinate(b, i));
+    void mapRef.current?.fitMarkers(points, { durationSeconds: 0.3 });
+  }, [mapLoaded, barbers]);
 
   const tabBarPadding =
     TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
 
-  const handlePinPress = useCallback(
+  const handleCardPress = useCallback(
     (index: number) => {
       setSelectedPin(index);
       scrollRef.current?.scrollTo({ x: index * 272, animated: true });
       const barber = barbers[index];
       const coord = barber ? getBarberCoordinate(barber, index) : null;
       if (coord && mapRef.current) {
-        mapRef.current.animateToRegion(
-          {
-            ...coord,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          },
-          400
-        );
-      }
-    },
-    [barbers]
-  );
-
-  const handleCardPress = useCallback(
-    (index: number) => {
-      setSelectedPin(index);
-      const barber = barbers[index];
-      const coord = barber ? getBarberCoordinate(barber, index) : null;
-      if (coord && mapRef.current) {
-        mapRef.current.animateToRegion(
-          {
-            ...coord,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          },
-          400
+        void mapRef.current.setCenter(
+          { ...coord, zoom: FOCUS_ZOOM },
+          { durationSeconds: 0.4 }
         );
       }
     },
@@ -176,14 +150,13 @@ export const BarbersMapScreen: React.FC = () => {
     const loc = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.Balanced,
     });
-    mapRef.current?.animateToRegion(
+    void mapRef.current?.setCenter(
       {
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
+        zoom: FOCUS_ZOOM,
       },
-      500
+      { durationSeconds: 0.5 }
     );
   }, []);
 
@@ -202,83 +175,37 @@ export const BarbersMapScreen: React.FC = () => {
   return (
     <ScreenLayout edgeToEdgeTop>
       <View style={{ flex: 1 }}>
-        {/* Real Map background */}
-        <MapView
+        {/* Real map background with one pin per barber. Tapping a pin selects
+            the matching card (camera focus + sheet scroll), mirroring a card tap.
+            TODO(user-location): re-add `showsUserLocation` equivalent when the
+            lib ships the user-location layer (roadmap v1). */}
+        <YandexMapView
           ref={mapRef}
-          provider={MAP_PROVIDER}
           style={StyleSheet.absoluteFillObject}
-          initialRegion={INITIAL_REGION}
-          customMapStyle={GOOGLE_DARK_MAP_STYLE}
-          showsUserLocation
-          showsMyLocationButton={false}
-          rotateEnabled={false}
-          pitchEnabled={false}
+          cameraPosition={DEFAULT_CAMERA}
+          nightMode
+          mapStyle={WARM_DARK_MAP_STYLE}
+          rotateGesturesEnabled={false}
+          tiltGesturesEnabled={false}
+          onMapLoaded={() => setMapLoaded(true)}
         >
           {barbers.map((barber, i) => {
-            const isActive = selectedPin === i;
-            const coord = getBarberCoordinate(barber, i);
-            const rating = barber.ratingAverage ?? 0;
+            const isSelected = selectedPin === i;
             return (
               <Marker
                 key={barber.id}
-                coordinate={coord}
-                onPress={() => handlePinPress(i)}
-                tracksViewChanges={tracksViewChanges}
-              >
-                <View style={styles.markerContainer}>
-                  <View
-                    style={[
-                      styles.markerBubble,
-                      {
-                        backgroundColor: isActive
-                          ? theme.colors.accent
-                          : theme.colors.fg,
-                      },
-                    ]}
-                  >
-                    <Icon
-                      name="star"
-                      size={11}
-                      color={isActive ? theme.colors.onAccent : theme.colors.bg}
-                    />
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        fontWeight: '600',
-                        color: isActive ? theme.colors.onAccent : theme.colors.bg,
-                      }}
-                    >
-                      {rating > 0 ? rating.toFixed(2).replace('.', ',') : '—'}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.markerNeedle,
-                      {
-                        backgroundColor: isActive
-                          ? theme.colors.accent
-                          : theme.colors.fg,
-                      },
-                    ]}
-                  />
-                  <View
-                    style={[
-                      styles.markerDot,
-                      {
-                        backgroundColor: isActive
-                          ? theme.colors.accent
-                          : theme.colors.fg,
-                        shadowColor: isActive
-                          ? theme.colors.accent
-                          : theme.colors.fg,
-                      },
-                    ]}
-                  />
-                </View>
-              </Marker>
+                point={getBarberCoordinate(barber, i)}
+                source={isSelected ? BARBER_MARKER_ICON_ACTIVE : BARBER_MARKER_ICON}
+                anchor={MARKER_ANCHOR}
+                scale={isSelected ? 1.15 : 1}
+                zIndex={isSelected ? 1 : 0}
+                identifier={barber.id}
+                handled
+                onPress={() => handleCardPress(i)}
+              />
             );
           })}
-        </MapView>
+        </YandexMapView>
 
         {/* Floating header */}
         <View style={[styles.mapHeader, { paddingTop: insets.top + 12 }]}>
@@ -686,35 +613,6 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  markerContainer: {
-    alignItems: 'center',
-  },
-  markerBubble: {
-    height: 32,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  markerNeedle: {
-    width: 2,
-    height: 14,
-  },
-  markerDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
   },
   locBtn: {
     position: 'absolute',

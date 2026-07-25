@@ -5,7 +5,11 @@
 
 import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
-import MapView, { type Region } from 'react-native-maps';
+import {
+  YandexMapView,
+  type YandexMapViewRef,
+  type CameraPositionChangeEvent,
+} from 'expo-yandex-mapkit';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +20,7 @@ import { Icon } from '../src/atoms/Icon';
 import { Button } from '../src/atoms/Button';
 import { ScreenHeader } from '../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../src/templates/ScreenLayout';
-import { DEFAULT_MAP_REGION, GOOGLE_DARK_MAP_STYLE, MAP_PROVIDER } from '../src/lib/maps';
+import { DEFAULT_CAMERA, FOCUS_ZOOM, WARM_DARK_MAP_STYLE } from '../src/lib/maps';
 import { useLocationPickerStore } from '../src/lib/locationPicker';
 import type { AppTheme } from '../src/lib/restyle';
 
@@ -35,12 +39,12 @@ export default function LocationPickerScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<YandexMapViewRef>(null);
   const setResult = useLocationPickerStore((s) => s.setResult);
 
   const [coordinate, setCoordinate] = useState({
-    latitude: DEFAULT_MAP_REGION.latitude,
-    longitude: DEFAULT_MAP_REGION.longitude,
+    latitude: DEFAULT_CAMERA.latitude,
+    longitude: DEFAULT_CAMERA.longitude,
   });
   const [address, setAddress] = useState('');
   const [resolving, setResolving] = useState(false);
@@ -58,9 +62,16 @@ export default function LocationPickerScreen() {
     }
   }, []);
 
-  const onRegionChangeComplete = useCallback(
-    (region: Region) => {
-      const coord = { latitude: region.latitude, longitude: region.longitude };
+  // Yandex fires this continuously while the camera moves; only reverse-geocode
+  // once the gesture settles (finished) to mirror onRegionChangeComplete.
+  const onCameraPositionChanged = useCallback(
+    (event: { nativeEvent: CameraPositionChangeEvent }) => {
+      const { cameraPosition, finished } = event.nativeEvent;
+      if (!finished) return;
+      const coord = {
+        latitude: cameraPosition.latitude,
+        longitude: cameraPosition.longitude,
+      };
       setCoordinate(coord);
       void resolveAddress(coord);
     },
@@ -76,7 +87,10 @@ export default function LocationPickerScreen() {
         accuracy: Location.Accuracy.Balanced,
       });
       const coord = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-      mapRef.current?.animateToRegion({ ...coord, latitudeDelta: 0.01, longitudeDelta: 0.01 }, 500);
+      void mapRef.current?.setCenter(
+        { ...coord, zoom: FOCUS_ZOOM },
+        { durationSeconds: 0.5 },
+      );
       setCoordinate(coord);
       void resolveAddress(coord);
     } finally {
@@ -93,17 +107,18 @@ export default function LocationPickerScreen() {
   return (
     <ScreenLayout edgeToEdgeTop>
       <View style={styles.flex}>
-        <MapView
+        {/* TODO(user-location): re-add a "show user location" dot once
+            expo-yandex-mapkit ships the user-location layer (roadmap v1).
+            react-native-maps' showsUserLocation has no equivalent yet. */}
+        <YandexMapView
           ref={mapRef}
-          provider={MAP_PROVIDER}
           style={StyleSheet.absoluteFillObject}
-          initialRegion={DEFAULT_MAP_REGION}
-          customMapStyle={GOOGLE_DARK_MAP_STYLE}
-          showsUserLocation
-          showsMyLocationButton={false}
-          rotateEnabled={false}
-          pitchEnabled={false}
-          onRegionChangeComplete={onRegionChangeComplete}
+          cameraPosition={DEFAULT_CAMERA}
+          nightMode
+          mapStyle={WARM_DARK_MAP_STYLE}
+          rotateGesturesEnabled={false}
+          tiltGesturesEnabled={false}
+          onCameraPositionChanged={onCameraPositionChanged}
         />
 
         {/* Fixed center pin */}

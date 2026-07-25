@@ -1,34 +1,97 @@
+import type { ImageSourcePropType } from 'react-native';
 import { showLocation } from 'react-native-map-link';
-import { PROVIDER_GOOGLE, type MapStyleElement, type Provider, type Region } from 'react-native-maps';
+import type { CameraPosition, MarkerAnchor } from 'expo-yandex-mapkit';
 import i18n from './i18n';
 
-/** Google Maps on both iOS and Android (requires native rebuild via app.config.ts). */
-export const MAP_PROVIDER: Provider = PROVIDER_GOOGLE;
+export type LatLng = { latitude: number; longitude: number };
 
-/** Dark/warm custom style for Google Maps. */
-export const GOOGLE_DARK_MAP_STYLE: MapStyleElement[] = [
-  { elementType: 'geometry', stylers: [{ color: '#1d130b' }] },
-  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#b8a99a' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#1d130b' }] },
-  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#2a1d14' }] },
-  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#9e8e7e' }] },
-  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
-  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#c4b5a5' }] },
-  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#a89888' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1a2e1a' }] },
-  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#6b8f5e' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2e1f14' }] },
-  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9e8e7e' }] },
-  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#3d2a1c' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#4a3323' }] },
-  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#b8a99a' }] },
-  { featureType: 'road.local', elementType: 'geometry', stylers: [{ color: '#2e1f14' }] },
-  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2a1d14' }] },
-  { featureType: 'transit', elementType: 'labels.text.fill', stylers: [{ color: '#8a7a6a' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#14202e' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#4a6a8a' }] },
+/**
+ * Barber map-pin icons (copper teardrop, generated into assets/markers). The
+ * `active` variant is brighter with a white ring for the selected barber.
+ * expo-yandex-mapkit markers are image-only for now (React-children icons are
+ * on the lib roadmap), so the rating stays on the cards rather than in the pin.
+ */
+export const BARBER_MARKER_ICON: ImageSourcePropType = require('../../assets/markers/pin-marker.png');
+export const BARBER_MARKER_ICON_ACTIVE: ImageSourcePropType = require('../../assets/markers/pin-marker-active.png');
+
+/** Pin the teardrop's tip (bottom-center) to the coordinate. */
+export const MARKER_ANCHOR: MarkerAnchor = { x: 0.5, y: 1 };
+
+/** Default camera zoom for street-level detail (Yandex zoom scale). */
+export const DEFAULT_ZOOM = 14;
+
+/** Zoom used when focusing a single barber / picked coordinate. */
+export const FOCUS_ZOOM = 15;
+
+/**
+ * Convert a legacy react-native-maps latitude/longitude delta to a Yandex zoom
+ * level. Kept so callers that still think in "region deltas" have a bridge:
+ * a full 360° span is zoom 0, halving the span adds one zoom level.
+ */
+export function zoomForDelta(delta: number): number {
+  if (!delta || delta <= 0) return DEFAULT_ZOOM;
+  return Math.log2(360 / delta);
+}
+
+/**
+ * Warm-copper dark map theme matching the app's dark palette (see
+ * `@my-barber/ui` tokens: bg #14110d, surface #1d1813, accent #d8854a). Ported
+ * from the app's original Google "warm-brown" style to Yandex MapKit's JSON
+ * style schema (array of {tags, elements, stylers} rules), consumed via the
+ * `<YandexMapView mapStyle={...} />` prop (expo-yandex-mapkit ≥ 0.0.5). Only the
+ * vector layer honours this; pass it alongside a dark base and it recolours land,
+ * water, roads, parks, buildings and labels to the app's tones. Unknown tags are
+ * skipped by MapKit, so the set stays intentionally broad.
+ */
+const WARM_DARK_MAP_RULES = [
+  // Base landmass / land use — deep warm ink.
+  { tags: 'land', elements: 'geometry', stylers: { color: '#17120c' } },
+  { tags: 'landcover', elements: 'geometry', stylers: { color: '#17120c' } },
+  { tags: 'urban_area', elements: 'geometry', stylers: { color: '#1b150e' } },
+  // Water — dark desaturated blue that still reads warm next to the land.
+  { tags: 'water', elements: 'geometry', stylers: { color: '#12212e' } },
+  // Big parks pop as green (a useful landmark), but generic greenery / residential
+  // yards stay subdued so dense blocks don't turn solid green at high zoom.
+  {
+    tags: { any: ['park', 'national_park'] },
+    elements: 'geometry',
+    stylers: { color: '#2a4a2e' },
+  },
+  {
+    tags: { any: ['vegetation', 'cemetery'] },
+    elements: 'geometry',
+    stylers: { color: '#1f3320' },
+  },
+  // Buildings / structures — a touch above the land, subtle warm outline.
+  {
+    tags: { any: ['building', 'structure'] },
+    elements: 'geometry.fill',
+    stylers: { color: '#1f1913' },
+  },
+  {
+    tags: { any: ['building', 'structure'] },
+    elements: 'geometry.outline',
+    stylers: { color: '#2c251f' },
+  },
+  // Roads — warm tan, kept clearly lighter than the land so the whole network stays
+  // legible at every zoom (the plain map's light-grey roads were the main thing lost
+  // when the first pass made roads too dark). Near-black casing for definition.
+  { tags: 'road', elements: 'geometry.fill', stylers: { color: '#7a6144' } },
+  { tags: 'road', elements: 'geometry.outline', stylers: { color: '#120d08' } },
+  { tags: 'road_minor', elements: 'geometry.fill', stylers: { color: '#4a3a28' } },
+  // Transit / metro lines left at the base scheme's own colour on purpose — the
+  // Tashkent metro network is a useful landmark, so we don't recolour it away.
+  // Admin borders — faint warm grey.
+  { tags: 'admin', elements: 'geometry', stylers: { color: '#3d362d' } },
+  // Labels — warm off-white text with a dark halo for legibility.
+  { elements: 'label.text.fill', stylers: { color: '#c2b3a2' } },
+  { elements: 'label.text.outline', stylers: { color: '#100c08' } },
+  // POI icons kept (metro, cafés, pharmacies, bazaars… are useful landmarks); the
+  // barber markers sit on their own overlay above the map, so they still read.
 ];
+
+/** The theme above serialised for the `mapStyle` prop (a Yandex JSON string). */
+export const WARM_DARK_MAP_STYLE = JSON.stringify(WARM_DARK_MAP_RULES);
 
 /** Tashkent area fallbacks when API location has no coordinates. */
 export const BARBER_FALLBACK_COORDINATES: Array<{ latitude: number; longitude: number }> = [
@@ -39,11 +102,11 @@ export const BARBER_FALLBACK_COORDINATES: Array<{ latitude: number; longitude: n
   { latitude: 41.32, longitude: 69.282 },
 ];
 
-export const DEFAULT_MAP_REGION: Region = {
+/** Default map camera: Tashkent / Mirzo-Ulugbek area. */
+export const DEFAULT_CAMERA: CameraPosition = {
   latitude: 41.315,
   longitude: 69.287,
-  latitudeDelta: 0.02,
-  longitudeDelta: 0.02,
+  zoom: DEFAULT_ZOOM,
 };
 
 export type BarberLocationWire =
@@ -90,15 +153,12 @@ export function formatBarberAddress(location: BarberLocationWire | undefined): s
   return null;
 }
 
-export function regionAroundCoordinate(
-  coordinate: { latitude: number; longitude: number },
-  delta = 0.008,
-): Region {
-  return {
-    ...coordinate,
-    latitudeDelta: delta,
-    longitudeDelta: delta,
-  };
+/** Build a Yandex camera position centered on a coordinate. */
+export function cameraForCoordinate(
+  coordinate: LatLng,
+  zoom = FOCUS_ZOOM,
+): CameraPosition {
+  return { ...coordinate, zoom };
 }
 
 /** Map apps offered in the directions picker (Uzbekistan-relevant subset). */
