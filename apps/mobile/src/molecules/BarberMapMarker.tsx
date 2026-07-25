@@ -28,7 +28,7 @@ const BASE_SIZE = 46;
 const SELECTED_SIZE = 58;
 const TAIL = 9;
 
-export const BarberMapMarker: React.FC<BarberMapMarkerProps> = ({
+export const BarberMapMarker = React.memo(function BarberMapMarker({
   point,
   avatarUri,
   initials,
@@ -36,7 +36,7 @@ export const BarberMapMarker: React.FC<BarberMapMarkerProps> = ({
   selected = false,
   identifier,
   onPress,
-}) => {
+}: BarberMapMarkerProps) {
   const theme = useTheme<AppTheme>();
 
   const hasRating = rating > 0;
@@ -124,7 +124,7 @@ export const BarberMapMarker: React.FC<BarberMapMarkerProps> = ({
       </View>
     </Marker>
   );
-};
+});
 
 const styles = StyleSheet.create({
   wrap: {

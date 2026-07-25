@@ -75,7 +75,7 @@ export const BarbersMapScreen: React.FC = () => {
   const sheetRef = useRef<BottomSheet>(null);
   const mapRef = useRef<YandexMapViewRef>(null);
   const scrollRef = useRef<ScrollView>(null);
-  const [selectedPin, setSelectedPin] = useState(0);
+  const [selectedPin, setSelectedPin] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const [activeChip, setActiveChip] = useState('filters');
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -107,14 +107,20 @@ export const BarbersMapScreen: React.FC = () => {
     return list;
   }, [rawBarbers, query]);
 
+  // Stable per-barber coordinates so the memoized markers don't get a fresh
+  // `point` object (and re-render) on every parent state change.
+  const coords = useMemo(
+    () => barbers.map((b, i) => getBarberCoordinate(b, i)),
+    [barbers]
+  );
+
   // Once the map has loaded and barbers are in, frame every pin so the user
   // sees the whole set instead of the default Tashkent camera. Runs once.
   useEffect(() => {
-    if (!mapLoaded || didFitRef.current || barbers.length < 2) return;
+    if (!mapLoaded || didFitRef.current || coords.length < 2) return;
     didFitRef.current = true;
-    const points = barbers.map((b, i) => getBarberCoordinate(b, i));
-    void mapRef.current?.fitMarkers(points, { durationSeconds: 0.3 });
-  }, [mapLoaded, barbers]);
+    void mapRef.current?.fitMarkers(coords, { durationSeconds: 0.3 });
+  }, [mapLoaded, coords]);
 
   const tabBarPadding =
     TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
@@ -123,8 +129,7 @@ export const BarbersMapScreen: React.FC = () => {
     (index: number) => {
       setSelectedPin(index);
       scrollRef.current?.scrollTo({ x: index * 272, animated: true });
-      const barber = barbers[index];
-      const coord = barber ? getBarberCoordinate(barber, index) : null;
+      const coord = coords[index];
       if (coord && mapRef.current) {
         void mapRef.current.setCenter(
           { ...coord, zoom: FOCUS_ZOOM },
@@ -132,7 +137,14 @@ export const BarbersMapScreen: React.FC = () => {
         );
       }
     },
-    [barbers]
+    [coords]
+  );
+
+  // Stable per-index press handlers so `onPress` identity stays constant across
+  // renders, keeping React.memo on the markers effective.
+  const pressHandlers = useMemo(
+    () => barbers.map((_, i) => () => handleCardPress(i)),
+    [barbers, handleCardPress]
   );
 
   const navigateToBarber = useCallback(
@@ -190,13 +202,13 @@ export const BarbersMapScreen: React.FC = () => {
           {barbers.map((barber, i) => (
             <BarberMapMarker
               key={barber.id}
-              point={getBarberCoordinate(barber, i)}
+              point={coords[i]}
               avatarUri={barber.avatar}
               initials={`${barber.firstName?.[0] ?? ''}${barber.lastName?.[0] ?? ''}`}
               rating={barber.ratingAverage ?? 0}
               selected={selectedPin === i}
               identifier={barber.id}
-              onPress={() => handleCardPress(i)}
+              onPress={pressHandlers[i]}
             />
           ))}
         </YandexMapView>
@@ -510,7 +522,7 @@ export const BarbersMapScreen: React.FC = () => {
                               }}
                             >
                               {rating > 0
-                                ? String(rating).replace('.', ',')
+                                ? rating.toFixed(1).replace('.', ',')
                                 : '—'}
                             </Text>
                           </View>
