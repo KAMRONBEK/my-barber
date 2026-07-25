@@ -9,11 +9,6 @@ overrides:
   react-dom: 19.2.0
   react-test-renderer: 19.2.0
 
-patchedDependencies:
-  expo-yandex-mapkit:
-    hash: 6ed21fd463ca2b09adcfe047d5d3fb66417f1d89cbe5806492b297a7c48526e2
-    path: patches/expo-yandex-mapkit.patch
-
 importers:
 
   .:
@@ -218,8 +213,8 @@ importers:
         specifier: ~55.0.6
         version: 55.0.6(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
       expo-yandex-mapkit:
-        specifier: ^0.0.5
-        version: 0.0.5(patch_hash=6ed21fd463ca2b09adcfe047d5d3fb66417f1d89cbe5806492b297a7c48526e2)(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
+        specifier: ^0.0.7
+        version: 0.0.7(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
       i18next:
         specifier: ^26.1.0
         version: 26.1.0(typescript@5.9.3)
@@ -5262,8 +5257,8 @@ packages:
       react: 19.2.0
       react-native: '*'
 
-  expo-yandex-mapkit@0.0.5:
-    resolution: {integrity: sha512-gtAPaEF8aYR0vHtQ+Q2rmLAfWCnCAIF9N0z5XtdpXh+70R15ICJ+9W7Hy/Z7Vgh9S+XlSR3mC15OGROSHvz4VA==}
+  expo-yandex-mapkit@0.0.7:
+    resolution: {integrity: sha512-653OzcNiNZbCYvkh6yxIWnZhLJf7EyAH082wy9uh1XdUyV7GRpTDlCm8QW8oDupFWgjS3qWLW+CKqBK9zPWmMQ==}
     peerDependencies:
       expo: '>=55'
       react: 19.2.0
@@ -14413,7 +14408,7 @@ snapshots:
       react-native: 0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0)
       sf-symbols-typescript: 2.2.0
 
-  expo-yandex-mapkit@0.0.5(patch_hash=6ed21fd463ca2b09adcfe047d5d3fb66417f1d89cbe5806492b297a7c48526e2)(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0):
+  expo-yandex-mapkit@0.0.7(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0):
     dependencies:
       expo: 55.0.24(@babel/core@7.29.0)(@expo/dom-webview@55.0.6)(@expo/metro-runtime@55.0.11)(expo-router@55.0.14)(react-dom@19.2.0(react@19.2.0))(react-native-worklets@0.7.4(@babel/core@7.29.0)(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
       react: 19.2.0
