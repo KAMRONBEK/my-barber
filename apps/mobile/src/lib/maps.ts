@@ -1,20 +1,10 @@
-import type { ImageSourcePropType } from 'react-native';
 import { showLocation } from 'react-native-map-link';
 import type { CameraPosition, MarkerAnchor } from 'expo-yandex-mapkit';
 import i18n from './i18n';
 
 export type LatLng = { latitude: number; longitude: number };
 
-/**
- * Barber map-pin icons (copper teardrop, generated into assets/markers). The
- * `active` variant is brighter with a white ring for the selected barber.
- * expo-yandex-mapkit markers are image-only for now (React-children icons are
- * on the lib roadmap), so the rating stays on the cards rather than in the pin.
- */
-export const BARBER_MARKER_ICON: ImageSourcePropType = require('../../assets/markers/pin-marker.png');
-export const BARBER_MARKER_ICON_ACTIVE: ImageSourcePropType = require('../../assets/markers/pin-marker-active.png');
-
-/** Pin the teardrop's tip (bottom-center) to the coordinate. */
+/** Pin the marker's tip (bottom-center) to the coordinate. */
 export const MARKER_ANCHOR: MarkerAnchor = { x: 0.5, y: 1 };
 
 /** Default camera zoom for street-level detail (Yandex zoom scale). */

@@ -282,7 +282,13 @@ export const BarberShopScreen: React.FC = () => {
             },
           ]}
         >
-          <BarberMapPreview coordinate={mapCoordinate} height={160} />
+          <BarberMapPreview
+            coordinate={mapCoordinate}
+            avatarUri={barber.avatar}
+            initials={`${barber.firstName?.[0] ?? ''}${barber.lastName?.[0] ?? ''}`}
+            rating={rating}
+            height={160}
+          />
           <View style={styles.mapMeta}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
               <Icon name="pin" size={16} color={theme.colors.accent} />
