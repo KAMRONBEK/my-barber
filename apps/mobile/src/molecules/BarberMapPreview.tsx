@@ -10,6 +10,7 @@ export interface BarberMapPreviewProps {
   coordinate: { latitude: number; longitude: number };
   avatarUri?: string | null;
   initials?: string;
+  rating?: number;
   height?: number;
 }
 
@@ -17,6 +18,7 @@ export const BarberMapPreview: React.FC<BarberMapPreviewProps> = ({
   coordinate,
   avatarUri,
   initials,
+  rating,
   height = 160,
 }) => {
   return (
@@ -29,7 +31,13 @@ export const BarberMapPreview: React.FC<BarberMapPreviewProps> = ({
         mapStyle={WARM_DARK_MAP_STYLE}
         interactiveDisabled
       >
-        <BarberMapMarker point={coordinate} avatarUri={avatarUri} initials={initials} selected />
+        <BarberMapMarker
+          point={coordinate}
+          avatarUri={avatarUri}
+          initials={initials}
+          rating={rating}
+          selected
+        />
       </YandexMapView>
     </View>
   );

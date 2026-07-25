@@ -17,6 +17,8 @@ export interface BarberMapMarkerProps {
   point: LatLng;
   avatarUri?: string | null;
   initials?: string;
+  /** Barber's average rating; a small ★ pill is shown on the bubble when > 0. */
+  rating?: number;
   selected?: boolean;
   identifier?: string;
   onPress?: () => void;
@@ -30,11 +32,15 @@ export const BarberMapMarker: React.FC<BarberMapMarkerProps> = ({
   point,
   avatarUri,
   initials,
+  rating = 0,
   selected = false,
   identifier,
   onPress,
 }) => {
   const theme = useTheme<AppTheme>();
+
+  const hasRating = rating > 0;
+  const ratingLabel = hasRating ? rating.toFixed(1).replace('.', ',') : '';
 
   // Re-snapshot the native icon only while the content is settling: on mount, and
   // whenever the size/ring (selected) or photo changes. The image stops it early via
@@ -106,6 +112,13 @@ export const BarberMapMarker: React.FC<BarberMapMarkerProps> = ({
             </View>
           )}
         </View>
+        {/* Rating chin badge — a small ★-rating pill on the bubble's bottom edge,
+            shown only when the barber has a rating. */}
+        {hasRating ? (
+          <View style={[styles.ratingBadge, { borderColor: ring }]}>
+            <Text style={styles.ratingText}>{`★ ${ratingLabel}`}</Text>
+          </View>
+        ) : null}
         {/* Pointer tail — its tip sits on the coordinate (anchor y = 1). */}
         <View style={[styles.tail, { borderTopColor: ring }]} />
       </View>
@@ -125,6 +138,20 @@ const styles = StyleSheet.create({
   initials: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  ratingBadge: {
+    marginTop: -7,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 8,
+    borderWidth: 1,
+    backgroundColor: '#faf7f2',
+  },
+  ratingText: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '800',
+    color: '#1a1611',
   },
   tail: {
     marginTop: -2,

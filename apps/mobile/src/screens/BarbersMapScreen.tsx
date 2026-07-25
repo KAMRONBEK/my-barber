@@ -193,6 +193,7 @@ export const BarbersMapScreen: React.FC = () => {
               point={getBarberCoordinate(barber, i)}
               avatarUri={barber.avatar}
               initials={`${barber.firstName?.[0] ?? ''}${barber.lastName?.[0] ?? ''}`}
+              rating={barber.ratingAverage ?? 0}
               selected={selectedPin === i}
               identifier={barber.id}
               onPress={() => handleCardPress(i)}

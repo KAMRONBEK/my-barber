@@ -286,6 +286,7 @@ export const BarberShopScreen: React.FC = () => {
             coordinate={mapCoordinate}
             avatarUri={barber.avatar}
             initials={`${barber.firstName?.[0] ?? ''}${barber.lastName?.[0] ?? ''}`}
+            rating={rating}
             height={160}
           />
           <View style={styles.mapMeta}>
