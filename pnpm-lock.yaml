@@ -213,8 +213,8 @@ importers:
         specifier: ~55.0.6
         version: 55.0.6(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
       expo-yandex-mapkit:
-        specifier: ^1.4.0
-        version: 1.4.0(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
+        specifier: ^2.0.0
+        version: 2.0.0(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
       i18next:
         specifier: ^26.1.0
         version: 26.1.0(typescript@5.9.3)
@@ -5257,8 +5257,8 @@ packages:
       react: 19.2.0
       react-native: '*'
 
-  expo-yandex-mapkit@1.4.0:
-    resolution: {integrity: sha512-tiIVMVMkvyepM3uBdmPb6rEIzBoJpS62KC37wI+MNAWpAV/h7rJFwOeW0fSAxwAC8YQkoQyP/JNO+OE1xxALbQ==}
+  expo-yandex-mapkit@2.0.0:
+    resolution: {integrity: sha512-j53+HLd63mqBtLF83ssoMlNt4OQ7sSIeyb3IxG4vyOM67c48J/VSzueSXHjVvAUHZuM5SVks/Ck5mYfYxSGT4g==}
     peerDependencies:
       expo: '>=55'
       react: 19.2.0
@@ -14408,7 +14408,7 @@ snapshots:
       react-native: 0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0)
       sf-symbols-typescript: 2.2.0
 
-  expo-yandex-mapkit@1.4.0(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0):
+  expo-yandex-mapkit@2.0.0(expo@55.0.24)(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0):
     dependencies:
       expo: 55.0.24(@babel/core@7.29.0)(@expo/dom-webview@55.0.6)(@expo/metro-runtime@55.0.11)(expo-router@55.0.14)(react-dom@19.2.0(react@19.2.0))(react-native-worklets@0.7.4(@babel/core@7.29.0)(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
       react: 19.2.0
