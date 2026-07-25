@@ -2,6 +2,7 @@
   "version": 2,
   "buildCommand": "bash vercel-build.sh",
   "installCommand": "corepack enable && pnpm install --frozen-lockfile",
+  "ignoreCommand": "npx turbo-ignore @my-barber/api",
   "env": {
     "NODE_ENV": "production"
   }

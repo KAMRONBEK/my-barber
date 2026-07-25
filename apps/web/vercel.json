@@ -1,1 +1,4 @@
-{}
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "ignoreCommand": "npx turbo-ignore @my-barber/web"
+}
