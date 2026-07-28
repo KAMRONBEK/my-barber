@@ -60,7 +60,7 @@ Seeded in every environment (staging + production). Use for manual testing from 
 | Barber | `barber@test.local` | `DevTest12345` |
 | Client | `client@test.local` | `DevTest12345` |
 
-The barber account has `approvalStatus: approved` so it is immediately usable. To re-seed a fresh environment run `pnpm --filter @my-barber/api seed`.
+The barber account has `approvalStatus: approved` so it is immediately usable. These accounts are pre-seeded as part of environment provisioning (see `backend/api/ENVIRONMENTS.md`). There is no `seed` script in the API package — the former `seed-test-accounts.ts` was removed in `4f48520`.
 
 ## Verification
 
