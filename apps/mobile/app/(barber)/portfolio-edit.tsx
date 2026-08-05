@@ -26,6 +26,7 @@ import { Icon } from '../../src/atoms/Icon';
 import { ScreenHeader } from '../../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../../src/templates/ScreenLayout';
 import { useAuthStore } from '../../src/lib/auth';
+import { queryKeys } from '../../src/lib/query';
 import {
   getBarberMe,
   getBarberServices,
@@ -50,6 +51,7 @@ export default function BarberPortfolioEditScreen() {
     barber ? `${barber.firstName} ${barber.lastName}` : ''
   );
   const [title, setTitle] = useState('');
+  const [experienceYears, setExperienceYears] = useState('');
   const [bio, setBio] = useState('');
   const [services, setServices] = useState<ApiService[]>([]);
 
@@ -75,15 +77,35 @@ export default function BarberPortfolioEditScreen() {
   });
   const photos = barberMeQuery.data?.barber.images ?? [];
 
+  useEffect(() => {
+    const years = barberMeQuery.data?.barber.experienceYears;
+    if (typeof years === 'number') {
+      setExperienceYears(String(years));
+    }
+  }, [barberMeQuery.data]);
+
+  // Photos and profile fields (name, experienceYears, ...) also surface on
+  // the client-facing side (barber list, banner, individual shop page) via
+  // the same underlying barber record — those queries must be invalidated
+  // too, or a barber previewing their own public profile right after saving
+  // sees stale data until the 5-minute staleTime lapses or they sign out
+  // (queryClient.clear() in auth.ts only covers the cross-session case).
+  const invalidatePublicBarberQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['barber', 'me'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.barbers });
+    queryClient.invalidateQueries({ queryKey: queryKeys.banner });
+    queryClient.invalidateQueries({ queryKey: queryKeys.favorites });
+  };
+
   const uploadPhotoMutation = useMutation({
     mutationFn: (base64DataUrl: string) =>
       uploadBarberPortfolioImages([base64DataUrl]),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['barber', 'me'] }),
+    onSuccess: invalidatePublicBarberQueries,
   });
 
   const deletePhotoMutation = useMutation({
     mutationFn: (index: number) => deleteBarberPortfolioImage(index),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['barber', 'me'] }),
+    onSuccess: invalidatePublicBarberQueries,
   });
 
   async function onAddPhoto() {
@@ -115,7 +137,11 @@ export default function BarberPortfolioEditScreen() {
     mutationFn: async () => {
       const [firstName, ...rest] = displayName.trim().split(' ');
       const lastName = rest.join(' ');
-      await updateBarberProfile({ firstName, lastName });
+      await updateBarberProfile({
+        firstName,
+        lastName,
+        experienceYears: experienceYears.trim() === '' ? undefined : Number(experienceYears),
+      });
       if (services.length > 0) {
         const payload = services.map((s) => ({
           name: s.name,
@@ -132,6 +158,7 @@ export default function BarberPortfolioEditScreen() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['barber-services'] });
+      invalidatePublicBarberQueries();
       router.back();
     },
   });
@@ -292,6 +319,13 @@ export default function BarberPortfolioEditScreen() {
               value={title}
               onChangeText={setTitle}
               placeholder={t('portfolioEdit.titlePlaceholder')}
+            />
+            <Input
+              label={t('portfolioEdit.experienceYears')}
+              value={experienceYears}
+              onChangeText={(text) => setExperienceYears(text.replace(/[^0-9]/g, ''))}
+              placeholder={t('portfolioEdit.experienceYearsPlaceholder')}
+              keyboardType="number-pad"
             />
             <Input
               label={t('portfolioEdit.bio')}

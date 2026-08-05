@@ -153,6 +153,7 @@ export interface ApiBarberFull extends ApiBarber {
   location?: BarberLocationWire;
   birthDate?: string;
   workingHours?: string;
+  experienceYears?: number;
   images?: string[];
   approvalStatus?: string;
   approvalMessage?: string;
@@ -187,6 +188,39 @@ export async function getBarbers(
     }
     throw err;
   }
+}
+
+export interface ApiBarberReview {
+  id: string;
+  bookingId: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+// GET /barbers/:barberId/reviews is mounted unauthenticated at the router
+// root (backend/api/routes/public.ts), not under /client — no author name is
+// returned (reviews only carry clientId), so the UI shows a generic label.
+export async function getBarberReviews(barberId: string): Promise<ApiBarberReview[]> {
+  const r = await api.get<
+    OkData<{
+      items: Array<{
+        id: string;
+        booking_id: string;
+        rating: number;
+        comment: string;
+        created_at: string;
+      }>;
+      next_cursor: string | null;
+    }>
+  >(`/barbers/${barberId}/reviews`);
+  return (r.data.data?.items ?? []).map((x) => ({
+    id: x.id,
+    bookingId: x.booking_id,
+    rating: x.rating,
+    comment: x.comment,
+    createdAt: x.created_at,
+  }));
 }
 
 // GET/POST/DELETE /client/favorites — returns the same BarberResponse shape

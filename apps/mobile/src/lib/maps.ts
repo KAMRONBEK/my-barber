@@ -108,10 +108,10 @@ export type BarberLocationWire =
       address?: string;
     };
 
-export function parseBarberCoordinate(
+/** Real coordinate parsed from the API, or null if the barber has none on file. */
+export function extractBarberCoordinate(
   location: BarberLocationWire | undefined,
-  fallbackIndex = 0,
-): { latitude: number; longitude: number } {
+): { latitude: number; longitude: number } | null {
   if (location && typeof location === 'object') {
     const latRaw =
       location.latitude != null
@@ -130,10 +130,35 @@ export function parseBarberCoordinate(
       }
     }
   }
+  return null;
+}
+
+export function parseBarberCoordinate(
+  location: BarberLocationWire | undefined,
+  fallbackIndex = 0,
+): { latitude: number; longitude: number } {
+  const real = extractBarberCoordinate(location);
+  if (real) return real;
 
   const fallback =
     BARBER_FALLBACK_COORDINATES[fallbackIndex % BARBER_FALLBACK_COORDINATES.length];
   return fallback ?? { latitude: 41.315, longitude: 69.287 };
+}
+
+/** Great-circle distance between two coordinates, in kilometers. */
+export function distanceKm(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+): number {
+  const R = 6371;
+  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
+  const dLng = ((b.longitude - a.longitude) * Math.PI) / 180;
+  const lat1 = (a.latitude * Math.PI) / 180;
+  const lat2 = (b.latitude * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
 export function formatBarberAddress(location: BarberLocationWire | undefined): string | null {

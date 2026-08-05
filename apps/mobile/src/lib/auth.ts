@@ -9,6 +9,7 @@
 
 import { create } from 'zustand';
 import { getItem, removeItem, setItem, STORAGE_KEYS } from './storage';
+import { queryClient } from './query';
 
 export interface ClientProfile {
   id: string;
@@ -28,6 +29,7 @@ export interface BarberProfile {
   phone: string;
   avatar?: string;
   images?: string[];
+  experienceYears?: number;
   approval_status?: string;
   approval_message?: string | null;
   ratingAverage?: number;
@@ -114,6 +116,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     await removeItem(STORAGE_KEYS.barber);
     await removeItem(STORAGE_KEYS.role);
     set({ status: 'unauthenticated', token: null, client: null, barber: null, role: null });
+    // The QueryClient is a module-level singleton shared across roles — without
+    // this, signing in as a different account (or switching barber/client on
+    // the same device) can keep serving cached data fetched under the
+    // previous session (e.g. a barber's stale barber-list entry from before
+    // they uploaded a portfolio photo).
+    queryClient.clear();
   },
 
   clearSession: async () => {
@@ -122,5 +130,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     await removeItem(STORAGE_KEYS.barber);
     await removeItem(STORAGE_KEYS.role);
     set({ status: 'unauthenticated', token: null, client: null, barber: null, role: null });
+    queryClient.clear();
   },
 }));

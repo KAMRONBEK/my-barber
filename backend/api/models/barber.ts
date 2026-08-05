@@ -29,6 +29,7 @@ export interface Barber {
   location: LatLng;
   birthDate: string;
   workingHours: string;
+  experienceYears?: number;
   avatar?: string;
   images: string[];
   deviceId?: string;
@@ -64,6 +65,7 @@ export interface BarberUpdateRequest {
   location?: LatLng;
   birthDate?: string;
   workingHours?: string;
+  experienceYears?: number;
 }
 
 export interface BarberCredentialsUpdateRequest {
@@ -84,6 +86,7 @@ export interface BarberResponse {
   location: LatLng;
   birthDate: string;
   workingHours: string;
+  experienceYears?: number;
   avatar?: string;
   images: string[];
   services?: BarberService[];

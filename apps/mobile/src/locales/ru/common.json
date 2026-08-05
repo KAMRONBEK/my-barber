@@ -289,6 +289,8 @@
     "displayNamePlaceholder": "Имя Фамилия",
     "title": "Должность",
     "titlePlaceholder": "Например, Senior Barber",
+    "experienceYears": "Опыт (лет)",
+    "experienceYearsPlaceholder": "Например, 8",
     "bio": "О себе",
     "bioPlaceholder": "Кратко расскажите о себе...",
     "service": "Услуга",

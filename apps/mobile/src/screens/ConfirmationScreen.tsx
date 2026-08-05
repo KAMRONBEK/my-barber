@@ -186,7 +186,7 @@ export const ConfirmationScreen: React.FC = () => {
           }}
         >
           {t('confirmation.body', {
-            name: '—',
+            name: barberDisplay || '—',
             dayLong: formatWeekdayLong(start),
             date: formatDayMonth(start),
             time: formatTimeOfDay(start),

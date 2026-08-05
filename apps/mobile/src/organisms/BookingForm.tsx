@@ -35,7 +35,7 @@ import {
 } from '../lib/format';
 import { deriveSlots, workingWindowForWeekday } from '../lib/slots';
 import {
-  type ApiBarber,
+  type ApiBarberFull,
   createBooking,
   getBookingsForBarberDay,
 } from '../lib/api';
@@ -43,7 +43,7 @@ import { queryKeys, STALE } from '../lib/query';
 import type { AppTheme } from '../lib/restyle';
 
 export interface BookingFormProps {
-  barber: ApiBarber;
+  barber: ApiBarberFull;
   onBooked: (booking: BookingContract) => void;
 }
 
@@ -95,7 +95,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
         day: selectedDay,
         totalMinutes: totalDuration,
         existing: bookingsQuery.data ?? [],
-        working: workingWindowForWeekday(selectedDay.getDay()),
+        working: workingWindowForWeekday(selectedDay.getDay(), barber.workingHours),
       }),
     [selectedDay, totalDuration, bookingsQuery.data],
   );
