@@ -9,8 +9,8 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../atoms/Text';
-import { BackButton, BACK_BUTTON_SIZE } from '../atoms/BackButton';
 import { Button } from '../atoms/Button';
+import { ScreenHeader } from '../molecules/ScreenHeader';
 import { ScreenLayout } from '../templates/ScreenLayout';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -18,7 +18,6 @@ import {
   TAB_BAR_BOTTOM_OFFSET,
 } from '../navigation/GlassTabBar';
 import { api } from '../lib/api';
-import { fontFamilies } from '@my-barber/ui';
 import {
   formatUZS,
   formatWeekdayShort,
@@ -110,24 +109,7 @@ export const BookingHistoryScreen: React.FC = () => {
 
   return (
     <ScreenLayout>
-      {/* Header */}
-      <View style={styles.header}>
-        <BackButton />
-        <Text
-          style={{
-            fontSize: 30,
-            fontWeight: '700',
-            fontFamily: fontFamilies.display,
-            color: theme.colors.fg,
-            letterSpacing: -0.5,
-            flex: 1,
-            textAlign: 'center',
-          }}
-        >
-          {t('bookings.title')}
-        </Text>
-        <View style={{ width: BACK_BUTTON_SIZE }} />
-      </View>
+      <ScreenHeader title={t('bookings.title')} />
 
       {/* Segmented control — pill shape */}
       <View
@@ -365,13 +347,6 @@ export const BookingHistoryScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   segmentWrap: {
     flexDirection: 'row',
     marginHorizontal: 20,

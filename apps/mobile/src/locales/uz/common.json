@@ -294,6 +294,8 @@
     "displayNamePlaceholder": "Ism Familiya",
     "title": "Lavozim",
     "titlePlaceholder": "Masalan, Senior Barber",
+    "experienceYears": "Tajriba (yil)",
+    "experienceYearsPlaceholder": "Masalan, 8",
     "bio": "Bio",
     "bioPlaceholder": "O'zingiz haqingizda qisqacha yozing...",
     "service": "Xizmat",

@@ -93,23 +93,22 @@ export default function BarberSettingsScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
+        <ScreenHeader
+          title={t('profileEdit.title')}
+          right={
+            <Button
+              variant="ghost"
+              label={t('common.save')}
+              onPress={onSave}
+              disabled={saving}
+            />
+          }
+        />
         <ScrollView
           contentContainerStyle={{ paddingBottom: tabBarPadding }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <ScreenHeader
-            title={t('profileEdit.title')}
-            right={
-              <Button
-                variant="ghost"
-                label={t('common.save')}
-                onPress={onSave}
-                disabled={saving}
-              />
-            }
-          />
-
           {/* Avatar */}
           <View style={{ alignItems: 'center', marginTop: 12 }}>
             <Avatar

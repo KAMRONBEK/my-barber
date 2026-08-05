@@ -1,9 +1,11 @@
 // Barber portfolio / detail screen. Tabs: Bio / Services / Portfolio / Reviews.
 // LinearGradient cover scrim, segmented tab control, portfolio grid, review list.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
+import * as Location from 'expo-location';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +22,7 @@ import {
   TAB_BAR_BOTTOM_OFFSET,
 } from '../navigation/GlassTabBar';
 import { shadows } from '@my-barber/ui';
-import { getBarbers, type ApiBarberFull } from '../lib/api';
+import { getBarbers, getBarberReviews, type ApiBarberFull } from '../lib/api';
 import { useFavoriteBarbers } from '../hooks/useFavoriteBarbers';
 import { hapticToggle } from '../lib/haptics';
 import { queryKeys, STALE } from '../lib/query';
@@ -28,6 +30,7 @@ import {
   formatUZS,
   formatDurationMinutes,
   formatPriceFrom,
+  formatDayMonth,
 } from '../lib/format';
 import {
   DEFAULT_SERVICE_DURATION_MINUTES,
@@ -35,45 +38,14 @@ import {
 import type { AppTheme } from '../lib/restyle';
 import { BarberMapPreview } from '../molecules/BarberMapPreview';
 import {
+  distanceKm,
+  extractBarberCoordinate,
   formatBarberAddress,
   openBarberDirections,
   parseBarberCoordinate,
 } from '../lib/maps';
 
 type TabKey = 'bio' | 'services' | 'portfolio' | 'reviews';
-
-const PORTFOLIO_GRADIENTS = [
-  ['#3d1e0a', '#1d130b'] as const,
-  ['#2e1508', '#1a0f06'] as const,
-  ['#4a1f0c', '#221208'] as const,
-  ['#3a1c10', '#1a100a'] as const,
-  ['#2a1806', '#140c04'] as const,
-  ['#4a220c', '#24110a'] as const,
-];
-
-const STUB_REVIEWS = [
-  {
-    id: '1',
-    author: 'Jasur T.',
-    rating: 5,
-    date: '12 may 2026',
-    comment: "Juda zo'r, vaqtida bo'ldi. Soch ham ajoyib chiqdi.",
-  },
-  {
-    id: '2',
-    author: 'Mirzo A.',
-    rating: 4,
-    date: '8 may 2026',
-    comment: 'Yaxshi usta, lekin biroz kech boshladi.',
-  },
-  {
-    id: '3',
-    author: 'Sardor K.',
-    rating: 5,
-    date: '2 may 2026',
-    comment: "Eng yaxshi sartarosh! Har doim shu yerga kelaman.",
-  },
-];
 
 export const BarberShopScreen: React.FC = () => {
   const theme = useTheme<AppTheme>();
@@ -99,6 +71,40 @@ export const BarberShopScreen: React.FC = () => {
     if (!barber?.services?.length) return null;
     return barber.services.reduce((min, s) => (s.price < min ? s.price : min), barber.services[0].price);
   }, [barber]);
+
+  // Real distance needs the user's own position — only computed when
+  // permission is granted; otherwise the stat honestly shows "—" below
+  // rather than a guessed number.
+  const [userCoordinate, setUserCoordinate] = useState<
+    { latitude: number; longitude: number } | null
+  >(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted' || cancelled) return;
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      if (!cancelled) {
+        setUserCoordinate({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const reviewsQuery = useQuery({
+    queryKey: ['barber-reviews', id],
+    queryFn: () => getBarberReviews(id as string),
+    enabled: activeTab === 'reviews' && !!id,
+    staleTime: 60 * 1000,
+  });
 
   if (barbersQuery.isLoading && !barber) {
     return (
@@ -127,6 +133,14 @@ export const BarberShopScreen: React.FC = () => {
     barber.location,
     barberIndex >= 0 ? barberIndex : 0,
   );
+  // Only a *real* barber coordinate counts — parseBarberCoordinate above
+  // falls back to an approximate fixed point for map display, which must
+  // never be used to compute a distance number presented as fact.
+  const realBarberCoordinate = extractBarberCoordinate(barber.location);
+  const distanceLabel =
+    userCoordinate && realBarberCoordinate
+      ? `${distanceKm(userCoordinate, realBarberCoordinate).toFixed(1).replace('.', ',')} km`
+      : String.fromCharCode(8212);
   const addressLabel =
     formatBarberAddress(barber.location) ??
     `${barber.firstName} ${barber.lastName}`;
@@ -165,35 +179,6 @@ export const BarberShopScreen: React.FC = () => {
             pointerEvents="none"
           />
 
-          <View style={styles.coverTop}>
-          <BackButton tone="dark" />
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <View style={[styles.iconBtn, styles.iconBtnDark]}>
-                <Icon name="share" size={18} color="#fff" />
-              </View>
-              <Pressable
-                onPress={() => {
-                  hapticToggle();
-                  toggleFavorite(barber.id);
-                }}
-                disabled={pendingIds.has(barber.id)}
-                style={[styles.iconBtn, styles.iconBtnDark]}
-                accessibilityRole="button"
-                accessibilityLabel={t('barber.saveToggle')}
-              >
-                {pendingIds.has(barber.id) ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Icon
-                    name={favoriteIds.has(barber.id) ? 'heart-filled' : 'heart'}
-                    size={18}
-                    color={favoriteIds.has(barber.id) ? theme.colors.accent : '#fff'}
-                  />
-                )}
-              </Pressable>
-            </View>
-          </View>
-
           {/* ID bar */}
           <View style={styles.idBar}>
             <Avatar
@@ -202,7 +187,12 @@ export const BarberShopScreen: React.FC = () => {
               initials={`${barber.firstName[0] ?? ''}${barber.lastName[0] ?? ''}`}
               ring
             />
-            <View style={{ flex: 1, paddingBottom: 12 }}>
+            {/* idBar sits half on/half off the cover (bottom: -38, avatar
+                bleeds across the seam by design) — the name/address text
+                needs enough paddingBottom to stay entirely on the dark
+                cover, or the address (styled for a dark background) goes
+                nearly invisible against the light content below. */}
+            <View style={{ flex: 1, paddingBottom: 46 }}>
               <View
                 style={{
                   flexDirection: 'row',
@@ -254,15 +244,14 @@ export const BarberShopScreen: React.FC = () => {
           />
           <Stat
             value={
-              Object.prototype.hasOwnProperty.call(barber, 'experienceYears') &&
-              typeof (barber as unknown as Record<string, unknown>).experienceYears === 'number'
-                ? String((barber as unknown as Record<string, unknown>).experienceYears)
+              typeof barber.experienceYears === 'number'
+                ? t('barber.experienceYears', { years: barber.experienceYears })
                 : String.fromCharCode(8212)
             }
             label={t('barber.experienceLabel')}
           />
           <Stat
-            value="1,2 km"
+            value={distanceLabel}
             label={t('barber.distance')}
           />
           <Stat
@@ -366,18 +355,10 @@ export const BarberShopScreen: React.FC = () => {
         {/* Tab content */}
         {activeTab === 'bio' ? (
           <View style={styles.section}>
-            <Text
-              style={{
-                color: theme.colors.fg2,
-                fontSize: 14,
-                lineHeight: 22,
-              }}
-            >
-              {t('barber.bio')}{' '}
-              <Text style={{ color: theme.colors.accent, fontWeight: '500' }}>
-                {t('barber.more')}
-              </Text>
-            </Text>
+            {/* No per-barber bio field exists on the backend yet — showing
+                generic marketing copy here would be fake, so this is
+                intentionally an honest empty state rather than prose. */}
+            <Text style={{ color: theme.colors.muted }}>{t('common.empty')}</Text>
           </View>
         ) : null}
 
@@ -440,28 +421,35 @@ export const BarberShopScreen: React.FC = () => {
         ) : null}
 
         {activeTab === 'portfolio' ? (
-          <View style={[styles.section, styles.portfolioGrid]}>
-            {PORTFOLIO_GRADIENTS.map((grads, i) => (
-              <View key={i} style={styles.portfolioTile}>
-                <LinearGradient
-                  colors={grads}
-                  style={StyleSheet.absoluteFillObject}
-                  start={{ x: 0.5, y: 0 }}
-                  end={{ x: 0.5, y: 1 }}
-                />
-                {/* When real photos are available, render Image here */}
+          <View style={styles.section}>
+            {(barber.images ?? []).length === 0 ? (
+              <Text style={{ color: theme.colors.muted }}>{t('common.empty')}</Text>
+            ) : (
+              <View style={styles.portfolioGrid}>
+                {(barber.images ?? []).map((uri, i) => (
+                  <View key={`${uri}-${i}`} style={styles.portfolioTile}>
+                    <Image
+                      source={{ uri }}
+                      style={StyleSheet.absoluteFillObject}
+                      contentFit="cover"
+                      transition={120}
+                    />
+                  </View>
+                ))}
               </View>
-            ))}
+            )}
           </View>
         ) : null}
 
         {activeTab === 'reviews' ? (
           <View style={styles.section}>
-            {STUB_REVIEWS.length === 0 ? (
+            {reviewsQuery.isLoading ? (
+              <ActivityIndicator color={theme.colors.accent} />
+            ) : (reviewsQuery.data ?? []).length === 0 ? (
               <Text style={{ color: theme.colors.muted }}>{t('common.empty')}</Text>
             ) : (
               <View style={{ gap: 12 }}>
-                {STUB_REVIEWS.map((review) => (
+                {(reviewsQuery.data ?? []).map((review) => (
                   <View
                     key={review.id}
                     style={[
@@ -481,10 +469,10 @@ export const BarberShopScreen: React.FC = () => {
                           flex: 1,
                         }}
                       >
-                        {review.author}
+                        {t('profile.role.client')}
                       </Text>
                       <Text style={{ fontSize: 12, color: theme.colors.muted2 }}>
-                        {review.date}
+                        {formatDayMonth(new Date(review.createdAt))}
                       </Text>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 2, marginVertical: 6 }}>
@@ -519,6 +507,39 @@ export const BarberShopScreen: React.FC = () => {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Fixed overlay header — stays put while the cover/content scroll beneath it */}
+      <View
+        style={[styles.coverTop, { top: insets.top + 12 }]}
+        pointerEvents="box-none"
+      >
+        <BackButton tone="dark" />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={[styles.iconBtn, styles.iconBtnDark]}>
+            <Icon name="share" size={18} color="#fff" />
+          </View>
+          <Pressable
+            onPress={() => {
+              hapticToggle();
+              toggleFavorite(barber.id);
+            }}
+            disabled={pendingIds.has(barber.id)}
+            style={[styles.iconBtn, styles.iconBtnDark]}
+            accessibilityRole="button"
+            accessibilityLabel={t('barber.saveToggle')}
+          >
+            {pendingIds.has(barber.id) ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Icon
+                name={favoriteIds.has(barber.id) ? 'heart-filled' : 'heart'}
+                size={18}
+                color={favoriteIds.has(barber.id) ? theme.colors.accent : '#fff'}
+              />
+            )}
+          </Pressable>
+        </View>
+      </View>
 
       {/* Floating CTA */}
       <View
@@ -623,7 +644,6 @@ const styles = StyleSheet.create({
   },
   coverTop: {
     position: 'absolute',
-    top: 60,
     left: 0,
     right: 0,
     paddingHorizontal: 20,

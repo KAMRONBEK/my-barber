@@ -133,8 +133,28 @@ export function uniqueSlots(pills: SlotPill[]): SlotPill[] {
   return out;
 }
 
-// Working window keyed by weekday. Slot picker reads this from a Barbershop
-// (eventually); for now we use the constant window across the whole week.
-export function workingWindowForWeekday(_weekday: number): WorkingWindow {
-  return DEFAULT_WORKING_WINDOW;
+// barber.workingHours is a free-text field (1-100 chars, no enforced format —
+// see backend/api/routes/barber.ts's validator) set once at registration, not
+// a structured per-weekday schedule. We can only safely use it when it
+// matches the "HH:MM - HH:MM" shape the UI itself displays; anything else
+// (or a missing value) falls back to the default window rather than guessing.
+function parseWorkingHours(text: string | undefined): WorkingWindow | null {
+  if (!text) return null;
+  const match = text.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const openMinutes = Number(match[1]) * 60 + Number(match[2]);
+  const closeMinutes = Number(match[3]) * 60 + Number(match[4]);
+  if (closeMinutes <= openMinutes) return null;
+  return { openMinutes, closeMinutes };
+}
+
+// Working window keyed by weekday. `workingHours` is a single string covering
+// the whole week (no per-weekday breakdown exists on the backend), so
+// `weekday` is currently unused — kept in the signature for when a real
+// per-day schedule ships.
+export function workingWindowForWeekday(
+  _weekday: number,
+  workingHours?: string,
+): WorkingWindow {
+  return parseWorkingHours(workingHours) ?? DEFAULT_WORKING_WINDOW;
 }
