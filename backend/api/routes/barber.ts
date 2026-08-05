@@ -316,6 +316,11 @@ router.get('/getMe', authenticateToken, async (req: Request, res: Response) => {
  *                 minLength: 1
  *                 maxLength: 100
  *                 example: 9:00 AM - 6:00 PM
+ *               experienceYears:
+ *                 type: integer
+ *                 minimum: 0
+ *                 maximum: 80
+ *                 example: 8
  *     responses:
  *       200:
  *         description: Profile updated successfully
@@ -377,6 +382,11 @@ router.put(
       .optional()
       .isLength({ min: 1, max: 100 })
       .withMessage('Working hours must be 1-100 characters'),
+    body('experienceYears')
+      .optional()
+      .isInt({ min: 0, max: 80 })
+      .withMessage('Experience years must be an integer between 0 and 80')
+      .toInt(),
   ],
   async (req: Request, res: Response) => {
     try {
