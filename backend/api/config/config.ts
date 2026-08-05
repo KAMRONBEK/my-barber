@@ -96,9 +96,14 @@ function validateConfig(): Config {
   // starts 403ing well before its claimed 1h expiry. Directory buckets are built for
   // high-throughput/low-latency workloads, not public profile photos; use a standard
   // S3 bucket here.
+  //
+  // This is a warning, not a boot-time throw: `config` is built at module-import
+  // time, so throwing here previously crashed the entire serverless function on
+  // every single invocation (FUNCTION_INVOCATION_FAILED app-wide) whenever this
+  // matched — turning a "photo URLs expire early" problem into a full outage.
   if (/--[a-z0-9-]+--x-s3$/.test(process.env.AWS_S3_BUCKET || '')) {
-    throw new Error(
-      `AWS_S3_BUCKET ("${process.env.AWS_S3_BUCKET}") looks like an S3 Express One Zone directory bucket. ` +
+    console.warn(
+      `⚠️  AWS_S3_BUCKET ("${process.env.AWS_S3_BUCKET}") looks like an S3 Express One Zone directory bucket. ` +
         'Presigned URLs on directory buckets expire in ~5 minutes regardless of the requested TTL, which breaks ' +
         'image loading app-wide once any caching or navigation delay passes that window. Use a standard S3 bucket.'
     );
