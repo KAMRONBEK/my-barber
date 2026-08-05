@@ -89,6 +89,21 @@ function validateConfig(): Config {
     );
   }
 
+  // S3 Express One Zone ("directory") buckets are named `<name>--<az-id>--x-s3`.
+  // They sign presigned URLs against CreateSession credentials that AWS caps at
+  // ~5 minutes, no matter what expiresIn is requested (AWS_S3_SIGNED_URL_TTL_SECONDS
+  // above is ignored past that point) — every image URL this API hands out silently
+  // starts 403ing well before its claimed 1h expiry. Directory buckets are built for
+  // high-throughput/low-latency workloads, not public profile photos; use a standard
+  // S3 bucket here.
+  if (/--[a-z0-9-]+--x-s3$/.test(process.env.AWS_S3_BUCKET || '')) {
+    throw new Error(
+      `AWS_S3_BUCKET ("${process.env.AWS_S3_BUCKET}") looks like an S3 Express One Zone directory bucket. ` +
+        'Presigned URLs on directory buckets expire in ~5 minutes regardless of the requested TTL, which breaks ' +
+        'image loading app-wide once any caching or navigation delay passes that window. Use a standard S3 bucket.'
+    );
+  }
+
   if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
     throw new Error(
       'Firebase configuration incomplete. Provide both FIREBASE_PRIVATE_KEY and FIREBASE_CLIENT_EMAIL'
