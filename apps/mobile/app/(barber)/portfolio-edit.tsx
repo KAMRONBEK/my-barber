@@ -82,6 +82,12 @@ export default function BarberPortfolioEditScreen() {
     if (typeof years === 'number') {
       setExperienceYears(String(years));
     }
+    if (barberMeQuery.data?.barber.title) {
+      setTitle(barberMeQuery.data.barber.title);
+    }
+    if (barberMeQuery.data?.barber.bio) {
+      setBio(barberMeQuery.data.barber.bio);
+    }
   }, [barberMeQuery.data]);
 
   // Photos and profile fields (name, experienceYears, ...) also surface on
@@ -141,6 +147,8 @@ export default function BarberPortfolioEditScreen() {
         firstName,
         lastName,
         experienceYears: experienceYears.trim() === '' ? undefined : Number(experienceYears),
+        title: title.trim(),
+        bio: bio.trim(),
       });
       if (services.length > 0) {
         const payload = services.map((s) => ({

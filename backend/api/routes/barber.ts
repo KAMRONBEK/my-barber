@@ -321,6 +321,14 @@ router.get('/getMe', authenticateToken, async (req: Request, res: Response) => {
  *                 minimum: 0
  *                 maximum: 80
  *                 example: 8
+ *               title:
+ *                 type: string
+ *                 maxLength: 100
+ *                 example: Senior Barber
+ *               bio:
+ *                 type: string
+ *                 maxLength: 500
+ *                 example: Eight years specializing in fades and beard shaping.
  *     responses:
  *       200:
  *         description: Profile updated successfully
@@ -387,6 +395,17 @@ router.put(
       .isInt({ min: 0, max: 80 })
       .withMessage('Experience years must be an integer between 0 and 80')
       .toInt(),
+    // checkFalsy: true (not the plain default) so an empty string clears the
+    // field instead of failing validation — unlike workingHours/location,
+    // title and bio are meant to be optional flourishes a barber can unset.
+    body('title')
+      .optional({ checkFalsy: true })
+      .isLength({ max: 100 })
+      .withMessage('Title must be at most 100 characters'),
+    body('bio')
+      .optional({ checkFalsy: true })
+      .isLength({ max: 500 })
+      .withMessage('Bio must be at most 500 characters'),
   ],
   async (req: Request, res: Response) => {
     try {

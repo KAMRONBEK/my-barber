@@ -30,6 +30,8 @@ export interface Barber {
   birthDate: string;
   workingHours: string;
   experienceYears?: number;
+  title?: string;
+  bio?: string;
   avatar?: string;
   images: string[];
   deviceId?: string;
@@ -66,6 +68,8 @@ export interface BarberUpdateRequest {
   birthDate?: string;
   workingHours?: string;
   experienceYears?: number;
+  title?: string;
+  bio?: string;
 }
 
 export interface BarberCredentialsUpdateRequest {
@@ -87,6 +91,8 @@ export interface BarberResponse {
   birthDate: string;
   workingHours: string;
   experienceYears?: number;
+  title?: string;
+  bio?: string;
   avatar?: string;
   images: string[];
   services?: BarberService[];

@@ -154,6 +154,8 @@ export interface ApiBarberFull extends ApiBarber {
   birthDate?: string;
   workingHours?: string;
   experienceYears?: number;
+  title?: string;
+  bio?: string;
   images?: string[];
   approvalStatus?: string;
   approvalMessage?: string;

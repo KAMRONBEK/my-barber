@@ -30,6 +30,8 @@ export interface BarberProfile {
   avatar?: string;
   images?: string[];
   experienceYears?: number;
+  title?: string;
+  bio?: string;
   approval_status?: string;
   approval_message?: string | null;
   ratingAverage?: number;

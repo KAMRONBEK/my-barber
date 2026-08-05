@@ -355,10 +355,13 @@ export const BarberShopScreen: React.FC = () => {
         {/* Tab content */}
         {activeTab === 'bio' ? (
           <View style={styles.section}>
-            {/* No per-barber bio field exists on the backend yet — showing
-                generic marketing copy here would be fake, so this is
-                intentionally an honest empty state rather than prose. */}
-            <Text style={{ color: theme.colors.muted }}>{t('common.empty')}</Text>
+            {barber.bio ? (
+              <Text style={{ color: theme.colors.fg2, fontSize: 14, lineHeight: 22 }}>
+                {barber.bio}
+              </Text>
+            ) : (
+              <Text style={{ color: theme.colors.muted }}>{t('common.empty')}</Text>
+            )}
           </View>
         ) : null}
 
