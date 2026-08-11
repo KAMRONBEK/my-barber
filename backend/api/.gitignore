@@ -76,3 +76,6 @@ dist/
 .env.development.local
 .env.staging.local
 .env.production.local
+.env*
+# ...but .env.example is the committed reference of every required variable
+!.env.example

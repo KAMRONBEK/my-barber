@@ -1,7 +1,7 @@
 // Barber portfolio / detail screen. Tabs: Bio / Services / Portfolio / Reviews.
 // LinearGradient cover scrim, segmented tab control, portfolio grid, review list.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
@@ -62,6 +62,17 @@ export const BarberShopScreen: React.FC = () => {
     queryFn: () => getBarbers(0, 50),
     staleTime: STALE.banner,
   });
+
+  // Portfolio image URLs are short-lived S3 presigned URLs (see fileStorage.ts);
+  // an expired one 403s silently in <Image>. Refetch once per slot to pick up
+  // a freshly-signed URL instead of leaving a permanently blank tile — capped
+  // to one retry per slot so a genuinely broken image doesn't refetch forever.
+  const retriedPortfolioSlotsRef = useRef<Set<string>>(new Set());
+  const handlePortfolioImageError = (slotKey: string) => {
+    if (retriedPortfolioSlotsRef.current.has(slotKey)) return;
+    retriedPortfolioSlotsRef.current.add(slotKey);
+    barbersQuery.refetch();
+  };
 
   const barber = useMemo<ApiBarberFull | undefined>(() => {
     return (barbersQuery.data ?? []).find((b) => b.id === id);
@@ -436,6 +447,7 @@ export const BarberShopScreen: React.FC = () => {
                       style={StyleSheet.absoluteFillObject}
                       contentFit="cover"
                       transition={120}
+                      onError={() => handlePortfolioImageError(`${barber.id}:${i}`)}
                     />
                   </View>
                 ))}
