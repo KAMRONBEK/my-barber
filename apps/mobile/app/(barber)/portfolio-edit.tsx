@@ -1,7 +1,7 @@
 // Barber Portfolio Edit screen.
 // Cover image, avatar, public profile fields, services editor, photo grid.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -76,6 +76,17 @@ export default function BarberPortfolioEditScreen() {
     staleTime: 60 * 1000,
   });
   const photos = barberMeQuery.data?.barber.images ?? [];
+
+  // Photo URLs are short-lived S3 presigned URLs (see fileStorage.ts); an
+  // expired one 403s silently in <Image>. Refetch once per slot to pick up a
+  // freshly-signed URL instead of leaving a permanently blank tile — capped
+  // to one retry per slot so a genuinely broken image doesn't refetch forever.
+  const retriedPhotoSlotsRef = useRef<Set<number>>(new Set());
+  const handlePhotoImageError = (idx: number) => {
+    if (retriedPhotoSlotsRef.current.has(idx)) return;
+    retriedPhotoSlotsRef.current.add(idx);
+    barberMeQuery.refetch();
+  };
 
   useEffect(() => {
     const years = barberMeQuery.data?.barber.experienceYears;
@@ -515,6 +526,7 @@ export default function BarberPortfolioEditScreen() {
                     style={styles.photoImage}
                     contentFit="cover"
                     transition={120}
+                    onError={() => handlePhotoImageError(idx)}
                   />
                   {isDeleting ? (
                     <View style={[StyleSheet.absoluteFillObject, styles.photoOverlay]}>
