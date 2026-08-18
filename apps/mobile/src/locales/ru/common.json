@@ -52,7 +52,7 @@
     "bookAgain": "Записаться снова",
     "seeAll": "Все",
     "seeAllCount": "Все {{count}}",
-    "featuredTitle": "Лучшие в Мирзо-Улугбеке",
+    "featuredTitle": "Лучшие барберы",
     "notifications": "Уведомления",
     "noUpcoming": "Пока нет записей.",
     "browse": "Найти барбера"
@@ -82,6 +82,9 @@
     "ratingReviews": "{{count}} отзыв(ов)",
     "priceLabel": "Цена",
     "saveToggle": "Сохранить",
+    "share": "Поделиться",
+    "aboutMe": "О себе",
+    "schedule": "График работы",
     "bio": "Восемь лет специализируется на градиентных стрижках, оформлении бороды и редакторском мужском груминге."
   },
   "booking": {
@@ -155,6 +158,16 @@
     "thisWeek": "На этой неделе",
     "nextWeek": "На следующей неделе",
     "earlier": "Ранее"
+  },
+  "bookingStatus": {
+    "pending_confirmation": "Ожидание",
+    "confirmed": "Подтверждено",
+    "rescheduled": "Перенесено",
+    "completed": "Завершено",
+    "cancelled": "Отменено",
+    "declined": "Отклонено",
+    "no_show": "Не пришёл",
+    "expired": "Просрочено"
   },
   "cutsHistory": {
     "title": "История стрижек",

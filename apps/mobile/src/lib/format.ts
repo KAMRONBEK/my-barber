@@ -7,7 +7,10 @@ import i18n from './i18n';
 
 const THIN_SPACE = ' ';
 
-export function formatUZS(amount: number): string {
+// Thousands-grouped digits, no currency unit — e.g. "100 000". Shared by
+// formatUZS/formatPriceFrom and by callers that already label the unit
+// elsewhere (e.g. a stat tile captioned "NARX") and don't want it repeated.
+export function formatAmountGrouped(amount: number): string {
   const safe = Number.isFinite(amount) ? Math.round(amount) : 0;
   const sign = safe < 0 ? '-' : '';
   const digits = Math.abs(safe).toString();
@@ -15,20 +18,17 @@ export function formatUZS(amount: number): string {
   for (let i = digits.length; i > 0; i -= 3) {
     parts.unshift(digits.slice(Math.max(0, i - 3), i));
   }
-  return `${sign}${parts.join(THIN_SPACE)} ${i18n.t('common.sum')}`;
+  return `${sign}${parts.join(THIN_SPACE)}`;
+}
+
+export function formatUZS(amount: number): string {
+  return `${formatAmountGrouped(amount)} ${i18n.t('common.sum')}`;
 }
 
 export function formatPriceFrom(amount: number): string {
   // Uzbek "{n} so'mdan" / Russian "от {n} сум". The plural-aware suffix lives
   // in the locale file as `common.from`.
-  const safe = Number.isFinite(amount) ? Math.round(amount) : 0;
-  const sign = safe < 0 ? '-' : '';
-  const digits = Math.abs(safe).toString();
-  const parts: string[] = [];
-  for (let i = digits.length; i > 0; i -= 3) {
-    parts.unshift(digits.slice(Math.max(0, i - 3), i));
-  }
-  return i18n.t('common.from', { value: `${sign}${parts.join(THIN_SPACE)}` });
+  return i18n.t('common.from', { value: formatAmountGrouped(amount) });
 }
 
 export function pad2(n: number): string {
@@ -84,4 +84,31 @@ export function startOfDay(d: Date): Date {
 // Add days, keeping local time intact.
 export function addDays(d: Date, days: number): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
+}
+
+// Booking status wire values (Firestore `BookingStatus`) -> localized label
+// and display tone, shared by the client and barber booking-history lists so
+// neither renders the raw snake_case enum.
+export function bookingStatusLabel(status: string): string {
+  return i18n.exists(`bookingStatus.${status}`) ? i18n.t(`bookingStatus.${status}`) : status;
+}
+
+export function bookingStatusTone(status: string): 'success' | 'danger' | 'accent' {
+  if (status === 'confirmed' || status === 'completed') return 'success';
+  if (status === 'cancelled' || status === 'declined' || status === 'no_show') return 'danger';
+  return 'accent';
+}
+
+// A pending_confirmation booking whose time has already passed is a request
+// the barber never answered — the backend's `upcoming` filter is status-only
+// (no timestamp cutoff), so these otherwise sit in the upcoming list forever
+// looking like a live appointment. Surface that distinctly instead.
+export function effectiveBookingStatus(
+  status: string,
+  timestampIso: string,
+): { label: string; tone: 'success' | 'warning' | 'danger' | 'accent' } {
+  if (status === 'pending_confirmation' && new Date(timestampIso).getTime() < Date.now()) {
+    return { label: i18n.t('bookingStatus.expired'), tone: 'warning' };
+  }
+  return { label: bookingStatusLabel(status), tone: bookingStatusTone(status) };
 }

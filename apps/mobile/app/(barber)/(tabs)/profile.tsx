@@ -113,23 +113,23 @@ export default function BarberProfileScreen() {
 
   return (
     <ScreenLayout>
+      {/* Fixed header — stays put while the content below scrolls */}
+      <View style={styles.header}>
+        <Text
+          style={{
+            fontSize: 17,
+            fontWeight: '600',
+            color: theme.colors.fg,
+          }}
+        >
+          {t('tabs.profile')}
+        </Text>
+      </View>
+
       <ScrollView
         contentContainerStyle={{ paddingBottom: tabBarPadding }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text
-            style={{
-              fontSize: 17,
-              fontWeight: '600',
-              color: theme.colors.fg,
-            }}
-          >
-            {t('tabs.profile')}
-          </Text>
-        </View>
-
         {/* ID card */}
         <View
           style={[

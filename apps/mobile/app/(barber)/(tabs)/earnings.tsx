@@ -94,75 +94,75 @@ export default function BarberEarningsScreen() {
 
   return (
     <ScreenLayout>
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: tabBarPadding }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
+      {/* Fixed header — stays put while the content below scrolls */}
+      <View style={styles.header}>
+        <Text
+          style={{
+            fontSize: 17,
+            fontWeight: '600',
+            color: theme.colors.fg,
+          }}
+        >
+          {t('tabs.earnings')}
+        </Text>
+      </View>
+
+      {/* Fixed month navigator */}
+      <View style={styles.monthNav}>
+        <Pressable
+          onPress={prevMonth}
+          style={[
+            styles.monthArrow,
+            {
+              backgroundColor: theme.colors.surface2,
+              borderColor: theme.colors.border,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
+          <Icon name="back" size={18} color={theme.colors.fg} />
+        </Pressable>
+
+        <View
+          style={[
+            styles.monthPill,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
           <Text
             style={{
-              fontSize: 17,
+              fontSize: 15,
               fontWeight: '600',
               color: theme.colors.fg,
             }}
           >
-            {t('tabs.earnings')}
+            {monthYearLabel(cursor, t)}
           </Text>
         </View>
 
-        {/* Month navigator */}
-        <View style={styles.monthNav}>
-          <Pressable
-            onPress={prevMonth}
-            style={[
-              styles.monthArrow,
-              {
-                backgroundColor: theme.colors.surface2,
-                borderColor: theme.colors.border,
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.back')}
-          >
-            <Icon name="back" size={18} color={theme.colors.fg} />
-          </Pressable>
+        <Pressable
+          onPress={nextMonth}
+          style={[
+            styles.monthArrow,
+            {
+              backgroundColor: theme.colors.surface2,
+              borderColor: theme.colors.border,
+            },
+          ]}
+          accessibilityRole="button"
+        >
+          <Icon name="arrow-right" size={18} color={theme.colors.fg} />
+        </Pressable>
+      </View>
 
-          <View
-            style={[
-              styles.monthPill,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-              },
-            ]}
-          >
-            <Text
-              style={{
-                fontSize: 15,
-                fontWeight: '600',
-                color: theme.colors.fg,
-              }}
-            >
-              {monthYearLabel(cursor, t)}
-            </Text>
-          </View>
-
-          <Pressable
-            onPress={nextMonth}
-            style={[
-              styles.monthArrow,
-              {
-                backgroundColor: theme.colors.surface2,
-                borderColor: theme.colors.border,
-              },
-            ]}
-            accessibilityRole="button"
-          >
-            <Icon name="arrow-right" size={18} color={theme.colors.fg} />
-          </Pressable>
-        </View>
-
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: tabBarPadding }}
+        showsVerticalScrollIndicator={false}
+      >
         {query.isLoading ? (
           <View style={styles.centered}>
             <ActivityIndicator color={theme.colors.accent} />

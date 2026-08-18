@@ -1,33 +1,34 @@
 // Design tokens derived from the Open Design "My Barber" project.
 // Source values are OKLCH in design/styles/tokens.css; resolved here to sRGB
-// hex/rgba for React Native consumption. Visual intent: warm-paper light,
-// deep-ink dark, copper accent.
-
+// hex/rgba for React Native consumption. Visual intent: monochrome
+// black/white — neutral grays for chrome, black (light mode) / white (dark
+// mode) as the accent. Status colors (success/warning/danger/info) are kept
+// as normal semantic colors by design, not grayscaled.
 import { Platform } from 'react-native';
 
 export const palette = {
   light: {
-    bg: '#faf7f2',
-    bgGrouped: '#f3eee5',
+    bg: '#f7f7f7',
+    bgGrouped: '#efefef',
     surface: '#ffffff',
-    surface2: '#f9f6f1',
-    surfaceGlass: 'rgba(255, 252, 247, 0.72)',
-    overlay: 'rgba(10, 8, 6, 0.32)',
+    surface2: '#f2f2f2',
+    surfaceGlass: 'rgba(255, 255, 255, 0.72)',
+    overlay: 'rgba(0, 0, 0, 0.32)',
 
-    fg: '#1a1611',
-    fg2: '#322a23',
-    muted: '#6b6056',
-    muted2: '#948a7f',
-    onAccent: '#faf7f2',
+    fg: '#0a0a0a',
+    fg2: '#2e2e2e',
+    muted: '#6b6b6b',
+    muted2: '#8f8f8f',
+    onAccent: '#ffffff',
 
-    border: '#e5dfd5',
-    borderStrong: '#c8c0b1',
-    hairline: 'rgba(10, 8, 6, 0.08)',
+    border: '#e2e2e2',
+    borderStrong: '#c7c7c7',
+    hairline: 'rgba(0, 0, 0, 0.08)',
 
-    accent: '#b35a25',
-    accent2: '#9a4818',
-    accentSoft: '#f5e6d2',
-    accentGlow: 'rgba(178, 92, 38, 0.18)',
+    accent: '#0a0a0a',
+    accent2: '#2e2e2e',
+    accentSoft: '#ececec',
+    accentGlow: 'rgba(10, 10, 10, 0.14)',
 
     success: '#2f9d5e',
     successSoft: '#d8f0e2',
@@ -39,27 +40,27 @@ export const palette = {
     infoSoft: '#d8e2f0',
   },
   dark: {
-    bg: '#14110d',
-    bgGrouped: '#0c0a07',
-    surface: '#1d1813',
-    surface2: '#241e18',
-    surfaceGlass: 'rgba(28, 22, 18, 0.62)',
+    bg: '#0a0a0a',
+    bgGrouped: '#000000',
+    surface: '#171717',
+    surface2: '#202020',
+    surfaceGlass: 'rgba(23, 23, 23, 0.62)',
     overlay: 'rgba(0, 0, 0, 0.52)',
 
-    fg: '#f5f1e9',
-    fg2: '#cfc6b8',
-    muted: '#948575',
-    muted2: '#6b6056',
-    onAccent: '#faf7f2',
+    fg: '#fafafa',
+    fg2: '#d4d4d4',
+    muted: '#8f8f8f',
+    muted2: '#6b6b6b',
+    onAccent: '#0a0a0a',
 
-    border: '#2c251f',
-    borderStrong: '#3d362d',
-    hairline: 'rgba(255, 240, 220, 0.10)',
+    border: '#2a2a2a',
+    borderStrong: '#3d3d3d',
+    hairline: 'rgba(255, 255, 255, 0.10)',
 
-    accent: '#d8854a',
-    accent2: '#f0a373',
-    accentSoft: '#4a2c1a',
-    accentGlow: 'rgba(220, 138, 70, 0.22)',
+    accent: '#fafafa',
+    accent2: '#d4d4d4',
+    accentSoft: '#242424',
+    accentGlow: 'rgba(250, 250, 250, 0.16)',
 
     success: '#5fc78a',
     successSoft: '#1f3d2a',

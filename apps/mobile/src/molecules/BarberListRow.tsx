@@ -16,9 +16,9 @@ import { hapticToggle } from '../lib/haptics';
 import type { AppTheme } from '../lib/restyle';
 
 const CARD_GRADIENTS = [
-  ['#3d1e0a', '#1d130b'] as const,
-  ['#2e1508', '#1a0f06'] as const,
-  ['#4a1f0c', '#221208'] as const,
+  ['#2c2c2c', '#1a1a1a'] as const,
+  ['#262626', '#161616'] as const,
+  ['#303030', '#1c1c1c'] as const,
 ];
 
 export const BarberListRow: React.FC<{

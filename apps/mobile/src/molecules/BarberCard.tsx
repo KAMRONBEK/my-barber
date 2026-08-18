@@ -50,7 +50,7 @@ export const BarberCard: React.FC<BarberCardProps> = ({
       accessibilityLabel={`${barber.firstName} ${barber.lastName}`}
     >
       <LinearGradient
-        colors={['#3d2a1a', '#c8a882']}
+        colors={['#333333', '#c4c4c4']}
         style={styles.listThumb}
       >
         {barber.avatar ? (
@@ -143,7 +143,7 @@ export const BarberRailCard: React.FC<{
       accessibilityRole="button"
     >
       <LinearGradient
-        colors={['#3d2a1a', '#c8a882']}
+        colors={['#333333', '#c4c4c4']}
         style={styles.railPortrait}
       >
         {barber.avatar ? (

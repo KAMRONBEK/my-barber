@@ -92,7 +92,7 @@ const TYPE_CONFIG: Record<
   booking_confirmed: { icon: 'check', color: '#2f9d5e' },
   booking_reminder: { icon: 'bell', color: '#d4a043' },
   booking_request: { icon: 'calendar', color: '#4673c0' },
-  system: { icon: 'mail', color: '#6b6056' },
+  system: { icon: 'mail', color: '#6b6b6b' },
 };
 
 export default function NotificationsScreen() {

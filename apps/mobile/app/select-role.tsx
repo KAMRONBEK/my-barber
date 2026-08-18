@@ -1,4 +1,4 @@
-// Role-selection screen. Two large tap-target cards with dark warm-brown
+// Role-selection screen. Two large tap-target cards with dark neutral
 // LinearGradient backgrounds, white text, and a circular arrow CTA.
 
 import React from 'react';
@@ -14,8 +14,8 @@ import { setItem } from '../src/lib/storage';
 import type { AppTheme } from '../src/lib/restyle';
 
 const ROLE_GRADIENTS = {
-  client: ['#3d1e0a', '#1d130b', '#100c07'] as const,
-  barber: ['#1a2a1a', '#0e1a0e', '#080e08'] as const,
+  client: ['#2c2c2c', '#1a1a1a', '#0d0d0d'] as const,
+  barber: ['#242424', '#141414', '#0a0a0a'] as const,
 };
 
 export default function SelectRoleScreen() {
@@ -32,7 +32,7 @@ export default function SelectRoleScreen() {
       <View style={styles.head}>
         <Text
           style={{
-            color: '#6b6056',
+            color: '#6b6b6b',
             fontSize: 11,
             fontWeight: '600',
             letterSpacing: 1.6,
@@ -46,7 +46,7 @@ export default function SelectRoleScreen() {
             marginTop: 14,
             fontSize: 32,
             fontWeight: '700',
-            color: '#1a1611',
+            color: '#0a0a0a',
             letterSpacing: -0.6,
           }}
         >

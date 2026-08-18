@@ -1,18 +1,36 @@
-// Barber portfolio / detail screen. Tabs: Bio / Services / Portfolio / Reviews.
-// LinearGradient cover scrim, segmented tab control, portfolio grid, review list.
+// Barber portfolio / detail screen. Photo hero (avatar, or a neutral
+// gradient fallback) with identity + rating overlaid, persistent bio +
+// book CTA, then a segmented tab control: Schedule / Services / Portfolio /
+// Reviews.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
+import Animated, {
+  interpolate,
+  interpolateColor,
+  runOnJS,
+  useAnimatedReaction,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@shopify/restyle';
 import { Text } from '../atoms/Text';
 import { BackButton } from '../atoms/BackButton';
-import { Avatar } from '../atoms/Avatar';
 import { Icon } from '../atoms/Icon';
 import { Button } from '../atoms/Button';
 import { ScreenLayout } from '../templates/ScreenLayout';
@@ -21,16 +39,18 @@ import {
   TAB_BAR_PILL_HEIGHT,
   TAB_BAR_BOTTOM_OFFSET,
 } from '../navigation/GlassTabBar';
-import { shadows } from '@my-barber/ui';
 import { getBarbers, getBarberReviews, type ApiBarberFull } from '../lib/api';
 import { useFavoriteBarbers } from '../hooks/useFavoriteBarbers';
 import { hapticToggle } from '../lib/haptics';
 import { queryKeys, STALE } from '../lib/query';
 import {
   formatUZS,
+  formatAmountGrouped,
   formatDurationMinutes,
-  formatPriceFrom,
+  formatWeekdayLong,
   formatDayMonth,
+  startOfDay,
+  addDays,
 } from '../lib/format';
 import {
   DEFAULT_SERVICE_DURATION_MINUTES,
@@ -41,6 +61,7 @@ import {
   distanceKm,
   extractBarberCoordinate,
   formatBarberAddress,
+  formatDistanceKm,
   openBarberDirections,
   parseBarberCoordinate,
 } from '../lib/maps';
@@ -56,6 +77,56 @@ export const BarberShopScreen: React.FC = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<TabKey>('bio');
   const { favoriteIds, pendingIds, toggleFavorite } = useFavoriteBarbers();
+
+  // The header (back/share/heart) is fixed in screen space, overlaid on the
+  // photo hero — its glass/white styling only reads once the dark photo is
+  // still behind it. Past HEADER_SOLID_RANGE of scroll, the photo has
+  // scrolled out from under the fixed header into the light content below,
+  // so the pills crossfade to an opaque light background + dark icons.
+  const HEADER_SOLID_RANGE: [number, number] = [150, 300];
+  const scrollY = useSharedValue(0);
+  const [headerSolid, setHeaderSolid] = useState(false);
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+  useAnimatedReaction(
+    () => scrollY.value > (HEADER_SOLID_RANGE[0] + HEADER_SOLID_RANGE[1]) / 2,
+    (isPast, wasPast) => {
+      if (isPast !== wasPast) {
+        runOnJS(setHeaderSolid)(isPast);
+      }
+    },
+  );
+  const headerPillStyle = useAnimatedStyle(() => {
+    const progress = interpolate(
+      scrollY.value,
+      HEADER_SOLID_RANGE,
+      [0, 1],
+      'clamp',
+    );
+    return {
+      backgroundColor: interpolateColor(
+        progress,
+        [0, 1],
+        ['rgba(255,255,255,0.12)', theme.colors.surface],
+      ),
+      borderColor: interpolateColor(
+        progress,
+        [0, 1],
+        ['rgba(255,255,255,0.18)', theme.colors.borderStrong],
+      ),
+    };
+  });
+
+  // Percentage width + aspectRatio on portfolioTile collapses to zero size on
+  // this RN/Yoga version, so the tile size is computed from the window width
+  // instead (matches styles.section's paddingHorizontal:20 and
+  // styles.portfolioGrid's gap:8).
+  const { width: windowWidth } = useWindowDimensions();
+  const portfolioTileWidth = (windowWidth - 20 * 2 - 8) / 2;
+  const portfolioTileHeight = portfolioTileWidth / 0.85;
 
   const barbersQuery = useQuery({
     queryKey: queryKeys.barbers,
@@ -117,6 +188,16 @@ export const BarberShopScreen: React.FC = () => {
     staleTime: 60 * 1000,
   });
 
+  // The API only exposes a single workingHours string (e.g. "09:00 - 18:00")
+  // applied every day — there's no per-day schedule yet — so the weekly list
+  // below repeats it across Mon–Sun and only distinguishes "today".
+  const weekDays = useMemo(() => {
+    const now = new Date();
+    const mondayOffset = now.getDay() === 0 ? -6 : 1 - now.getDay();
+    const monday = addDays(startOfDay(now), mondayOffset);
+    return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  }, []);
+
   if (barbersQuery.isLoading && !barber) {
     return (
       <ScreenLayout>
@@ -150,95 +231,91 @@ export const BarberShopScreen: React.FC = () => {
   const realBarberCoordinate = extractBarberCoordinate(barber.location);
   const distanceLabel =
     userCoordinate && realBarberCoordinate
-      ? `${distanceKm(userCoordinate, realBarberCoordinate).toFixed(1).replace('.', ',')} km`
+      ? formatDistanceKm(distanceKm(userCoordinate, realBarberCoordinate))
       : String.fromCharCode(8212);
   const addressLabel =
     formatBarberAddress(barber.location) ??
     `${barber.firstName} ${barber.lastName}`;
+  const initials = `${barber.firstName[0] ?? ''}${barber.lastName[0] ?? ''}`;
+  const isFavorited = favoriteIds.has(barber.id);
+  const isFavoritePending = pendingIds.has(barber.id);
 
   const TABS: Array<{ key: TabKey; label: string }> = [
-    { key: 'bio', label: t('barber.about') },
+    { key: 'bio', label: t('barber.schedule') },
     { key: 'services', label: t('barber.services') },
     { key: 'portfolio', label: t('barber.portfolio') },
     { key: 'reviews', label: t('barber.reviews') },
   ];
 
   return (
-    <ScreenLayout edgeToEdgeTop>
-      <ScrollView
+    // contentStyle backgroundColor matches the cover's dark fallback/scrim
+    // tone so the iOS overscroll bounce at the top reveals more of the same
+    // dark cover instead of flashing the screen's light bg.
+    <ScreenLayout edgeToEdgeTop contentStyle={{ backgroundColor: '#0a0a0a' }}>
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={[
           styles.scroll,
           { backgroundColor: theme.colors.bg, paddingBottom: tabBarPadding },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Cover with LinearGradient scrim */}
+        {/* Cover: barber's avatar, or a neutral gradient + initials if unset */}
         <View style={styles.cover}>
-          {/* Full dark-warm gradient base */}
+          {barber.avatar ? (
+            <Image
+              source={{ uri: barber.avatar }}
+              style={StyleSheet.absoluteFillObject}
+              contentFit="cover"
+              transition={150}
+            />
+          ) : (
+            <LinearGradient
+              colors={['#2c2c2c', '#1a1a1a', '#0d0d0d']}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            >
+              <View style={styles.coverInitialsWrap}>
+                <Text style={styles.coverInitials}>{initials}</Text>
+              </View>
+            </LinearGradient>
+          )}
+          {/* Bottom scrim for text legibility over photo or fallback alike */}
           <LinearGradient
-            colors={['#140f0a', '#1a120c', '#1d150f']}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-          {/* Bottom scrim — transparent → #1d150f for text legibility */}
-          <LinearGradient
-            colors={['transparent', '#1d150f']}
-            start={{ x: 0.5, y: 0.3 }}
+            colors={['transparent', 'rgba(10,10,10,0.88)']}
+            start={{ x: 0.5, y: 0.35 }}
             end={{ x: 0.5, y: 1 }}
             style={StyleSheet.absoluteFillObject}
             pointerEvents="none"
           />
 
-          {/* ID bar */}
-          <View style={styles.idBar}>
-            <Avatar
-              size={76}
-              uri={barber.avatar ?? undefined}
-              initials={`${barber.firstName[0] ?? ''}${barber.lastName[0] ?? ''}`}
-              ring
-            />
-            {/* idBar sits half on/half off the cover (bottom: -38, avatar
-                bleeds across the seam by design) — the name/address text
-                needs enough paddingBottom to stay entirely on the dark
-                cover, or the address (styled for a dark background) goes
-                nearly invisible against the light content below. */}
-            <View style={{ flex: 1, paddingBottom: 46 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <Text
-                  style={{
-                    color: '#fff',
-                    fontSize: 22,
-                    fontWeight: '700',
-                    letterSpacing: -0.4,
-                  }}
-                  numberOfLines={1}
-                >
+          {/* Bottom: name/title + rating badge */}
+          <View style={styles.coverBottom}>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.coverName} numberOfLines={1}>
                   {barber.firstName} {barber.lastName}
                 </Text>
-                <Icon name="verified" size={16} color={theme.colors.accent} />
+                <Icon name="verified" size={16} color={theme.colors.muted2} />
               </View>
-              <Text
-                style={{
-                  marginTop: 4,
-                  color: 'rgba(255,255,255,0.78)',
-                  fontSize: 13,
-                }}
-                numberOfLines={1}
-              >
-                {addressLabel}
+              {barber.title ? (
+                <Text style={styles.coverTitle} numberOfLines={1}>
+                  {barber.title}
+                </Text>
+              ) : null}
+            </View>
+            <View style={[styles.ratingBadge, styles.iconBtnDark]}>
+              <Icon name="star" size={12} color="#fff" />
+              <Text style={styles.ratingBadgeText}>
+                {rating ? rating.toFixed(1) : String.fromCharCode(8212)}
               </Text>
             </View>
           </View>
         </View>
 
-        {/* Stats: star rating / experience / distance / price-from */}
+        {/* Stats: experience / distance / price-from */}
         <View
           style={[
             styles.statsBar,
@@ -248,11 +325,6 @@ export const BarberShopScreen: React.FC = () => {
             },
           ]}
         >
-          <Stat
-            value={rating ? rating.toFixed(1) : String.fromCharCode(8212)}
-            label={t('barber.rating')}
-            icon
-          />
           <Stat
             value={
               typeof barber.experienceYears === 'number'
@@ -266,113 +338,132 @@ export const BarberShopScreen: React.FC = () => {
             label={t('barber.distance')}
           />
           <Stat
-            value={minPrice != null ? formatUZS(minPrice) : String.fromCharCode(8212)}
+            value={minPrice != null ? formatAmountGrouped(minPrice) : String.fromCharCode(8212)}
             label={t('barber.priceLabel')}
             accent
           />
         </View>
 
-        {/* Mini map */}
-        <View
-          style={[
-            styles.mapWidget,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-            },
-          ]}
-        >
-          <BarberMapPreview
-            coordinate={mapCoordinate}
-            avatarUri={barber.avatar}
-            initials={`${barber.firstName?.[0] ?? ''}${barber.lastName?.[0] ?? ''}`}
-            rating={rating}
-            height={160}
-          />
-          <View style={styles.mapMeta}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-              <Icon name="pin" size={16} color={theme.colors.accent} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '500', color: theme.colors.fg }}>
-                  {addressLabel}
-                </Text>
-                {barber.workingHours ? (
-                  <Text
-                    style={{ fontSize: 12, color: theme.colors.muted, marginTop: 2 }}
-                    numberOfLines={1}
-                  >
-                    {barber.workingHours}
-                  </Text>
-                ) : null}
-              </View>
-            </View>
-            <Pressable
-              style={[styles.navBtn, { backgroundColor: theme.colors.fg }]}
-              onPress={() =>
-                void openBarberDirections(mapCoordinate, { title: addressLabel })
-              }
-              accessibilityRole="button"
-              accessibilityLabel={t('barber.directions')}
-            >
-              <Icon name="arrow-right" size={14} color={theme.colors.bg} />
-              <Text style={{ color: theme.colors.bg, fontSize: 13, fontWeight: '600' }}>
-                {t('barber.directions')}
-              </Text>
-            </Pressable>
-          </View>
+        {/* Persistent bio */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.fg }]}>
+            {t('barber.aboutMe')}
+          </Text>
+          {barber.bio ? (
+            <Text style={{ marginTop: 8, color: theme.colors.fg2, fontSize: 14, lineHeight: 22 }}>
+              {barber.bio}
+            </Text>
+          ) : (
+            <Text style={{ marginTop: 8, color: theme.colors.muted }}>{t('common.empty')}</Text>
+          )}
         </View>
 
-        {/* Segmented tab control */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsRow}
-          style={styles.tabsScroll}
+        {/* Inline book CTA */}
+        <View style={styles.section}>
+          <Button
+            label={t('barber.bookSeat')}
+            fullWidth
+            onPress={() => router.push(`/booking/${barber.id}`)}
+          />
+        </View>
+
+        {/* Segmented tab control — single continuous track, inset active pill */}
+        <View
+          style={[
+            styles.segmentedTrack,
+            { backgroundColor: theme.colors.surface2, borderColor: theme.colors.border },
+          ]}
         >
-          {TABS.map(({ key, label }) => {
-            const isActive = activeTab === key;
-            return (
-              <Pressable
-                key={key}
-                onPress={() => setActiveTab(key)}
-                style={[
-                  styles.tabChip,
-                  isActive && styles.tabChipActive,
-                  {
-                    backgroundColor: isActive
-                      ? 'rgba(42, 32, 24, 0.78)'
-                      : theme.colors.surface2,
-                    borderColor: isActive
-                      ? 'rgba(255, 255, 255, 0.09)'
-                      : theme.colors.border,
-                  },
-                ]}
-                accessibilityRole="tab"
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '600',
-                    color: isActive ? theme.colors.bg : theme.colors.fg,
-                  }}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+          {TABS.map(({ key, label }) => (
+            <Segment
+              key={key}
+              label={label}
+              isActive={activeTab === key}
+              onPress={() => setActiveTab(key)}
+              theme={theme}
+            />
+          ))}
+        </View>
 
         {/* Tab content */}
         {activeTab === 'bio' ? (
           <View style={styles.section}>
-            {barber.bio ? (
-              <Text style={{ color: theme.colors.fg2, fontSize: 14, lineHeight: 22 }}>
-                {barber.bio}
-              </Text>
-            ) : (
-              <Text style={{ color: theme.colors.muted }}>{t('common.empty')}</Text>
-            )}
+            <Text style={[styles.sectionTitle, { color: theme.colors.fg }]}>
+              {t('barber.schedule')}
+            </Text>
+            <View style={{ marginTop: 8, gap: 8 }}>
+              {weekDays.map((d) => {
+                const isToday = d.toDateString() === new Date().toDateString();
+                return (
+                  <View
+                    key={d.toISOString()}
+                    style={[
+                      styles.scheduleRow,
+                      {
+                        backgroundColor: theme.colors.surface,
+                        borderColor: theme.colors.border,
+                      },
+                    ]}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      {isToday ? (
+                        <View
+                          style={[styles.scheduleDot, { backgroundColor: theme.colors.success }]}
+                        />
+                      ) : null}
+                      <Text style={{ fontSize: 14, color: theme.colors.fg }}>
+                        {formatWeekdayLong(d)}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 14, color: theme.colors.muted }}>
+                      {barber.workingHours ?? String.fromCharCode(8212)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Mini map */}
+            <View
+              style={[
+                styles.mapWidget,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                },
+              ]}
+            >
+              <BarberMapPreview
+                coordinate={mapCoordinate}
+                avatarUri={barber.avatar}
+                initials={initials}
+                rating={rating}
+                height={160}
+              />
+              <View style={styles.mapMeta}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <Icon name="pin" size={16} color={theme.colors.accent} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: theme.colors.fg }}>
+                      {addressLabel}
+                    </Text>
+                  </View>
+                </View>
+                <Pressable
+                  style={[styles.navBtn, { backgroundColor: theme.colors.fg }]}
+                  onPress={() =>
+                    void openBarberDirections(mapCoordinate, { title: addressLabel })
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={t('barber.directions')}
+                >
+                  <Icon name="arrow-right" size={14} color={theme.colors.bg} />
+                  <Text style={{ color: theme.colors.bg, fontSize: 13, fontWeight: '600' }}>
+                    {t('barber.directions')}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
           </View>
         ) : null}
 
@@ -441,7 +532,13 @@ export const BarberShopScreen: React.FC = () => {
             ) : (
               <View style={styles.portfolioGrid}>
                 {(barber.images ?? []).map((uri, i) => (
-                  <View key={`${uri}-${i}`} style={styles.portfolioTile}>
+                  <View
+                    key={`${uri}-${i}`}
+                    style={[
+                      styles.portfolioTile,
+                      { width: portfolioTileWidth, height: portfolioTileHeight },
+                    ]}
+                  >
                     <Image
                       source={{ uri }}
                       style={StyleSheet.absoluteFillObject}
@@ -520,75 +617,58 @@ export const BarberShopScreen: React.FC = () => {
           </View>
         ) : null}
 
-        <View style={{ height: 120 }} />
-      </ScrollView>
+        <View style={{ height: 40 }} />
+      </Animated.ScrollView>
 
-      {/* Fixed overlay header — stays put while the cover/content scroll beneath it */}
+      {/* Fixed header — stays put while the cover/content scroll beneath it.
+          Crossfades from glass/white (over the photo) to a solid light pill
+          with dark icons once scrolled past it, via headerPillStyle. */}
       <View
         style={[styles.coverTop, { top: insets.top + 12 }]}
         pointerEvents="box-none"
       >
-        <BackButton tone="dark" />
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          style={styles.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
+          <Animated.View style={[StyleSheet.absoluteFillObject, styles.iconBtnPill, headerPillStyle]} />
+          <Icon name="back" size={18} color={headerSolid ? theme.colors.fg : '#fff'} />
+        </Pressable>
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={[styles.iconBtn, styles.iconBtnDark]}>
-            <Icon name="share" size={18} color="#fff" />
+          <View style={styles.iconBtn}>
+            <Animated.View style={[StyleSheet.absoluteFillObject, styles.iconBtnPill, headerPillStyle]} />
+            <Icon name="share" size={18} color={headerSolid ? theme.colors.fg : '#fff'} />
           </View>
           <Pressable
             onPress={() => {
               hapticToggle();
               toggleFavorite(barber.id);
             }}
-            disabled={pendingIds.has(barber.id)}
-            style={[styles.iconBtn, styles.iconBtnDark]}
+            disabled={isFavoritePending}
+            style={styles.iconBtn}
             accessibilityRole="button"
             accessibilityLabel={t('barber.saveToggle')}
           >
-            {pendingIds.has(barber.id) ? (
-              <ActivityIndicator size="small" color="#fff" />
+            <Animated.View style={[StyleSheet.absoluteFillObject, styles.iconBtnPill, headerPillStyle]} />
+            {isFavoritePending ? (
+              <ActivityIndicator size="small" color={headerSolid ? theme.colors.fg : '#fff'} />
             ) : (
               <Icon
-                name={favoriteIds.has(barber.id) ? 'heart-filled' : 'heart'}
+                name={isFavorited ? 'heart-filled' : 'heart'}
                 size={18}
-                color={favoriteIds.has(barber.id) ? theme.colors.accent : '#fff'}
+                color={
+                  !headerSolid
+                    ? '#fff'
+                    : isFavorited
+                      ? theme.colors.accent
+                      : theme.colors.fg
+                }
               />
             )}
           </Pressable>
         </View>
-      </View>
-
-      {/* Floating CTA */}
-      <View
-        style={[
-          styles.floating,
-          shadows.floating,
-          {
-            bottom: Math.max(insets.bottom, 16) + 8,
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-            shadowColor: theme.colors.fg,
-          },
-        ]}
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.colors.muted, fontSize: 12 }}>
-            {t('barber.priceFrom')}
-          </Text>
-          <Text
-            style={{
-              color: theme.colors.fg,
-              fontSize: 18,
-              fontWeight: '700',
-              letterSpacing: -0.3,
-              fontVariant: ['tabular-nums'],
-            }}
-          >
-            {minPrice != null ? formatPriceFrom(minPrice) : '—'}
-          </Text>
-        </View>
-        <Button
-          label={t('barber.bookSeat')}
-          onPress={() => router.push(`/booking/${barber.id}`)}
-        />
       </View>
     </ScreenLayout>
   );
@@ -644,6 +724,59 @@ const Stat: React.FC<{
   );
 };
 
+const SEGMENT_ANIM_DURATION = 220;
+
+const Segment: React.FC<{
+  label: string;
+  isActive: boolean;
+  onPress: () => void;
+  theme: AppTheme;
+}> = ({ label, isActive, onPress, theme }) => {
+  const progress = useSharedValue(isActive ? 1 : 0);
+
+  useEffect(() => {
+    progress.value = withTiming(isActive ? 1 : 0, { duration: SEGMENT_ANIM_DURATION });
+  }, [isActive, progress]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      progress.value,
+      [0, 1],
+      ['transparent', theme.colors.surface],
+    ),
+    shadowOpacity: interpolate(progress.value, [0, 1], [0, 0.1]),
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={styles.segment}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: isActive }}
+      accessibilityLabel={label}
+    >
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFillObject,
+          styles.segmentPill,
+          pillStyle,
+          { shadowColor: theme.colors.fg, elevation: isActive ? 2 : 0 },
+        ]}
+      />
+      <Text
+        numberOfLines={1}
+        style={{
+          fontSize: 12,
+          fontWeight: '600',
+          color: isActive ? theme.colors.fg : theme.colors.muted,
+        }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+};
+
 const styles = StyleSheet.create({
   scroll: {
     paddingBottom: 100,
@@ -654,8 +787,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cover: {
-    height: 320,
+    height: 380,
     position: 'relative',
+  },
+  coverInitialsWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coverInitials: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 56,
+    fontWeight: '700',
+    letterSpacing: -1,
   },
   coverTop: {
     position: 'absolute',
@@ -669,26 +813,54 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 40,
     height: 40,
-    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconBtnPill: {
+    borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
   },
   iconBtnDark: {
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  idBar: {
+  coverBottom: {
     position: 'absolute',
     left: 20,
     right: 20,
-    bottom: -38,
+    bottom: 20,
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 14,
+    gap: 12,
+  },
+  coverName: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+  },
+  coverTitle: {
+    marginTop: 4,
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 13,
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  ratingBadgeText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
   },
   statsBar: {
-    marginTop: 56,
+    marginTop: 16,
     marginHorizontal: 20,
     padding: 14,
     borderRadius: 18,
@@ -702,7 +874,6 @@ const styles = StyleSheet.create({
   },
   mapWidget: {
     marginTop: 14,
-    marginHorizontal: 20,
     borderRadius: 18,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
@@ -723,31 +894,48 @@ const styles = StyleSheet.create({
     gap: 6,
     flexShrink: 0,
   },
-  tabsScroll: {
-    flexGrow: 0,
-    marginTop: 16,
-  },
-  tabsRow: {
-    paddingHorizontal: 20,
-    gap: 8,
-    paddingBottom: 4,
-  },
-  tabChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  tabChipActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 4,
-  },
   section: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  segmentedTrack: {
+    marginTop: 20,
+    marginHorizontal: 20,
+    flexDirection: 'row',
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 4,
+    gap: 4,
+  },
+  segment: {
+    flex: 1,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentPill: {
+    borderRadius: 999,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+  },
+  scheduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  scheduleDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   serviceRow: {
     flexDirection: 'row',
@@ -764,11 +952,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   portfolioTile: {
-    width: '48%',
-    aspectRatio: 0.85,
     borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: '#1d150f',
+    backgroundColor: '#171717',
   },
   reviewCard: {
     padding: 14,
@@ -778,19 +964,5 @@ const styles = StyleSheet.create({
   reviewHead: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  floating: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 16,
-    borderRadius: 999,
-    paddingLeft: 20,
-    paddingRight: 6,
-    paddingVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: StyleSheet.hairlineWidth,
   },
 });

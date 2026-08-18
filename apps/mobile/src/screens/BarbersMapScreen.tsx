@@ -45,11 +45,11 @@ import type { AppTheme } from '../lib/restyle';
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 const CARD_GRADIENTS = [
-  ['#3d1e0a', '#1d130b'] as const,
-  ['#2e1508', '#1a0f06'] as const,
-  ['#4a1f0c', '#221208'] as const,
-  ['#3a1c10', '#1a100a'] as const,
-  ['#2a1806', '#140c04'] as const,
+  ['#2c2c2c', '#1a1a1a'] as const,
+  ['#262626', '#161616'] as const,
+  ['#303030', '#1c1c1c'] as const,
+  ['#242424', '#141414'] as const,
+  ['#2a2a2a', '#181818'] as const,
 ];
 
 const FILTER_CHIPS: Array<{ key: string; labelKey: string; icon?: boolean }> = [
@@ -407,7 +407,7 @@ export const BarbersMapScreen: React.FC = () => {
                     dotColor = theme.colors.warning ?? '#d4a043';
                   } else {
                     openLabel = t('search.closed');
-                    dotColor = theme.colors.muted2 ?? '#948a7f';
+                    dotColor = theme.colors.muted2 ?? '#8f8f8f';
                   }
 
                   const priceRange = getPriceRange(barber);

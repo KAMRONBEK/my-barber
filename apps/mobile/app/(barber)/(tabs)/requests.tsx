@@ -84,109 +84,109 @@ export default function BarberRequestsScreen() {
 
   return (
     <ScreenLayout>
+      {/* Fixed header — stays put while the content below scrolls */}
+      <View style={styles.header}>
+        <Text
+          style={{
+            fontSize: 28,
+            fontWeight: '700',
+            color: theme.colors.fg,
+            letterSpacing: -0.6,
+          }}
+        >
+          {t('requests.title')}
+        </Text>
+        {incomingCount > 0 && (
+          <View style={styles.countBadge}>
+            <View
+              style={[
+                styles.dot,
+                { backgroundColor: theme.colors.accent },
+              ]}
+            />
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '500',
+                color: theme.colors.accent,
+              }}
+            >
+              {incomingCount} ta yangi
+            </Text>
+          </View>
+        )}
+      </View>
+      <Text
+        style={{
+          paddingHorizontal: 20,
+          fontSize: 14,
+          color: theme.colors.muted,
+          marginTop: 2,
+        }}
+      >
+        {t('requests.subtitle')}
+      </Text>
+
+      {/* Fixed tabs */}
+      <View style={styles.tabsRow}>
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <Pressable
+              key={tab.key}
+              onPress={() => setActiveTab(tab.key)}
+              style={[
+                styles.tabBtn,
+                {
+                  backgroundColor: isActive
+                    ? theme.colors.fg
+                    : theme.colors.surface,
+                  borderColor: isActive
+                    ? 'transparent'
+                    : theme.colors.border,
+                },
+              ]}
+            >
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '500',
+                  color: isActive ? theme.colors.bg : theme.colors.muted,
+                }}
+              >
+                {tab.label}
+              </Text>
+              {tab.key === 'incoming' && incomingCount > 0 && (
+                <View
+                  style={[
+                    styles.badge,
+                    {
+                      backgroundColor: isActive
+                        ? theme.colors.accent
+                        : theme.colors.accent,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      fontWeight: '700',
+                      color: theme.colors.onAccent,
+                    }}
+                  >
+                    {incomingCount}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: tabBarPadding }}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text
-            style={{
-              fontSize: 28,
-              fontWeight: '700',
-              color: theme.colors.fg,
-              letterSpacing: -0.6,
-            }}
-          >
-            {t('requests.title')}
-          </Text>
-          {incomingCount > 0 && (
-            <View style={styles.countBadge}>
-              <View
-                style={[
-                  styles.dot,
-                  { backgroundColor: theme.colors.accent },
-                ]}
-              />
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: '500',
-                  color: theme.colors.accent,
-                }}
-              >
-                {incomingCount} ta yangi
-              </Text>
-            </View>
-          )}
-        </View>
-        <Text
-          style={{
-            paddingHorizontal: 20,
-            fontSize: 14,
-            color: theme.colors.muted,
-            marginTop: 2,
-          }}
-        >
-          {t('requests.subtitle')}
-        </Text>
-
-        {/* Tabs */}
-        <View style={styles.tabsRow}>
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.key;
-            return (
-              <Pressable
-                key={tab.key}
-                onPress={() => setActiveTab(tab.key)}
-                style={[
-                  styles.tabBtn,
-                  {
-                    backgroundColor: isActive
-                      ? theme.colors.fg
-                      : theme.colors.surface,
-                    borderColor: isActive
-                      ? 'transparent'
-                      : theme.colors.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '500',
-                    color: isActive ? theme.colors.bg : theme.colors.muted,
-                  }}
-                >
-                  {tab.label}
-                </Text>
-                {tab.key === 'incoming' && incomingCount > 0 && (
-                  <View
-                    style={[
-                      styles.badge,
-                      {
-                        backgroundColor: isActive
-                          ? theme.colors.accent
-                          : theme.colors.accent,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 10,
-                        fontWeight: '700',
-                        color: theme.colors.onAccent,
-                      }}
-                    >
-                      {incomingCount}
-                    </Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-
         {/* Request list */}
         <View style={styles.list}>
           {filtered.length === 0 && (

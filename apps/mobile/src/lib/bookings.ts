@@ -6,10 +6,12 @@
 
 import { api } from './api';
 
+// The wire contract has no embedded barber display info, only barber_id —
+// callers resolve the name client-side against /client/barbers.
 export interface CutHistoryItem {
   id: string;
   timestamp: string;
-  barberName?: string;
+  barber_id: string;
   services?: Array<{ name: string; price: number }>;
 }
 

@@ -29,6 +29,7 @@ import {
   formatWeekdayShort,
   formatDayMonth,
   formatTimeOfDay,
+  effectiveBookingStatus,
 } from '../../src/lib/format';
 import type { AppTheme } from '../../src/lib/restyle';
 
@@ -50,13 +51,22 @@ function weekLabel(date: Date, t: (key: string) => string): string {
   return t('bookings.earlier');
 }
 
+// weekLabel's rolling window treats "within the last 6 days" as part of
+// "this week" — correct for the past tab, but on the upcoming tab that
+// mislabels an already-passed, still-unanswered pending request as if it
+// were a normal this-week appointment. Pull those into their own group
+// instead of date-bucketing them (mirrors effectiveBookingStatus's pill).
 function groupByWeek(
   items: BarberBookingDetail[],
   t: (key: string) => string,
 ): BookingsByWeek[] {
   const groups = new Map<string, BarberBookingDetail[]>();
   for (const item of items) {
-    const label = weekLabel(new Date(item.timestamp), t);
+    const date = new Date(item.timestamp);
+    const label =
+      item.status === 'pending_confirmation' && date.getTime() < Date.now()
+        ? t('bookingStatus.expired')
+        : weekLabel(date, t);
     const existing = groups.get(label) ?? [];
     existing.push(item);
     groups.set(label, existing);
@@ -65,13 +75,6 @@ function groupByWeek(
     label,
     items: groupItems,
   }));
-}
-
-function statusTone(status?: string): 'success' | 'danger' | 'accent' {
-  if (status === 'confirmed' || status === 'completed') return 'success';
-  if (status === 'cancelled' || status === 'declined' || status === 'no_show')
-    return 'danger';
-  return 'accent';
 }
 
 export default function BarberBookingsHistoryScreen() {
@@ -142,6 +145,7 @@ export default function BarberBookingsHistoryScreen() {
       </View>
 
       <ScrollView
+        style={styles.flex}
         contentContainerStyle={[
           styles.scroll,
           { paddingBottom: tabBarPadding },
@@ -157,7 +161,9 @@ export default function BarberBookingsHistoryScreen() {
             <Text style={{ color: theme.colors.danger, marginBottom: 12 }}>
               {t('common.error')}
             </Text>
-            <Button label={t('common.retry')} onPress={() => refetch()} />
+            <View style={{ alignSelf: 'center' }}>
+              <Button label={t('common.retry')} onPress={() => refetch()} />
+            </View>
           </View>
         ) : items.length === 0 ? (
           <View style={styles.center}>
@@ -200,9 +206,13 @@ export default function BarberBookingsHistoryScreen() {
                       .map((s) => s.name)
                       .join(' + ');
                     const clientName = `${item.clientFirstName} ${item.clientLastName}`.trim();
-                    const tone = statusTone(item.status);
+                    const { label: statusLabel, tone } = effectiveBookingStatus(
+                      item.status ?? '',
+                      item.timestamp,
+                    );
                     const toneColors = {
                       success: theme.colors.success,
+                      warning: theme.colors.warning,
                       danger: theme.colors.danger,
                       accent: theme.colors.accent,
                     };
@@ -305,7 +315,7 @@ export default function BarberBookingsHistoryScreen() {
                                 color: toneColors[tone],
                               }}
                             >
-                              {item.status}
+                              {statusLabel}
                             </Text>
                           </View>
                         ) : null}
@@ -337,6 +347,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: 'center',
   },
+  flex: {
+    flex: 1,
+  },
   scroll: {
     paddingHorizontal: 20,
     flexGrow: 1,
@@ -345,7 +358,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 60,
   },
   card: {
     flexDirection: 'row',

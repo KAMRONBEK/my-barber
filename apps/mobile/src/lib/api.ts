@@ -308,6 +308,24 @@ export async function getClientUpcomingBookings(): Promise<BookingContract[]> {
   return r.data.data.items ?? [];
 }
 
+/** Client's completed bookings (any barber) — used to derive the real "book again" rail on Home. */
+export async function getClientCompletedBookings(limit = 30): Promise<BookingContract[]> {
+  const r = await api.get<OkData<{ items: BookingContract[] }>>(
+    '/client/bookings',
+    { params: { status: 'completed', limit } },
+  );
+  return r.data.data.items ?? [];
+}
+
+/** Unread notification count for the current user — drives the Home bell's badge dot. */
+export async function getUnreadNotificationCount(): Promise<number> {
+  const r = await api.get<OkData<{ unread_count: number }>>(
+    '/client/notifications',
+    { params: { limit: 1 } },
+  );
+  return r.data.data.unread_count ?? 0;
+}
+
 // ---- Barber endpoints ----
 
 export interface BarberMeResponse {
@@ -318,6 +336,16 @@ export interface BarberMeResponse {
 export async function getBarberMe(): Promise<BarberMeResponse> {
   const r = await api.get<OkData<BarberMeResponse>>('/barber/getMe');
   return r.data.data;
+}
+
+// PUT /barber/update-avatar — same JSON-base64-not-multipart contract as
+// uploadClientAvatar (see backend/api/middleware/upload.ts's uploadSingle).
+export async function uploadBarberAvatar(base64DataUrl: string): Promise<string | undefined> {
+  const r = await api.put<{ ok: boolean; message: string; file?: { url: string } }>(
+    '/barber/update-avatar',
+    { avatar: base64DataUrl },
+  );
+  return r.data.file?.url;
 }
 
 // POST /barber/add-image expects JSON { images: string[] } of base64 data

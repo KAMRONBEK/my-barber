@@ -161,6 +161,20 @@ export function distanceKm(
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
+/**
+ * Compact distance label for tight UI (stat tiles, list rows). Adapts unit
+ * and precision to magnitude so it never overflows: meters under 1km, one
+ * decimal under 10km, whole km under 1000km, "k km" beyond that.
+ */
+export function formatDistanceKm(km: number): string {
+  if (!Number.isFinite(km) || km < 0) return String.fromCharCode(8212);
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  const oneDecimal = (n: number) => n.toFixed(1).replace('.', ',');
+  if (km < 10) return `${oneDecimal(km)} km`;
+  if (km < 1000) return `${Math.round(km)} km`;
+  return `${oneDecimal(km / 1000)}k km`;
+}
+
 export function formatBarberAddress(location: BarberLocationWire | undefined): string | null {
   if (!location) return null;
   if (typeof location === 'string') return location;

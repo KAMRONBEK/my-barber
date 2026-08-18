@@ -52,7 +52,7 @@
     "bookAgain": "Yana band qilish",
     "seeAll": "Hammasi",
     "seeAllCount": "Barchasi {{count}} ta",
-    "featuredTitle": "Mirzo-Ulug'bekda eng yaxshilar",
+    "featuredTitle": "Eng yaxshi sartaroshlar",
     "notifications": "Bildirishnomalar",
     "noUpcoming": "Hozircha buyurtmangiz yo'q.",
     "browse": "Sartaroshlarni ko'rish"
@@ -82,6 +82,9 @@
     "ratingReviews": "{{count}} sharh",
     "priceLabel": "Narx",
     "saveToggle": "Saqlash",
+    "share": "Ulashish",
+    "aboutMe": "O'zim haqimda",
+    "schedule": "Ish jadvali",
     "bio": "Sakkiz yildan beri bosqichli soch olish, soqol shakllari va erkaklar uchun editorial uslubdagi grooming bo'yicha ixtisoslashgan.",
     "more": "Batafsil",
     "directions": "Yo'nalish",
@@ -159,6 +162,16 @@
     "thisWeek": "Shu hafta",
     "nextWeek": "Keyingi hafta",
     "earlier": "Ilgari"
+  },
+  "bookingStatus": {
+    "pending_confirmation": "Kutilmoqda",
+    "confirmed": "Tasdiqlangan",
+    "rescheduled": "Ko'chirilgan",
+    "completed": "Yakunlangan",
+    "cancelled": "Bekor qilingan",
+    "declined": "Rad etilgan",
+    "no_show": "Kelmadi",
+    "expired": "Muddati o'tgan"
   },
   "cutsHistory": {
     "title": "Soch olish tarixi",

@@ -3,7 +3,7 @@
 // BookingHistoryScreen's segmented view, just pre-filtered to one status so
 // there's no segment control to show).
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '@shopify/restyle';
@@ -18,6 +18,8 @@ import {
   TAB_BAR_BOTTOM_OFFSET,
 } from '../src/navigation/GlassTabBar';
 import { COMPLETED_CUTS_QUERY_KEY, fetchCompletedCuts } from '../src/lib/bookings';
+import { getBarbers } from '../src/lib/api';
+import { queryKeys, STALE } from '../src/lib/query';
 import { formatUZS, formatWeekdayShort, formatDayMonth } from '../src/lib/format';
 import type { AppTheme } from '../src/lib/restyle';
 
@@ -33,6 +35,21 @@ export default function CutsHistoryScreen() {
     staleTime: 30_000,
   });
 
+  // Shares BarberShopScreen/HomeScreen's query key/cache — used only to
+  // resolve barber_id -> display name (there's no get-barber-by-id endpoint).
+  const barbersQuery = useQuery({
+    queryKey: queryKeys.barbers,
+    queryFn: () => getBarbers(0, 50),
+    staleTime: STALE.banner,
+  });
+  const barberById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const b of barbersQuery.data ?? []) {
+      map.set(b.id, `${b.firstName} ${b.lastName}`.trim());
+    }
+    return map;
+  }, [barbersQuery.data]);
+
   const items = data ?? [];
 
   return (
@@ -40,6 +57,7 @@ export default function CutsHistoryScreen() {
       <ScreenHeader title={t('cutsHistory.title')} />
 
       <ScrollView
+        style={styles.flex}
         contentContainerStyle={[styles.scroll, { paddingBottom: tabBarPadding }]}
         showsVerticalScrollIndicator={false}
       >
@@ -52,7 +70,9 @@ export default function CutsHistoryScreen() {
             <Text style={{ color: theme.colors.danger, marginBottom: 12 }}>
               {t('common.error')}
             </Text>
-            <Button label={t('common.retry')} onPress={() => refetch()} />
+            <View style={{ alignSelf: 'center' }}>
+              <Button label={t('common.retry')} onPress={() => refetch()} />
+            </View>
           </View>
         ) : items.length === 0 ? (
           <View style={styles.center}>
@@ -110,7 +130,7 @@ export default function CutsHistoryScreen() {
                       style={{ fontSize: 14, fontWeight: '700', color: theme.colors.fg }}
                       numberOfLines={1}
                     >
-                      {item.barberName ?? '—'}
+                      {barberById.get(item.barber_id) ?? '—'}
                     </Text>
                     <Text
                       style={{ fontSize: 12, color: theme.colors.muted, marginTop: 2 }}
@@ -145,6 +165,9 @@ export default function CutsHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   scroll: {
     paddingHorizontal: 20,
     paddingTop: 12,
@@ -154,7 +177,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 60,
   },
   card: {
     flexDirection: 'row',

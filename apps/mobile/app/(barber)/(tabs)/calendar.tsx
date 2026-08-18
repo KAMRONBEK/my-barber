@@ -476,6 +476,59 @@ export default function BarberCalendarScreen() {
 
   return (
     <ScreenLayout>
+      {/* Fixed header — stays put while the content below scrolls */}
+      <View style={styles.header}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Pressable onPress={goPrevMonth} style={styles.iconBtn}>
+            <Icon name="chevron-left" size={18} color={theme.colors.fg} />
+          </Pressable>
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: '700',
+              color: theme.colors.fg,
+              letterSpacing: -0.4,
+              minWidth: 140,
+              textAlign: 'center',
+            }}
+          >
+            {monthYearLabel(selectedDate, t)}
+          </Text>
+          <Pressable onPress={goNextMonth} style={styles.iconBtn}>
+            <Icon name="chevron-right" size={18} color={theme.colors.fg} />
+          </Pressable>
+        </View>
+
+        <Pressable
+          onPress={goToday}
+          style={[
+            styles.todayBtn,
+            {
+              backgroundColor: theme.colors.surface2,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <View
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: theme.colors.accent,
+            }}
+          />
+          <Text
+            style={{
+              fontSize: 11,
+              fontWeight: '700',
+              color: theme.colors.fg,
+            }}
+          >
+            {t('calendar.today')}
+          </Text>
+        </Pressable>
+      </View>
+
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
@@ -490,61 +543,8 @@ export default function BarberCalendarScreen() {
           />
         }
       >
-        {/* index 0: Header + Stats (scrollable) */}
+        {/* index 0: Stats (scrollable) */}
         <View>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Pressable onPress={goPrevMonth} style={styles.iconBtn}>
-                <Icon name="chevron-left" size={18} color={theme.colors.fg} />
-              </Pressable>
-              <Text
-                style={{
-                  fontSize: 20,
-                  fontWeight: '700',
-                  color: theme.colors.fg,
-                  letterSpacing: -0.4,
-                  minWidth: 140,
-                  textAlign: 'center',
-                }}
-              >
-                {monthYearLabel(selectedDate, t)}
-              </Text>
-              <Pressable onPress={goNextMonth} style={styles.iconBtn}>
-                <Icon name="chevron-right" size={18} color={theme.colors.fg} />
-              </Pressable>
-            </View>
-
-            <Pressable
-              onPress={goToday}
-              style={[
-                styles.todayBtn,
-                {
-                  backgroundColor: theme.colors.surface2,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            >
-              <View
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: theme.colors.accent,
-                }}
-              />
-              <Text
-                style={{
-                  fontSize: 11,
-                  fontWeight: '700',
-                  color: theme.colors.fg,
-                }}
-              >
-                {t('calendar.today')}
-              </Text>
-            </Pressable>
-          </View>
-
           {/* Stat strip */}
           <View style={styles.statStrip}>
             <View

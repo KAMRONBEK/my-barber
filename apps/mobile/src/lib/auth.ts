@@ -51,6 +51,7 @@ interface AuthState {
   hydrate: () => Promise<void>;
   signIn: (token: string, user: ClientProfile | BarberProfile, role: UserRole) => Promise<void>;
   setClient: (client: ClientProfile) => Promise<void>;
+  setBarber: (barber: BarberProfile) => Promise<void>;
   signOut: () => Promise<void>;
   clearSession: () => Promise<void>; // called by 401 interceptor
 }
@@ -110,6 +111,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   setClient: async (client) => {
     await setItem(STORAGE_KEYS.client, JSON.stringify(client));
     set({ client });
+  },
+
+  setBarber: async (barber) => {
+    await setItem(STORAGE_KEYS.barber, JSON.stringify(barber));
+    set({ barber });
   },
 
   signOut: async () => {

@@ -73,7 +73,7 @@ export const UpcomingBanner: React.FC<UpcomingBannerProps> = ({
       style={[
         styles.card,
         {
-          backgroundColor: '#1d150f',
+          backgroundColor: '#171717',
         },
       ]}
       accessibilityRole="button"
@@ -140,7 +140,7 @@ export const UpcomingBanner: React.FC<UpcomingBannerProps> = ({
             { backgroundColor: 'rgba(255,255,255,0.96)' },
           ]}
         >
-          <Icon name="arrow-right" size={18} color="#15110d" />
+          <Icon name="arrow-right" size={18} color="#0a0a0a" />
         </View>
       </View>
     </Pressable>

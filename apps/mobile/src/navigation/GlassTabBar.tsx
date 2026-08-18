@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 999,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 252, 247, 0.72)',
+    backgroundColor: 'rgba(255, 255, 255, 0.72)',
   },
   overlay: {
     borderRadius: 999,

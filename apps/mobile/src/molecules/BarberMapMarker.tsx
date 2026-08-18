@@ -145,13 +145,13 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: 8,
     borderWidth: 1,
-    backgroundColor: '#faf7f2',
+    backgroundColor: '#f7f7f7',
   },
   ratingText: {
     fontSize: 10,
     lineHeight: 12,
     fontWeight: '800',
-    color: '#1a1611',
+    color: '#0a0a0a',
   },
   tail: {
     marginTop: -2,

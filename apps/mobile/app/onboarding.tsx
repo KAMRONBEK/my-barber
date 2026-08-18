@@ -16,12 +16,12 @@ import type { AppTheme } from '../src/lib/restyle';
 
 export const ONBOARDING_SEEN_KEY = 'hasSeenOnboarding';
 
-// Warm dark-portrait gradient stops per slide — distinct tones within the
-// same deep-brown / copper family.
+// Neutral dark-portrait gradient stops per slide — distinct tones within
+// the same monochrome black family.
 const SLIDE_GRADIENTS: Array<readonly [string, string, string]> = [
-  ['#3d1e0a', '#1d130b', '#100c07'],
-  ['#2e1508', '#1a0f06', '#0e0904'],
-  ['#4a1f0c', '#221208', '#110905'],
+  ['#2c2c2c', '#1a1a1a', '#0d0d0d'],
+  ['#262626', '#161616', '#0a0a0a'],
+  ['#303030', '#1c1c1c', '#0e0e0e'],
 ] as const;
 
 const SLIDES = [

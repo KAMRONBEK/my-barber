@@ -33,6 +33,7 @@ export default function SavedBarbersScreen() {
       <ScreenHeader title={t('favorites.title')} />
 
       <ScrollView
+        style={styles.flex}
         contentContainerStyle={[styles.scroll, { paddingBottom: tabBarPadding }]}
         showsVerticalScrollIndicator={false}
       >
@@ -88,6 +89,9 @@ export default function SavedBarbersScreen() {
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   scroll: {
     paddingHorizontal: 20,
     paddingTop: 12,
@@ -97,7 +101,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 60,
   },
   emptyIcon: {
     width: 80,

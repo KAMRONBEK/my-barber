@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Switch,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -33,6 +34,7 @@ import {
   updateBarberServices,
   updateBarberProfile,
   uploadBarberPortfolioImages,
+  uploadBarberAvatar,
   deleteBarberPortfolioImage,
   type ApiService,
 } from '../../src/lib/api';
@@ -46,6 +48,14 @@ export default function BarberPortfolioEditScreen() {
   const insets = useSafeAreaInsets();
 
   const barber = useAuthStore((s) => s.barber);
+  const setBarber = useAuthStore((s) => s.setBarber);
+
+  // Percentage width + aspectRatio on photoCell collapses to zero size on
+  // this RN/Yoga version, so the cell size is computed from the window width
+  // instead (matches styles.section's marginHorizontal:20 and
+  // styles.photoGrid's gap:8, for a 3-column grid).
+  const { width: windowWidth } = useWindowDimensions();
+  const photoCellSize = (windowWidth - 20 * 2 - 8 * 2) / 3;
 
   const [displayName, setDisplayName] = useState(
     barber ? `${barber.firstName} ${barber.lastName}` : ''
@@ -120,6 +130,16 @@ export default function BarberPortfolioEditScreen() {
     onSuccess: invalidatePublicBarberQueries,
   });
 
+  const uploadAvatarMutation = useMutation({
+    mutationFn: (base64DataUrl: string) => uploadBarberAvatar(base64DataUrl),
+    onSuccess: async (url) => {
+      if (url && barber) {
+        await setBarber({ ...barber, avatar: url });
+      }
+      invalidatePublicBarberQueries();
+    },
+  });
+
   const deletePhotoMutation = useMutation({
     mutationFn: (index: number) => deleteBarberPortfolioImage(index),
     onSuccess: invalidatePublicBarberQueries,
@@ -148,6 +168,28 @@ export default function BarberPortfolioEditScreen() {
     if (!manipulated.base64) return;
 
     uploadPhotoMutation.mutate(`data:image/jpeg;base64,${manipulated.base64}`);
+  }
+
+  async function onChangeAvatar() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    const manipulated = await ImageManipulator.manipulateAsync(
+      result.assets[0].uri,
+      [{ resize: { width: 512 } }],
+      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+    );
+    if (!manipulated.base64) return;
+
+    uploadAvatarMutation.mutate(`data:image/jpeg;base64,${manipulated.base64}`);
   }
 
   const saveMutation = useMutation({
@@ -247,9 +289,13 @@ export default function BarberPortfolioEditScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Cover */}
+        {/* Cover — shows the same photo as the avatar below it (the app has
+            no separate banner image; this is the barber's one public photo,
+            also used as the hero image on their client-facing shop page). */}
         <View style={styles.coverWrap}>
-          <View
+          <Pressable
+            onPress={onChangeAvatar}
+            disabled={uploadAvatarMutation.isPending}
             style={[
               styles.cover,
               {
@@ -258,14 +304,23 @@ export default function BarberPortfolioEditScreen() {
               },
             ]}
           >
-            <Icon name="user" size={40} color={theme.colors.muted} />
+            {barber?.avatar ? (
+              <Image
+                source={{ uri: barber.avatar }}
+                style={StyleSheet.absoluteFillObject}
+                contentFit="cover"
+                transition={150}
+              />
+            ) : (
+              <Icon name="user" size={40} color={theme.colors.muted} />
+            )}
             <View
               style={[
                 styles.coverOverlay,
                 { backgroundColor: `${theme.colors.bg}66` },
               ]}
             >
-              <Pressable
+              <View
                 style={[
                   styles.coverEditBtn,
                   {
@@ -273,32 +328,41 @@ export default function BarberPortfolioEditScreen() {
                     borderColor: theme.colors.border,
                   },
                 ]}
-                accessibilityRole="button"
               >
-                <Icon name="settings" size={14} color={theme.colors.fg} />
-              </Pressable>
+                {uploadAvatarMutation.isPending ? (
+                  <ActivityIndicator size="small" color={theme.colors.fg} />
+                ) : (
+                  <Icon name="camera" size={14} color={theme.colors.fg} />
+                )}
+              </View>
             </View>
-          </View>
+          </Pressable>
 
           {/* Avatar */}
           <View style={styles.avatarWrap}>
-            <Avatar
-              size={88}
-              uri={barber?.avatar ?? undefined}
-              initials={`${barber?.firstName?.[0] ?? ''}${barber?.lastName?.[0] ?? ''}`}
-              ring
-            />
-            <Pressable
-              style={[
-                styles.avatarEdit,
-                {
-                  backgroundColor: theme.colors.accent,
-                  borderColor: theme.colors.surface,
-                },
-              ]}
-              accessibilityRole="button"
-            >
-              <Icon name="settings" size={12} color={theme.colors.onAccent} />
+            <Pressable onPress={onChangeAvatar} disabled={uploadAvatarMutation.isPending}>
+              <Avatar
+                size={88}
+                uri={barber?.avatar ?? undefined}
+                initials={`${barber?.firstName?.[0] ?? ''}${barber?.lastName?.[0] ?? ''}`}
+                ring
+              />
+              {uploadAvatarMutation.isPending ? (
+                <View style={[StyleSheet.absoluteFillObject, styles.avatarOverlay]}>
+                  <ActivityIndicator size="small" color="#fff" />
+                </View>
+              ) : null}
+              <View
+                style={[
+                  styles.avatarEdit,
+                  {
+                    backgroundColor: theme.colors.accent,
+                    borderColor: theme.colors.surface,
+                  },
+                ]}
+              >
+                <Icon name="camera" size={12} color={theme.colors.onAccent} />
+              </View>
             </Pressable>
           </View>
         </View>
@@ -516,6 +580,8 @@ export default function BarberPortfolioEditScreen() {
                   style={[
                     styles.photoCell,
                     {
+                      width: photoCellSize,
+                      height: photoCellSize,
                       backgroundColor: theme.colors.surface2,
                       borderColor: theme.colors.border,
                     },
@@ -556,6 +622,8 @@ export default function BarberPortfolioEditScreen() {
               style={[
                 styles.photoCell,
                 {
+                  width: photoCellSize,
+                  height: photoCellSize,
                   backgroundColor: theme.colors.surface2,
                   borderColor: theme.colors.border,
                   borderStyle: 'dashed',
@@ -629,6 +697,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarOverlay: {
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   section: {
     marginHorizontal: 20,
     marginTop: 8,
@@ -660,8 +734,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   photoCell: {
-    width: '31%',
-    aspectRatio: 1,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',

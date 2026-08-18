@@ -2,7 +2,7 @@
 // Fetches from GET /client/bookings?status=upcoming|past.
 // Groups results by week with date-group labels.
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -17,29 +17,43 @@ import {
   TAB_BAR_PILL_HEIGHT,
   TAB_BAR_BOTTOM_OFFSET,
 } from '../navigation/GlassTabBar';
-import { api } from '../lib/api';
+import { api, getBarbers } from '../lib/api';
+import { queryKeys, STALE } from '../lib/query';
 import {
   formatUZS,
   formatWeekdayShort,
   formatDayMonth,
   formatTimeRange,
+  effectiveBookingStatus,
 } from '../lib/format';
 import type { AppTheme } from '../lib/restyle';
 
 type Segment = 'upcoming' | 'past';
 
-// Minimal shape from GET /client/bookings?status=...
+// Minimal shape from GET /client/bookings?status=... — the wire contract has
+// no embedded barber display info, only barber_id, so the name is resolved
+// client-side against /client/barbers (see barberById below).
 interface BookingHistoryItem {
   id: string;
   timestamp: string;
   status: string;
-  barberName?: string;
+  barber_id: string;
   services?: Array<{ name: string; price: number; durationMinutes?: number }>;
 }
 
 interface BookingsByWeek {
   label: string;
   items: BookingHistoryItem[];
+}
+
+// The backend's `upcoming` status filter is status-only (pending_confirmation
+// / confirmed / rescheduled) with no timestamp cutoff, so a request the
+// barber never answered stays "upcoming" forever once its time passes.
+function isExpiredPending(item: BookingHistoryItem): boolean {
+  return (
+    item.status === 'pending_confirmation' &&
+    new Date(item.timestamp).getTime() < Date.now()
+  );
 }
 
 function weekLabel(
@@ -56,13 +70,20 @@ function weekLabel(
   return t('bookings.earlier');
 }
 
+// weekLabel's rolling window treats "within the last 6 days" as part of
+// "this week" — fine once expired-pending items have already been moved out
+// of the upcoming list (see `items` in the component below), but an expired
+// item can still land in the *past* tab's this-week/earlier buckets, where
+// it should stand out from genuinely completed/cancelled bookings.
 function groupByWeek(
   items: BookingHistoryItem[],
   t: (key: string) => string,
 ): BookingsByWeek[] {
   const groups: Map<string, BookingHistoryItem[]> = new Map();
   for (const item of items) {
-    const label = weekLabel(new Date(item.timestamp), t);
+    const label = isExpiredPending(item)
+      ? t('bookingStatus.expired')
+      : weekLabel(new Date(item.timestamp), t);
     const existing = groups.get(label) ?? [];
     existing.push(item);
     groups.set(label, existing);
@@ -92,20 +113,56 @@ export const BookingHistoryScreen: React.FC = () => {
   const tabBarPadding = TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
   const [segment, setSegment] = useState<Segment>('upcoming');
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['bookings', segment],
-    queryFn: () => fetchBookings(segment),
+  // Both status buckets are fetched regardless of the active tab — the past
+  // tab needs upcomingQuery's data too, to pull out expired-pending items
+  // (see `items` below), and this also makes switching tabs instant since
+  // neither query re-fires on segment change.
+  const upcomingQuery = useQuery({
+    queryKey: ['bookings', 'upcoming'],
+    queryFn: () => fetchBookings('upcoming'),
     staleTime: 30_000,
   });
+  const pastQuery = useQuery({
+    queryKey: ['bookings', 'past'],
+    queryFn: () => fetchBookings('past'),
+    staleTime: 30_000,
+  });
+  const isLoading = upcomingQuery.isLoading || pastQuery.isLoading;
+  const isError = upcomingQuery.isError || pastQuery.isError;
+  const refetch = () => {
+    upcomingQuery.refetch();
+    pastQuery.refetch();
+  };
 
-  const items = data ?? [];
+  // Shares BarberShopScreen/HomeScreen's query key/cache — used only to
+  // resolve barber_id -> display name (there's no get-barber-by-id endpoint).
+  const barbersQuery = useQuery({
+    queryKey: queryKeys.barbers,
+    queryFn: () => getBarbers(0, 50),
+    staleTime: STALE.banner,
+  });
+  const barberById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const b of barbersQuery.data ?? []) {
+      map.set(b.id, `${b.firstName} ${b.lastName}`.trim());
+    }
+    return map;
+  }, [barbersQuery.data]);
+
+  // Move expired-pending bookings out of "upcoming" (where the backend
+  // leaves them forever) and into "past" (where they actually belong,
+  // sorted back into the timeline by timestamp).
+  const items = useMemo(() => {
+    const upcomingRaw = upcomingQuery.data ?? [];
+    const pastRaw = pastQuery.data ?? [];
+    if (segment === 'upcoming') {
+      return upcomingRaw.filter((i) => !isExpiredPending(i));
+    }
+    return [...pastRaw, ...upcomingRaw.filter(isExpiredPending)].sort((a, b) =>
+      b.timestamp.localeCompare(a.timestamp),
+    );
+  }, [segment, upcomingQuery.data, pastQuery.data]);
   const grouped = groupByWeek(items, t);
-
-  function statusTone(status: string): 'success' | 'danger' | 'accent' {
-    if (status === 'confirmed') return 'success';
-    if (status === 'cancelled' || status === 'declined') return 'danger';
-    return 'accent';
-  }
 
   return (
     <ScreenLayout>
@@ -149,6 +206,7 @@ export const BookingHistoryScreen: React.FC = () => {
       </View>
 
       <ScrollView
+        style={styles.flex}
         contentContainerStyle={[
           styles.scroll,
           { backgroundColor: theme.colors.bg, paddingBottom: tabBarPadding },
@@ -164,7 +222,9 @@ export const BookingHistoryScreen: React.FC = () => {
             <Text style={{ color: theme.colors.danger, marginBottom: 12 }}>
               {t('common.error')}
             </Text>
-            <Button label={t('common.retry')} onPress={() => refetch()} />
+            <View style={{ alignSelf: 'center' }}>
+              <Button label={t('common.retry')} onPress={() => refetch()} />
+            </View>
           </View>
         ) : items.length === 0 ? (
           <View style={styles.empty}>
@@ -183,10 +243,15 @@ export const BookingHistoryScreen: React.FC = () => {
             {segment === 'upcoming' ? (
               <>
                 <View style={{ height: 12 }} />
-                <Button
-                  label={t('home.browse')}
-                  onPress={() => router.replace('/(tabs)')}
-                />
+                {/* Button's default (non-fullWidth) style hardcodes
+                    alignSelf:'flex-start' with no style prop to override it —
+                    wrap it so it centers under the empty-state text instead. */}
+                <View style={{ alignSelf: 'center' }}>
+                  <Button
+                    label={t('home.browse')}
+                    onPress={() => router.replace('/(tabs)')}
+                  />
+                </View>
               </>
             ) : null}
           </View>
@@ -217,9 +282,14 @@ export const BookingHistoryScreen: React.FC = () => {
                     const serviceLabel = (item.services ?? [])
                       .map((s) => s.name)
                       .join(' + ');
-                    const tone = statusTone(item.status);
+                    const barberName = barberById.get(item.barber_id);
+                    const { label: statusLabel, tone } = effectiveBookingStatus(
+                      item.status,
+                      item.timestamp,
+                    );
                     const toneColors = {
                       success: theme.colors.success,
+                      warning: theme.colors.warning,
                       danger: theme.colors.danger,
                       accent: theme.colors.accent,
                     };
@@ -275,7 +345,7 @@ export const BookingHistoryScreen: React.FC = () => {
                             }}
                             numberOfLines={1}
                           >
-                            {item.barberName ?? '—'}
+                            {barberName ?? '—'}
                           </Text>
                           <Text
                             style={{
@@ -330,7 +400,7 @@ export const BookingHistoryScreen: React.FC = () => {
                               color: toneColors[tone],
                             }}
                           >
-                            {item.status}
+                            {statusLabel}
                           </Text>
                         </View>
                       </View>
@@ -347,6 +417,9 @@ export const BookingHistoryScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   segmentWrap: {
     flexDirection: 'row',
     marginHorizontal: 20,
@@ -373,7 +446,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 60,
   },
   card: {
     flexDirection: 'row',

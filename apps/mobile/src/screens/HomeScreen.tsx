@@ -3,10 +3,11 @@
 //   - "Upcoming · Today" banner (rendered only if there's an upcoming booking
 //     in cache — for the slice we don't ship a server endpoint yet, so it
 //     stays optional)
-//   - "Yana band qilish" rail of recent barbers (shows top 4 from /banner)
+//   - "Yana band qilish" rail — barbers derived from the client's own
+//     completed bookings (real visit counts), not the generic banner feed
 //   - featured list — top barbers from /client/banner
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -23,7 +24,14 @@ import {
   TAB_BAR_PILL_HEIGHT,
   TAB_BAR_BOTTOM_OFFSET,
 } from '../navigation/GlassTabBar';
-import { getBanner, api } from '../lib/api';
+import {
+  getBanner,
+  getBarbers,
+  getClientCompletedBookings,
+  getUnreadNotificationCount,
+  api,
+  type ApiBarberFull,
+} from '../lib/api';
 import { useAuthStore } from '../lib/auth';
 import { queryKeys, STALE } from '../lib/query';
 import {
@@ -47,9 +55,50 @@ export const HomeScreen: React.FC = () => {
     staleTime: STALE.banner,
   });
 
-  const barbers = bannerQuery.data ?? [];
-  const featured = barbers.slice(0, 3);
-  const railBarbers = barbers.slice(0, 4);
+  const featured = (bannerQuery.data ?? []).slice(0, 3);
+
+  // "Book again" rail: real completed-booking history, grouped by barber for
+  // a genuine visit count — not the generic banner feed. allBarbersQuery
+  // shares BarberShopScreen's query key/cache, used to resolve barber_id ->
+  // display info (there's no single get-barber-by-id endpoint yet).
+  const completedBookingsQuery = useQuery({
+    queryKey: ['client-completed-bookings'],
+    queryFn: () => getClientCompletedBookings(30),
+    staleTime: STALE.banner,
+  });
+  const allBarbersQuery = useQuery({
+    queryKey: queryKeys.barbers,
+    queryFn: () => getBarbers(0, 50),
+    staleTime: STALE.banner,
+  });
+  const railBarbers = useMemo(() => {
+    const byBarber = new Map<string, { count: number; lastTimestamp: string }>();
+    for (const b of completedBookingsQuery.data ?? []) {
+      const existing = byBarber.get(b.barber_id);
+      if (existing) {
+        existing.count += 1;
+        if (b.timestamp > existing.lastTimestamp) existing.lastTimestamp = b.timestamp;
+      } else {
+        byBarber.set(b.barber_id, { count: 1, lastTimestamp: b.timestamp });
+      }
+    }
+    const allBarbers = allBarbersQuery.data ?? [];
+    return Array.from(byBarber.entries())
+      .sort((a, b) => (a[1].lastTimestamp < b[1].lastTimestamp ? 1 : -1))
+      .slice(0, 4)
+      .map(([barberId, info]) => {
+        const barber = allBarbers.find((b) => b.id === barberId);
+        return barber ? { barber, count: info.count } : null;
+      })
+      .filter((x): x is { barber: ApiBarberFull; count: number } => x !== null);
+  }, [completedBookingsQuery.data, allBarbersQuery.data]);
+
+  const unreadNotificationsQuery = useQuery({
+    queryKey: ['unread-notifications-count'],
+    queryFn: getUnreadNotificationCount,
+    staleTime: 30 * 1000,
+  });
+  const hasUnreadNotifications = (unreadNotificationsQuery.data ?? 0) > 0;
 
   // TODO: fetch the user's next upcoming booking from
   //       GET /client/bookings?status=upcoming&limit=1 once that endpoint ships.
@@ -156,14 +205,14 @@ export const HomeScreen: React.FC = () => {
               accessibilityLabel={t('home.notifications')}
             >
               <Icon name="bell" size={18} color={theme.colors.fg} />
-              {/* Notification dot — show when there are unread notifications.
-                  Stub as visible until the notifications API is wired up. */}
-              <View
-                style={[
-                  styles.notifDot,
-                  { backgroundColor: theme.colors.accent },
-                ]}
-              />
+              {hasUnreadNotifications ? (
+                <View
+                  style={[
+                    styles.notifDot,
+                    { backgroundColor: theme.colors.accent },
+                  ]}
+                />
+              ) : null}
             </Pressable>
             <Avatar
               size={40}
@@ -208,12 +257,12 @@ export const HomeScreen: React.FC = () => {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.rail}
             >
-              {railBarbers.map((b) => (
+              {railBarbers.map(({ barber, count }) => (
                 <BarberRailCard
-                  key={b.id}
-                  barber={b}
-                  visitCountLabel={t('home.seeAllCount', { count: 1 })}
-                  onPress={() => router.push(`/barber/${b.id}`)}
+                  key={barber.id}
+                  barber={barber}
+                  visitCountLabel={t('home.seeAllCount', { count })}
+                  onPress={() => router.push(`/barber/${barber.id}`)}
                 />
               ))}
             </ScrollView>
@@ -232,9 +281,9 @@ export const HomeScreen: React.FC = () => {
             >
               {t('home.featuredTitle')}
             </Text>
-            {barbers.length > 0 ? (
+            {(bannerQuery.data ?? []).length > 0 ? (
               <Text style={{ color: theme.colors.accent, fontSize: 13 }}>
-                {t('home.seeAllCount', { count: barbers.length })}
+                {t('home.seeAllCount', { count: (bannerQuery.data ?? []).length })}
               </Text>
             ) : null}
           </View>
@@ -302,7 +351,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#FFFCF7',
+    borderColor: '#f7f7f7',
   },
   section: {
     marginTop: 24,
