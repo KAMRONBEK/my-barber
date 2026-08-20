@@ -43,3 +43,7 @@ coverage/
 .cache/
 .claude/
 cspell.json
+
+# ruflo/claude-flow runtime state (daemon pid, session logs, policy + metrics
+# snapshots) — machine-local, regenerated on every run
+.claude-flow/
