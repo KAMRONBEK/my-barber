@@ -676,6 +676,7 @@ export class BarberServiceClass {
             services.push({
               name: service?.name,
               price: service?.price,
+              durationMinutes: service?.durationMinutes,
             });
           }
         }

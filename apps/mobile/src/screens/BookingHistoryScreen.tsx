@@ -2,12 +2,25 @@
 // Fetches from GET /client/bookings?status=upcoming|past.
 // Groups results by week with date-group labels.
 
-import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+  type BottomSheetBackdropProps,
+} from '@gorhom/bottom-sheet';
 import { Text } from '../atoms/Text';
 import { Button } from '../atoms/Button';
 import { ScreenHeader } from '../molecules/ScreenHeader';
@@ -17,9 +30,10 @@ import {
   TAB_BAR_PILL_HEIGHT,
   TAB_BAR_BOTTOM_OFFSET,
 } from '../navigation/GlassTabBar';
-import { api, getBarbers } from '../lib/api';
+import { api, cancelBooking, getBarbers } from '../lib/api';
 import { queryKeys, STALE } from '../lib/query';
 import {
+  formatDurationMinutes,
   formatUZS,
   formatWeekdayShort,
   formatDayMonth,
@@ -27,6 +41,23 @@ import {
   effectiveBookingStatus,
 } from '../lib/format';
 import type { AppTheme } from '../lib/restyle';
+
+// Statuses the client can still back out of. Declined/cancelled/completed/
+// no-show are terminal; a booking whose time already passed can't be
+// cancelled either even if the backend never got around to marking it so
+// (see isExpiredPending below).
+const CANCELLABLE_STATUSES = new Set([
+  'pending_confirmation',
+  'confirmed',
+  'rescheduled',
+]);
+
+function isCancellable(item: BookingHistoryItem): boolean {
+  return (
+    CANCELLABLE_STATUSES.has(item.status) &&
+    new Date(item.timestamp).getTime() > Date.now()
+  );
+}
 
 type Segment = 'upcoming' | 'past';
 
@@ -110,8 +141,58 @@ export const BookingHistoryScreen: React.FC = () => {
   const router = useRouter();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
   const tabBarPadding = TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
   const [segment, setSegment] = useState<Segment>('upcoming');
+
+  const [activeItem, setActiveItem] = useState<BookingHistoryItem | null>(null);
+  const sheetRef = useRef<React.ElementRef<typeof BottomSheetModal>>(null);
+
+  const renderSheetBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        pressBehavior="close"
+        opacity={0.5}
+      />
+    ),
+    [],
+  );
+
+  const cancelMutation = useMutation({
+    mutationFn: (bookingId: string) => cancelBooking(bookingId),
+    onSuccess: () => {
+      sheetRef.current?.dismiss();
+      void qc.invalidateQueries({ queryKey: ['bookings'] });
+    },
+    onError: () => {
+      Alert.alert(t('common.error'), t('booking.createError'));
+    },
+  });
+
+  function openDetails(item: BookingHistoryItem) {
+    setActiveItem(item);
+    sheetRef.current?.present();
+  }
+
+  function handleCancel() {
+    if (!activeItem) return;
+    const bookingId = activeItem.id;
+    Alert.alert(
+      t('confirmation.cancelConfirmTitle'),
+      t('confirmation.cancelConfirmBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('confirmation.cancelBooking'),
+          style: 'destructive',
+          onPress: () => cancelMutation.mutate(bookingId),
+        },
+      ],
+    );
+  }
 
   // Both status buckets are fetched regardless of the active tab — the past
   // tab needs upcomingQuery's data too, to pull out expired-pending items
@@ -295,8 +376,9 @@ export const BookingHistoryScreen: React.FC = () => {
                     };
 
                     return (
-                      <View
+                      <Pressable
                         key={item.id}
+                        onPress={() => openDetails(item)}
                         style={[
                           styles.card,
                           {
@@ -403,7 +485,7 @@ export const BookingHistoryScreen: React.FC = () => {
                             {statusLabel}
                           </Text>
                         </View>
-                      </View>
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -412,6 +494,178 @@ export const BookingHistoryScreen: React.FC = () => {
           </View>
         )}
       </ScrollView>
+
+      {/* Booking detail bottom sheet — sized to its content (enableDynamicSizing)
+          rather than a guessed percentage, and BottomSheetModal (portaled via
+          BottomSheetModalProvider in app/_layout.tsx) rather than plain
+          BottomSheet so it renders above the tab bar instead of clipping
+          behind it. */}
+      <BottomSheetModal
+        ref={sheetRef}
+        enableDynamicSizing
+        enablePanDownToClose
+        backdropComponent={renderSheetBackdrop}
+        backgroundStyle={{ backgroundColor: theme.colors.surface }}
+        handleIndicatorStyle={{
+          width: 36,
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: theme.colors.border,
+        }}
+      >
+        <BottomSheetView style={{ padding: 20, gap: 12 }}>
+          {activeItem &&
+            (() => {
+              const start = new Date(activeItem.timestamp);
+              const duration =
+                activeItem.services?.reduce(
+                  (s, svc) => s + (svc.durationMinutes ?? 45),
+                  0,
+                ) ?? 45;
+              const total = (activeItem.services ?? []).reduce(
+                (sum, s) => sum + s.price,
+                0,
+              );
+              const serviceLabel = (activeItem.services ?? [])
+                .map((s) => s.name)
+                .join(' + ');
+              const barberName = barberById.get(activeItem.barber_id);
+              const { label: statusLabel, tone } = effectiveBookingStatus(
+                activeItem.status,
+                activeItem.timestamp,
+              );
+              const toneColors = {
+                success: theme.colors.success,
+                warning: theme.colors.warning,
+                danger: theme.colors.danger,
+                accent: theme.colors.accent,
+              };
+
+              return (
+                <>
+                  <View style={{ alignItems: 'center', marginBottom: 4 }}>
+                    <Text
+                      style={{
+                        fontSize: 18,
+                        fontWeight: '700',
+                        color: theme.colors.fg,
+                      }}
+                    >
+                      {barberName ?? '—'}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        color: theme.colors.muted,
+                        marginTop: 4,
+                      }}
+                    >
+                      {serviceLabel || '—'}
+                    </Text>
+                    <View
+                      style={[
+                        styles.sheetStatusPill,
+                        { backgroundColor: `${toneColors[tone]}20` },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: '600',
+                          color: toneColors[tone],
+                        }}
+                      >
+                        {statusLabel}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.sheetDetailBox,
+                      {
+                        backgroundColor: theme.colors.surface2,
+                        borderColor: theme.colors.border,
+                      },
+                    ]}
+                  >
+                    <View style={styles.sheetDetailRow}>
+                      <Text style={{ fontSize: 13, color: theme.colors.muted }}>
+                        {t('booking.date')}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '500',
+                          color: theme.colors.fg,
+                        }}
+                      >
+                        {formatDayMonth(start)}
+                      </Text>
+                    </View>
+                    <View style={styles.sheetDetailRow}>
+                      <Text style={{ fontSize: 13, color: theme.colors.muted }}>
+                        {t('booking.time')}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '500',
+                          color: theme.colors.fg,
+                        }}
+                      >
+                        {formatTimeRange(start, duration)}
+                      </Text>
+                    </View>
+                    <View style={styles.sheetDetailRow}>
+                      <Text style={{ fontSize: 13, color: theme.colors.muted }}>
+                        {t('requests.duration')}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '500',
+                          color: theme.colors.fg,
+                        }}
+                      >
+                        {formatDurationMinutes(duration)}
+                      </Text>
+                    </View>
+                    <View style={styles.sheetDetailRow}>
+                      <Text style={{ fontSize: 13, color: theme.colors.muted }}>
+                        {t('booking.total')}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '500',
+                          color: theme.colors.fg,
+                        }}
+                      >
+                        {formatUZS(total)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {isCancellable(activeItem) ? (
+                    <Button
+                      variant="destructive"
+                      fullWidth
+                      label={
+                        cancelMutation.isPending
+                          ? t('confirmation.cancelling')
+                          : t('confirmation.cancelBooking')
+                      }
+                      onPress={handleCancel}
+                      disabled={cancelMutation.isPending}
+                      loading={cancelMutation.isPending}
+                    />
+                  ) : null}
+                </>
+              );
+            })()}
+        </BottomSheetView>
+      </BottomSheetModal>
     </ScreenLayout>
   );
 };
@@ -468,5 +722,23 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
     flexShrink: 0,
+  },
+  sheetStatusPill: {
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  sheetDetailBox: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 6,
+  },
+  sheetDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
   },
 });

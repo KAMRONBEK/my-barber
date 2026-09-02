@@ -1,5 +1,6 @@
-// Booking confirmation. Renders a Reanimated check-ring + ticket. The
-// "cancel" CTA invokes /client/bookings/:id/cancel from the brief.
+// Booking confirmation. Renders a Reanimated check-ring + ticket. Cancelling
+// now happens from the bookings list (BookingHistoryScreen's detail sheet),
+// not here.
 //
 // The booking we display comes from React Query's cache (set by the booking
 // mutation). If the cache is cold (deep link / refresh), we render a fallback
@@ -16,7 +17,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@shopify/restyle';
 import {
@@ -32,7 +33,6 @@ import { BackButton } from '../atoms/BackButton';
 import { Button } from '../atoms/Button';
 import { BookingTicket } from '../molecules/BookingTicket';
 import { ScreenLayout } from '../templates/ScreenLayout';
-import { cancelBooking } from '../lib/api';
 import {
   formatTimeOfDay,
   formatDayMonth,
@@ -99,18 +99,6 @@ export const ConfirmationScreen: React.FC = () => {
     transform: [{ translateY: ticketY.value }],
     opacity: ticketOpacity.value,
   }));
-
-  const cancelMut = useMutation({
-    mutationFn: async () => cancelBooking(id),
-    onSuccess: (updated) => {
-      if (lastStash) {
-        qc.setQueryData(LAST_BOOKING_KEY, { ...lastStash, booking: updated });
-      }
-    },
-  });
-
-  const isCancelled =
-    contract?.status === 'cancelled' || contract?.status === 'declined';
 
   if (!booking || !contract) {
     return (
@@ -209,35 +197,6 @@ export const ConfirmationScreen: React.FC = () => {
             label={t('confirmation.viewBookings')}
             onPress={() => router.replace('/(tabs)')}
           />
-          {!isCancelled ? (
-            <View style={{ height: 8 }} />
-          ) : null}
-          {!isCancelled ? (
-            <Button
-              variant="destructive"
-              fullWidth
-              label={
-                cancelMut.isPending
-                  ? t('confirmation.cancelling')
-                  : t('confirmation.cancelBooking')
-              }
-              onPress={() => cancelMut.mutate()}
-              disabled={cancelMut.isPending}
-              loading={cancelMut.isPending}
-              testID="confirmation-cancel"
-            />
-          ) : (
-            <Text
-              style={{
-                color: theme.colors.danger,
-                fontSize: 13,
-                textAlign: 'center',
-                marginTop: 6,
-              }}
-            >
-              {t('confirmation.cancelledNote')}
-            </Text>
-          )}
         </View>
 
         <Text

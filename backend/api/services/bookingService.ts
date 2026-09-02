@@ -173,6 +173,7 @@ export class BookingServiceClass {
             barberId: service?.barberId,
             name: service?.name,
             price: service?.price,
+            durationMinutes: service?.durationMinutes,
           });
         }
       }

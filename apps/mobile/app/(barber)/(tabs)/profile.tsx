@@ -21,6 +21,7 @@ import { Icon, type IconName } from '../../../src/atoms/Icon';
 import { ScreenLayout } from '../../../src/templates/ScreenLayout';
 import { HelpSheet, type HelpSheetRef } from '../../../src/molecules/HelpSheet';
 import { useAuthStore } from '../../../src/lib/auth';
+import { clearPushToken } from '../../../src/lib/pushToken';
 import { useAppearanceStore, type AppearanceMode } from '../../../src/lib/appearance';
 import { useLocaleStore } from '../../../src/lib/locale';
 import type { SupportedLocale } from '../../../src/lib/i18n';
@@ -76,6 +77,9 @@ export default function BarberProfileScreen() {
     8;
 
   async function onSignOut() {
+    // Best-effort — needs the still-valid JWT, so this must run before
+    // signOut() clears it. A failure here shouldn't block sign-out.
+    await clearPushToken('barber');
     await signOut();
   }
 

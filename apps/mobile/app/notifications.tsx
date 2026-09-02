@@ -1,6 +1,7 @@
-// Notifications screen. Fetches from GET /client/notifications.
-// Grouped notification rows with icon badges, relative timestamps,
-// Accept/Reject inline actions for booking-request types.
+// Notifications screen (shared by both roles). Fetches from GET
+// /notifications, which resolves the recipient from the JWT. Grouped
+// notification rows with icon badges, relative timestamps, tap-to-deep-link,
+// and barber-only Accept/Reject inline actions for booking-request types.
 
 import React from 'react';
 import {
@@ -19,13 +20,23 @@ import { Button } from '../src/atoms/Button';
 import { Icon, type IconName } from '../src/atoms/Icon';
 import { ScreenHeader } from '../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../src/templates/ScreenLayout';
-import { api } from '../src/lib/api';
+import { api, patchBookingStatus } from '../src/lib/api';
+import { useAuthStore } from '../src/lib/auth';
+import {
+  invalidateQueriesForNotification,
+  resolveNotificationRoute,
+} from '../src/lib/notificationRouting';
 import type { AppTheme } from '../src/lib/restyle';
 
 type NotificationType =
   | 'booking_confirmed'
-  | 'booking_reminder'
+  | 'booking_declined'
+  | 'booking_rescheduled'
+  | 'booking_cancelled'
+  | 'booking_completed'
+  | 'no_show'
   | 'booking_request'
+  | 'booking_client_no_show_signal'
   | 'system';
 
 interface NotificationItem {
@@ -35,10 +46,12 @@ interface NotificationItem {
   body: string;
   isRead: boolean;
   createdAt: string;
+  /** From inbox `metadata.booking_id` — absent for non-booking (system) rows. */
+  bookingId: string | null;
 }
 
-// Raw shape from GET /client/notifications — snake_case fields, and the
-// array lives under `data.items`, not `data` directly (that's a cursor page:
+// Raw shape from GET /notifications — snake_case fields, and the array
+// lives under `data.items`, not `data` directly (that's a cursor page:
 // { items, next_cursor, unread_count }).
 interface NotificationApiItem {
   id: string;
@@ -47,20 +60,28 @@ interface NotificationApiItem {
   body: string;
   read_at: string | null;
   created_at: string;
+  metadata?: Record<string, unknown>;
 }
 
 const KNOWN_TYPES: NotificationType[] = [
   'booking_confirmed',
-  'booking_reminder',
+  'booking_declined',
+  'booking_rescheduled',
+  'booking_cancelled',
+  'booking_completed',
+  'no_show',
   'booking_request',
+  'booking_client_no_show_signal',
   'system',
 ];
 
 async function fetchNotifications(): Promise<NotificationItem[]> {
+  // `/notifications` resolves the recipient (barber vs. client) from the JWT
+  // — unlike the `/client/notifications` alias, it also works for barbers.
   const r = await api.get<{
     ok: boolean;
     data: { items: NotificationApiItem[] };
-  }>('/client/notifications');
+  }>('/notifications');
   const items = r.data.data?.items ?? [];
   return items.map((item) => ({
     id: item.id,
@@ -71,6 +92,10 @@ async function fetchNotifications(): Promise<NotificationItem[]> {
     body: item.body,
     isRead: item.read_at !== null,
     createdAt: item.created_at,
+    bookingId:
+      typeof item.metadata?.booking_id === 'string'
+        ? item.metadata.booking_id
+        : null,
   }));
 }
 
@@ -90,8 +115,13 @@ const TYPE_CONFIG: Record<
   { icon: IconName; color: string }
 > = {
   booking_confirmed: { icon: 'check', color: '#2f9d5e' },
-  booking_reminder: { icon: 'bell', color: '#d4a043' },
+  booking_declined: { icon: 'x', color: '#c0524a' },
+  booking_rescheduled: { icon: 'calendar', color: '#d4a043' },
+  booking_cancelled: { icon: 'x', color: '#c0524a' },
+  booking_completed: { icon: 'check', color: '#2f9d5e' },
+  no_show: { icon: 'bell', color: '#c0524a' },
   booking_request: { icon: 'calendar', color: '#4673c0' },
+  booking_client_no_show_signal: { icon: 'bell', color: '#d4a043' },
   system: { icon: 'mail', color: '#6b6b6b' },
 };
 
@@ -100,6 +130,7 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const role = useAuthStore((s) => s.role);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['notifications'],
@@ -111,19 +142,44 @@ export default function NotificationsScreen() {
 
   async function markAllRead() {
     try {
-      await api.post('/client/notifications/read-all');
+      await api.post('/notifications/read-all');
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch {
-      // Fail silently — endpoint may not exist yet
+      // Fail silently — best-effort
     }
   }
 
-  async function handleBookingAction(id: string, action: 'accept' | 'reject') {
+  async function markRead(id: string) {
     try {
-      await api.post(`/client/bookings/${id}/${action}`);
+      await api.patch(`/notifications/${id}/read`);
       void queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch {
-      // Fail silently
+      // Fail silently — best-effort
+    }
+  }
+
+  function handlePress(notif: NotificationItem) {
+    if (!notif.isRead) void markRead(notif.id);
+    invalidateQueriesForNotification(queryClient, role, notif.type);
+    router.push(resolveNotificationRoute(role, notif.type) as any);
+  }
+
+  // Only barbers receive `booking_request` (a fresh booking awaiting their
+  // decision — see bookingLifecycleNotifications.ts) so this is a barber-only
+  // action, and it hits the barber status endpoint by the booking's own id,
+  // not the notification's id.
+  async function handleBookingAction(
+    notif: NotificationItem,
+    status: 'confirmed' | 'declined',
+  ) {
+    if (!notif.bookingId) return;
+    try {
+      await patchBookingStatus(notif.bookingId, status);
+      void markRead(notif.id);
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      void queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+    } catch {
+      // Fail silently — best-effort
     }
   }
 
@@ -195,8 +251,9 @@ export default function NotificationsScreen() {
           {notifications.map((notif) => {
             const cfg = TYPE_CONFIG[notif.type] ?? TYPE_CONFIG.system;
             return (
-              <View
+              <Pressable
                 key={notif.id}
+                onPress={() => handlePress(notif)}
                 style={[
                   styles.row,
                   {
@@ -265,13 +322,14 @@ export default function NotificationsScreen() {
                     {notif.body}
                   </Text>
 
-                  {/* Inline Accept/Reject for booking_request type */}
-                  {notif.type === 'booking_request' ? (
+                  {/* Inline Accept/Reject — barber-only, matches the
+                      barber-only booking_request notification type. */}
+                  {notif.type === 'booking_request' &&
+                  role === 'barber' &&
+                  notif.bookingId ? (
                     <View style={styles.actions}>
                       <Pressable
-                        onPress={() =>
-                          handleBookingAction(notif.id, 'accept')
-                        }
+                        onPress={() => handleBookingAction(notif, 'confirmed')}
                         style={[
                           styles.actionBtn,
                           { backgroundColor: theme.colors.successSoft },
@@ -288,9 +346,7 @@ export default function NotificationsScreen() {
                         </Text>
                       </Pressable>
                       <Pressable
-                        onPress={() =>
-                          handleBookingAction(notif.id, 'reject')
-                        }
+                        onPress={() => handleBookingAction(notif, 'declined')}
                         style={[
                           styles.actionBtn,
                           { backgroundColor: theme.colors.dangerSoft },
@@ -309,7 +365,7 @@ export default function NotificationsScreen() {
                     </View>
                   ) : null}
                 </View>
-              </View>
+              </Pressable>
             );
           })}
         </ScrollView>

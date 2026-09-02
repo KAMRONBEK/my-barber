@@ -244,6 +244,7 @@ export class ClientServiceClass {
             services.push({
               name: service?.name,
               price: service?.price,
+              durationMinutes: service?.durationMinutes,
             });
           }
         }

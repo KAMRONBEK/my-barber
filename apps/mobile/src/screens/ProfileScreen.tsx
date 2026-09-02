@@ -26,6 +26,7 @@ import {
 import { HelpSheet, type HelpSheetRef } from '../molecules/HelpSheet';
 import { getMe } from '../lib/api';
 import { useAuthStore } from '../lib/auth';
+import { clearPushToken } from '../lib/pushToken';
 import { useAppearanceStore, type AppearanceMode } from '../lib/appearance';
 import { useLocaleStore } from '../lib/locale';
 import { useFavoriteBarbers } from '../hooks/useFavoriteBarbers';
@@ -84,6 +85,9 @@ export const ProfileScreen: React.FC = () => {
     : null;
 
   async function onSignOut() {
+    // Best-effort — needs the still-valid JWT, so this must run before
+    // signOut() clears it. A failure here shouldn't block sign-out.
+    await clearPushToken('client');
     await signOut();
   }
 

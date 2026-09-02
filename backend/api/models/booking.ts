@@ -59,6 +59,7 @@ export interface BookingDetails {
   services: Array<{
     name: string;
     price: number;
+    durationMinutes?: number;
   }>;
 }
 
