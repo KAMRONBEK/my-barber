@@ -130,11 +130,11 @@ const TEMPLATES: Record<
     client: {
       notificationType: 'booking_confirmed',
       copy: {
-        uz: (time) => ({
+        uz: time => ({
           title: 'Buyurtma tasdiqlandi',
           body: `Uchrashuvingiz ${time} vaqtiga tasdiqlandi`,
         }),
-        ru: (time) => ({
+        ru: time => ({
           title: 'Бронирование подтверждено',
           body: `Ваша запись подтверждена на ${time}`,
         }),
@@ -173,11 +173,11 @@ const TEMPLATES: Record<
     client: {
       notificationType: 'booking_rescheduled',
       copy: {
-        uz: (time) => ({
+        uz: time => ({
           title: "Buyurtma vaqti o'zgartirildi",
           body: `Uchrashuvingiz ${time} ga ko'chirildi`,
         }),
-        ru: (time) => ({
+        ru: time => ({
           title: 'Время записи перенесено',
           body: `Ваша запись перенесена на ${time}`,
         }),
