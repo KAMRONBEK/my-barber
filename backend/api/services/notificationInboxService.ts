@@ -74,7 +74,17 @@ export class NotificationInboxService {
   ): Promise<void> {
     const meta = { booking_id: booking.id, ...(extra ?? {}) };
 
-    const deliveries = getBookingLifecycleDeliveries(kind, booking, extra);
+    const { barberService } = await import('./barberService');
+    const { clientService } = await import('./clientService');
+    const [barber, client] = await Promise.all([
+      barberService.getBarberById(booking.barberId),
+      clientService.getClientById(booking.clientId),
+    ]);
+
+    const deliveries = getBookingLifecycleDeliveries(kind, booking, extra, {
+      barber: barber?.locale,
+      client: client?.locale,
+    });
     for (const d of deliveries) {
       const recipientId =
         d.recipientType === 'barber' ? booking.barberId : booking.clientId;

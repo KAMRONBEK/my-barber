@@ -44,6 +44,7 @@ import {
   registerPushToken,
   subscribeToPushTokenRotation,
 } from '../src/lib/pushToken';
+import { syncLocaleToBackend } from '../src/lib/localeSync';
 import { useArrivalCheckStore } from '../src/lib/arrivalCheck';
 import { useArrivalReminderPoll } from '../src/lib/useArrivalReminderPoll';
 import { ArrivalConfirmationSheet } from '../src/molecules/ArrivalConfirmationSheet';
@@ -67,6 +68,7 @@ export default function RootLayout() {
   const systemScheme = useColorScheme();
   const appearanceMode = useAppearanceStore((s) => s.mode);
   const hydrateAppearance = useAppearanceStore((s) => s.hydrate);
+  const locale = useLocaleStore((s) => s.locale);
   const hydrateLocale = useLocaleStore((s) => s.hydrate);
   const effectiveScheme = appearanceMode === 'system' ? systemScheme : appearanceMode;
   const restyleTheme = effectiveScheme === 'dark' ? darkTheme : theme;
@@ -109,6 +111,15 @@ export default function RootLayout() {
       sub.remove();
     };
   }, [status, role]);
+
+  // Keeps the backend's stored locale in step with the app's language —
+  // fires once per login (so a user who never opens the language screen
+  // still gets their device-detected default synced) and again any time
+  // setLocale() changes it later, since `locale` is a dependency here.
+  useEffect(() => {
+    if (status !== 'authenticated' || !role) return;
+    void syncLocaleToBackend(role, locale);
+  }, [status, role, locale]);
 
   // Foreground/backgrounded → foregrounded polling backstop, and periodic
   // local-notification scheduling, for the arrival-confirmation prompt.

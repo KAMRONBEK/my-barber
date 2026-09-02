@@ -327,6 +327,11 @@ export async function clearClientPushToken(): Promise<void> {
   await api.delete('/client/push-token');
 }
 
+/** Syncs the app's language setting so push/inbox notification copy matches it — see localeSync.ts. */
+export async function updateClientLocale(locale: 'uz' | 'ru'): Promise<void> {
+  await api.put('/client/locale', { locale });
+}
+
 /** Unread notification count for the current user (either role) — drives the bell's badge dot. */
 export async function getUnreadNotificationCount(): Promise<number> {
   const r = await api.get<OkData<{ unread_count: number }>>(
@@ -435,6 +440,11 @@ export async function registerBarberDeviceId(deviceId: string): Promise<void> {
 /** Clears the barber's stored push token (sign-out). */
 export async function clearBarberPushToken(): Promise<void> {
   await api.delete('/barber/push-token');
+}
+
+/** Syncs the app's language setting so push/inbox notification copy matches it — see localeSync.ts. */
+export async function updateBarberLocale(locale: 'uz' | 'ru'): Promise<void> {
+  await api.put('/barber/locale', { locale });
 }
 
 export interface EarningsSummary {

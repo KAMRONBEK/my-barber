@@ -9,6 +9,8 @@ export interface Client {
   avatar?: string;
   /** Expo push token (`ExponentPushToken[...]`); omit from responses */
   deviceId?: string;
+  /** App language, synced from the mobile client — drives push/inbox notification copy. */
+  locale?: 'uz' | 'ru';
   createdAt?: Date;
   updatedAt?: Date;
 }

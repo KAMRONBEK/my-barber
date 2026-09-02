@@ -35,6 +35,8 @@ export interface Barber {
   avatar?: string;
   images: string[];
   deviceId?: string;
+  /** App language, synced from the mobile client — drives push/inbox notification copy. */
+  locale?: 'uz' | 'ru';
   services?: BarberService[];
   approvalStatus?: BarberApprovalStatus;
   approvalMessage?: string;
