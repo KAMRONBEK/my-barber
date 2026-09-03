@@ -35,6 +35,16 @@ import {
   ensureNotificationPermission,
   isArrivalCheckinNotification,
 } from '../src/lib/arrivalNotifications';
+import {
+  invalidateQueriesForNotification,
+  isBookingLifecyclePushData,
+  resolveNotificationRoute,
+} from '../src/lib/notificationRouting';
+import {
+  registerPushToken,
+  subscribeToPushTokenRotation,
+} from '../src/lib/pushToken';
+import { syncLocaleToBackend } from '../src/lib/localeSync';
 import { useArrivalCheckStore } from '../src/lib/arrivalCheck';
 import { useArrivalReminderPoll } from '../src/lib/useArrivalReminderPoll';
 import { ArrivalConfirmationSheet } from '../src/molecules/ArrivalConfirmationSheet';
@@ -58,6 +68,7 @@ export default function RootLayout() {
   const systemScheme = useColorScheme();
   const appearanceMode = useAppearanceStore((s) => s.mode);
   const hydrateAppearance = useAppearanceStore((s) => s.hydrate);
+  const locale = useLocaleStore((s) => s.locale);
   const hydrateLocale = useLocaleStore((s) => s.hydrate);
   const effectiveScheme = appearanceMode === 'system' ? systemScheme : appearanceMode;
   const restyleTheme = effectiveScheme === 'dark' ? darkTheme : theme;
@@ -76,20 +87,48 @@ export default function RootLayout() {
     void hydrateLocale();
   }, [hydrate, hydrateAppearance, hydrateLocale]);
 
-  // Request notification permission once authenticated — needed to display
-  // the locally-scheduled arrival-check-in reminder (see
-  // useArrivalReminderPoll.ts / arrivalNotifications.ts). This is entirely
-  // device-scheduled, no server push or cron involved. Denial or an
-  // unsupported environment (e.g. simulator) is fine; the foreground poll
-  // below is the backstop.
+  // Request notification permission once authenticated, then register this
+  // device's Expo push token with the backend — without this, server-sent
+  // booking-lifecycle pushes (notificationService.ts) have nowhere to go:
+  // `barber.deviceId` / `client.deviceId` stay empty and every send silently
+  // no-ops. Permission alone (no registration) still covers the
+  // locally-scheduled arrival-check-in reminder (see
+  // useArrivalReminderPoll.ts / arrivalNotifications.ts), which is entirely
+  // device-scheduled. Denial or an unsupported environment (e.g. simulator)
+  // is fine — the foreground poll is the arrival-check-in backstop, and a
+  // push that never registers just never arrives, no user-facing failure.
   useEffect(() => {
     if (status !== 'authenticated' || !role) return;
-    void ensureNotificationPermission();
+
+    let cancelled = false;
+    void ensureNotificationPermission().then((granted) => {
+      if (granted && !cancelled) void registerPushToken(role);
+    });
+
+    const sub = subscribeToPushTokenRotation(role);
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
   }, [status, role]);
+
+  // Keeps the backend's stored locale in step with the app's language —
+  // fires once per login (so a user who never opens the language screen
+  // still gets their device-detected default synced) and again any time
+  // setLocale() changes it later, since `locale` is a dependency here.
+  useEffect(() => {
+    if (status !== 'authenticated' || !role) return;
+    void syncLocaleToBackend(role, locale);
+  }, [status, role, locale]);
 
   // Foreground/backgrounded → foregrounded polling backstop, and periodic
   // local-notification scheduling, for the arrival-confirmation prompt.
   useArrivalReminderPoll();
+
+  // Holds a lifecycle-push deep-link target tapped before auth hydration
+  // settled (cold start) — consumed once `status` becomes 'authenticated'
+  // below, after the auth-redirect effect has run.
+  const pendingDeepLinkRef = useRef<string | null>(null);
 
   // Local notification shown (foreground) or tapped (background/killed) →
   // open the non-dismissable arrival sheet directly, bypassing the poll.
@@ -99,18 +138,49 @@ export default function RootLayout() {
       useArrivalCheckStore.getState().open({ id: data.booking_id, role: data.role });
     };
 
+    // Tapping a server-sent booking-lifecycle push (new booking, confirmed,
+    // cancelled, etc. — see notificationRouting.ts) deep-links into the
+    // screen that shows that booking. Only on tap (the response listener),
+    // never on mere receipt — a push landing while the user is mid-task
+    // shouldn't yank them away from what they're doing.
+    const onLifecyclePushTap = (data: unknown) => {
+      if (!isBookingLifecyclePushData(data)) return;
+      const role = useAuthStore.getState().role;
+      // The push arriving is proof the underlying booking changed — force a
+      // refetch rather than trusting each query's staleTime. Deep-link
+      // targets are tab screens that stay mounted once visited, so merely
+      // navigating back to one doesn't itself trigger a refetch.
+      invalidateQueriesForNotification(queryClient, role, data.notification_type);
+      const target = resolveNotificationRoute(role, data.notification_type);
+      if (useAuthStore.getState().status === 'authenticated') {
+        router.push(target as any);
+      } else {
+        pendingDeepLinkRef.current = target;
+      }
+    };
+
+    const onNotificationTap = (data: unknown) => {
+      onArrivalCheckinData(data);
+      onLifecyclePushTap(data);
+    };
+
+    // Cold start: app was killed and the user tapped a push to launch it.
+    void Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) onNotificationTap(response.notification.request.content.data);
+    });
+
     const receivedSub = Notifications.addNotificationReceivedListener((n) => {
       onArrivalCheckinData(n.request.content.data);
     });
     const responseSub = Notifications.addNotificationResponseReceivedListener(
-      (r) => onArrivalCheckinData(r.notification.request.content.data),
+      (r) => onNotificationTap(r.notification.request.content.data),
     );
 
     return () => {
       receivedSub.remove();
       responseSub.remove();
     };
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (status === 'unknown') return;
@@ -125,10 +195,13 @@ export default function RootLayout() {
         const onBarber = segments[0] === '(barber)';
 
         if (role === 'barber') {
-          // Barbers belong in the barber workspace, but appearance/language
-          // are shared top-level screens both roles can reach.
+          // Barbers belong in the barber workspace, but appearance/language/
+          // notifications are shared top-level screens both roles can reach.
           const onValidBarberScreen =
-            onBarber || segments[0] === 'appearance' || segments[0] === 'language';
+            onBarber ||
+            segments[0] === 'appearance' ||
+            segments[0] === 'language' ||
+            segments[0] === 'notifications';
           if (!onValidBarberScreen) {
             router.replace('/(barber)/calendar' as any);
           }
@@ -168,6 +241,18 @@ export default function RootLayout() {
 
     void navigate();
   }, [status, segments, router]);
+
+  // Consumes a deep link queued by the notification-tap effect above because
+  // it arrived before auth hydration settled (cold start). Declared after
+  // the auth-redirect effect so its navigation runs last in the same commit
+  // and isn't clobbered by that effect's router.replace to the role's
+  // default screen.
+  useEffect(() => {
+    if (status !== 'authenticated' || !pendingDeepLinkRef.current) return;
+    const target = pendingDeepLinkRef.current;
+    pendingDeepLinkRef.current = null;
+    router.push(target as any);
+  }, [status, router]);
 
   /* ── start network logging in dev ──────────────────────────────────────── */
   useEffect(() => {

@@ -317,10 +317,25 @@ export async function getClientCompletedBookings(limit = 30): Promise<BookingCon
   return r.data.data.items ?? [];
 }
 
-/** Unread notification count for the current user — drives the Home bell's badge dot. */
+/** Registers this device's Expo push token for the client — see pushToken.ts. */
+export async function registerClientDeviceId(deviceId: string): Promise<void> {
+  await api.put('/client/update-device-id', { deviceId });
+}
+
+/** Clears the client's stored push token (sign-out). */
+export async function clearClientPushToken(): Promise<void> {
+  await api.delete('/client/push-token');
+}
+
+/** Syncs the app's language setting so push/inbox notification copy matches it — see localeSync.ts. */
+export async function updateClientLocale(locale: 'uz' | 'ru'): Promise<void> {
+  await api.put('/client/locale', { locale });
+}
+
+/** Unread notification count for the current user (either role) — drives the bell's badge dot. */
 export async function getUnreadNotificationCount(): Promise<number> {
   const r = await api.get<OkData<{ unread_count: number }>>(
-    '/client/notifications',
+    '/notifications',
     { params: { limit: 1 } },
   );
   return r.data.data.unread_count ?? 0;
@@ -415,6 +430,21 @@ export async function getBarberArrivalPending(): Promise<BookingContract[]> {
     '/barber/bookings/arrival-pending',
   );
   return r.data.data.bookings ?? [];
+}
+
+/** Registers this device's Expo push token for the barber — see pushToken.ts. */
+export async function registerBarberDeviceId(deviceId: string): Promise<void> {
+  await api.put('/barber/update-device-id', { deviceId });
+}
+
+/** Clears the barber's stored push token (sign-out). */
+export async function clearBarberPushToken(): Promise<void> {
+  await api.delete('/barber/push-token');
+}
+
+/** Syncs the app's language setting so push/inbox notification copy matches it — see localeSync.ts. */
+export async function updateBarberLocale(locale: 'uz' | 'ru'): Promise<void> {
+  await api.put('/barber/locale', { locale });
 }
 
 export interface EarningsSummary {

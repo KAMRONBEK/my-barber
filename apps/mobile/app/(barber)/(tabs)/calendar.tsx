@@ -15,12 +15,29 @@ import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+import { useRouter } from 'expo-router';
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+  type BottomSheetBackdropProps,
+} from '@gorhom/bottom-sheet';
 import { Text } from '../../../src/atoms/Text';
 import { Icon } from '../../../src/atoms/Icon';
 import { Button } from '../../../src/atoms/Button';
 import { ScreenLayout } from '../../../src/templates/ScreenLayout';
-import { getBarberBookings, patchBookingStatus } from '../../../src/lib/api';
+import {
+  getBarberBookings,
+  getUnreadNotificationCount,
+  patchBookingStatus,
+} from '../../../src/lib/api';
+import {
+  bookingStatusLabel,
+  bookingStatusTone,
+  formatDurationMinutes,
+  formatTimeRange,
+  formatUZS,
+} from '../../../src/lib/format';
 import { hapticToggle } from '../../../src/lib/haptics';
 import {
   BARBER_TAB_BAR_PILL_HEIGHT,
@@ -165,12 +182,33 @@ export default function BarberCalendarScreen() {
   const theme = useTheme<AppTheme>();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  const unreadQuery = useQuery({
+    queryKey: ['notifications-unread-count'],
+    queryFn: getUnreadNotificationCount,
+    staleTime: 15_000,
+  });
+  const hasUnreadNotifications = (unreadQuery.data ?? 0) > 0;
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [now, setNow] = useState(new Date());
   const [activeBooking, setActiveBooking] = useState<any | null>(null);
-  const sheetRef = useRef<BottomSheet>(null);
+  const sheetRef = useRef<React.ElementRef<typeof BottomSheetModal>>(null);
   const scrollRef = useRef<ScrollView>(null);
+
+  const renderSheetBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        pressBehavior="close"
+        opacity={0.5}
+      />
+    ),
+    [],
+  );
 
   const tabBarPadding =
     BARBER_TAB_BAR_PILL_HEIGHT +
@@ -427,12 +465,12 @@ export default function BarberCalendarScreen() {
 
   const showBookingActions = (booking: any) => {
     setActiveBooking(booking);
-    sheetRef.current?.snapToIndex(0);
+    sheetRef.current?.present();
   };
 
   const handleCancelBooking = () => {
     if (!activeBooking) return;
-    sheetRef.current?.close();
+    sheetRef.current?.dismiss();
     Alert.alert(
       t('confirmation.cancelConfirmTitle'),
       t('confirmation.cancelConfirmBody'),
@@ -499,34 +537,60 @@ export default function BarberCalendarScreen() {
           </Pressable>
         </View>
 
-        <Pressable
-          onPress={goToday}
-          style={[
-            styles.todayBtn,
-            {
-              backgroundColor: theme.colors.surface2,
-              borderColor: theme.colors.border,
-            },
-          ]}
-        >
-          <View
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 3,
-              backgroundColor: theme.colors.accent,
-            }}
-          />
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: '700',
-              color: theme.colors.fg,
-            }}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Pressable
+            onPress={goToday}
+            style={[
+              styles.todayBtn,
+              {
+                backgroundColor: theme.colors.surface2,
+                borderColor: theme.colors.border,
+              },
+            ]}
           >
-            {t('calendar.today')}
-          </Text>
-        </Pressable>
+            <View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: theme.colors.accent,
+              }}
+            />
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: '700',
+                color: theme.colors.fg,
+              }}
+            >
+              {t('calendar.today')}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push('/notifications')}
+            style={[
+              styles.iconBtn,
+              {
+                backgroundColor: theme.colors.surface2,
+                borderColor: theme.colors.border,
+                borderWidth: StyleSheet.hairlineWidth,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={t('home.notifications')}
+          >
+            <Icon name="bell" size={18} color={theme.colors.fg} />
+            {hasUnreadNotifications ? (
+              <View
+                style={[
+                  styles.notifDot,
+                  { backgroundColor: theme.colors.accent },
+                ]}
+              />
+            ) : null}
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -819,12 +883,16 @@ export default function BarberCalendarScreen() {
         </View>
       </ScrollView>
 
-      {/* Booking actions bottom sheet */}
-      <BottomSheet
+      {/* Booking actions bottom sheet — sized to its content (enableDynamicSizing)
+          rather than a guessed percentage, and BottomSheetModal (portaled via
+          BottomSheetModalProvider in app/_layout.tsx) rather than plain
+          BottomSheet so it renders above the tab bar instead of clipping
+          behind it. */}
+      <BottomSheetModal
         ref={sheetRef}
-        index={-1}
-        snapPoints={['35%', '50%']}
+        enableDynamicSizing
         enablePanDownToClose
+        backdropComponent={renderSheetBackdrop}
         backgroundStyle={{
           backgroundColor: theme.colors.surface,
         }}
@@ -838,41 +906,121 @@ export default function BarberCalendarScreen() {
         <BottomSheetView style={{ padding: 20, gap: 12 }}>
           {activeBooking && (
             <>
-              <View style={{ alignItems: 'center', marginBottom: 8 }}>
-                <Text
-                  style={{
-                    fontSize: 18,
-                    fontWeight: '700',
-                    color: theme.colors.fg,
-                  }}
-                >
-                  {activeBooking.clientFirstName} {activeBooking.clientLastName}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    color: theme.colors.muted,
-                    marginTop: 4,
-                  }}
-                >
-                  {activeBooking.services
-                    ?.map((s: any) => s.name)
-                    .join(' + ') ?? ''}
-                </Text>
-              </View>
+              {(() => {
+                const duration: number =
+                  activeBooking.services?.reduce(
+                    (s: number, svc: any) => s + (svc.durationMinutes ?? 45),
+                    0,
+                  ) ?? 45;
+                const price: number =
+                  activeBooking.services?.reduce(
+                    (s: number, svc: any) => s + (svc.price ?? 0),
+                    0,
+                  ) ?? 0;
+                const toneColors = {
+                  success: theme.colors.success,
+                  danger: theme.colors.danger,
+                  accent: theme.colors.accent,
+                };
+                const tone = bookingStatusTone(activeBooking.status);
 
-              <Button
-                variant="secondary"
-                label="Batafsil ko'rish"
-                onPress={() => sheetRef.current?.close()}
-                fullWidth
-              />
-              <Button
-                variant="secondary"
-                label="Mijozga qo'ng'iroq qilish"
-                onPress={() => sheetRef.current?.close()}
-                fullWidth
-              />
+                return (
+                  <>
+                    <View style={{ alignItems: 'center', marginBottom: 4 }}>
+                      <Text
+                        style={{
+                          fontSize: 18,
+                          fontWeight: '700',
+                          color: theme.colors.fg,
+                        }}
+                      >
+                        {activeBooking.clientFirstName} {activeBooking.clientLastName}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          color: theme.colors.muted,
+                          marginTop: 4,
+                        }}
+                      >
+                        {activeBooking.services
+                          ?.map((s: any) => s.name)
+                          .join(' + ') ?? ''}
+                      </Text>
+                      <View
+                        style={[
+                          styles.sheetStatusPill,
+                          { backgroundColor: `${toneColors[tone]}20` },
+                        ]}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: '600',
+                            color: toneColors[tone],
+                          }}
+                        >
+                          {bookingStatusLabel(activeBooking.status)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View
+                      style={[
+                        styles.sheetDetailBox,
+                        {
+                          backgroundColor: theme.colors.surface2,
+                          borderColor: theme.colors.border,
+                        },
+                      ]}
+                    >
+                      <View style={styles.sheetDetailRow}>
+                        <Text style={{ fontSize: 13, color: theme.colors.muted }}>
+                          {t('requests.when')}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: '500',
+                            color: theme.colors.fg,
+                          }}
+                        >
+                          {formatTimeRange(new Date(activeBooking.timestamp), duration)}
+                        </Text>
+                      </View>
+                      <View style={styles.sheetDetailRow}>
+                        <Text style={{ fontSize: 13, color: theme.colors.muted }}>
+                          {t('requests.duration')}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: '500',
+                            color: theme.colors.fg,
+                          }}
+                        >
+                          {formatDurationMinutes(duration)}
+                        </Text>
+                      </View>
+                      <View style={styles.sheetDetailRow}>
+                        <Text style={{ fontSize: 13, color: theme.colors.muted }}>
+                          {t('booking.total')}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: '500',
+                            color: theme.colors.fg,
+                          }}
+                        >
+                          {formatUZS(price)}
+                        </Text>
+                      </View>
+                    </View>
+                  </>
+                );
+              })()}
+
               {activeBooking.status !== 'cancelled' && (
                 <Button
                   variant="destructive"
@@ -884,7 +1032,7 @@ export default function BarberCalendarScreen() {
             </>
           )}
         </BottomSheetView>
-      </BottomSheet>
+      </BottomSheetModal>
     </ScreenLayout>
   );
 }
@@ -905,6 +1053,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
+    position: 'relative',
+  },
+  notifDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#f7f7f7',
   },
   todayBtn: {
     height: 36,
@@ -1011,5 +1170,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
+  },
+  sheetStatusPill: {
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  sheetDetailBox: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 6,
+  },
+  sheetDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
   },
 });

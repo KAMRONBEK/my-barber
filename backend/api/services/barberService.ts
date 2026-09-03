@@ -322,6 +322,14 @@ export class BarberServiceClass {
     }
   }
 
+  /** Synced from the mobile app's language setting — drives notification copy. */
+  async updateBarberLocale(id: string, locale: 'uz' | 'ru'): Promise<void> {
+    await this.firestore.collection(COLLECTIONS.BARBERS).doc(id).update({
+      locale,
+      updatedAt: new Date(),
+    });
+  }
+
   /** Removes stored Expo push token for pruning when Expo reports DeviceNotRegistered. */
   async clearPushTokenMatching(expoPushToken: string): Promise<void> {
     try {
@@ -676,6 +684,7 @@ export class BarberServiceClass {
             services.push({
               name: service?.name,
               price: service?.price,
+              durationMinutes: service?.durationMinutes,
             });
           }
         }

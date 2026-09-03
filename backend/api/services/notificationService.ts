@@ -63,24 +63,20 @@ export class NotificationService {
       const { barberService } = await import('./barberService');
       const { clientService } = await import('./clientService');
 
+      const [barber, client] = await Promise.all([
+        barberService.getBarberById(bookingSnapshot.barberId),
+        clientService.getClientById(bookingSnapshot.clientId),
+      ]);
+
       const deliveries = getBookingLifecycleDeliveries(
         kind,
         bookingSnapshot,
-        extra
+        extra,
+        { barber: barber?.locale, client: client?.locale }
       );
       for (const d of deliveries) {
-        let token: string | undefined;
-        if (d.recipientType === 'barber') {
-          const barber = await barberService.getBarberById(
-            bookingSnapshot.barberId
-          );
-          token = barber?.deviceId;
-        } else {
-          const client = await clientService.getClientById(
-            bookingSnapshot.clientId
-          );
-          token = client?.deviceId;
-        }
+        const token =
+          d.recipientType === 'barber' ? barber?.deviceId : client?.deviceId;
 
         if (!token?.trim()) {
           continue;

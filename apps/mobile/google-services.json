@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "62605385044",
+    "firebase_url": "https://barber-rest-api-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "barber-rest-api",
+    "storage_bucket": "barber-rest-api.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:62605385044:android:47f01ddced52eee0a4fcc1",
+        "android_client_info": {
+          "package_name": "com.thealiyevazim.mybarber"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAM93Ulth-KPn9fUbv7p4OKjC0M2NL--9c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:62605385044:android:b7fbde0e54281d57a4fcc1",
+        "android_client_info": {
+          "package_name": "uz.mybarber.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAM93Ulth-KPn9fUbv7p4OKjC0M2NL--9c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

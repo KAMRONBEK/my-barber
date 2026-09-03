@@ -1711,6 +1711,62 @@ router.put(
 
 /**
  * @swagger
+ * /barber/locale:
+ *   put:
+ *     summary: Sync the app's language setting — drives notification copy language
+ *     tags: [Barber]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - locale
+ *             properties:
+ *               locale:
+ *                 type: string
+ *                 enum: [uz, ru]
+ *     responses:
+ *       200:
+ *         description: Locale stored
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied — barber account required
+ *       500:
+ *         description: Internal server error
+ */
+router.put(
+  '/locale',
+  [authenticateToken, body('locale').isIn(['uz', 'ru'])],
+  async (req: Request, res: Response) => {
+    try {
+      if (handleValidationErrors(req, res)) return;
+
+      const barberId = (req as any).user.id;
+      if ((req as any).user.type !== 'barber') {
+        return res.status(403).json({
+          ok: false,
+          error: 'Access denied. Barber account required.',
+        });
+      }
+
+      await barberService.updateBarberLocale(barberId, req.body.locale);
+      res.json({ ok: true, message: 'Locale updated successfully' });
+    } catch (error) {
+      logger.error('Error updating barber locale:', error);
+      res.status(500).json({ ok: false, error: 'Internal server error' });
+    }
+  }
+);
+
+/**
+ * @swagger
  * /barber/push-token:
  *   delete:
  *     summary: Clear stored Expo push token (unregister from push)

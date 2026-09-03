@@ -132,6 +132,14 @@ export class ClientServiceClass {
     logger.info('Client device ID updated successfully', { clientId: id });
   }
 
+  /** Synced from the mobile app's language setting — drives notification copy. */
+  async updateClientLocale(id: string, locale: 'uz' | 'ru'): Promise<void> {
+    await this.firestore.collection(COLLECTIONS.CLIENTS).doc(id).update({
+      locale,
+      updatedAt: new Date(),
+    });
+  }
+
   /** Removes stored Expo push token when Expo reports DeviceNotRegistered. */
   async clearPushTokenMatching(expoPushToken: string): Promise<void> {
     const snap = await this.firestore
@@ -244,6 +252,7 @@ export class ClientServiceClass {
             services.push({
               name: service?.name,
               price: service?.price,
+              durationMinutes: service?.durationMinutes,
             });
           }
         }
