@@ -44,6 +44,7 @@ function sharedSchemas() {
         id: { type: 'string' },
         name: { type: 'string' },
         price: { type: 'number', description: 'Price in minor units (e.g. UZS)' },
+        durationMinutes: { type: 'integer' },
       },
     },
     BookingContract: {

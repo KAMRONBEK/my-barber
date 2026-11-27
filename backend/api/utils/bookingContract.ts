@@ -30,6 +30,7 @@ export function bookingResponseToContract(o: BookingResponse): BookingContract {
     id: String(s.id ?? ''),
     name: s.name,
     price: s.price,
+    ...(s.durationMinutes ? { durationMinutes: s.durationMinutes } : {}),
   }));
   const cancellation =
     o.cancellationReason ??

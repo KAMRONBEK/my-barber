@@ -93,7 +93,12 @@ export interface BookingContract {
   cancellation_reason: string | null;
   barber_id: string;
   client_id: string;
-  services: Array<{ id: string; name: string; price: number }>;
+  services: Array<{
+    id: string;
+    name: string;
+    price: number;
+    durationMinutes?: number;
+  }>;
   updated_at: string;
   /** Present on completed bookings in the client's history. */
   reviewed?: boolean;
