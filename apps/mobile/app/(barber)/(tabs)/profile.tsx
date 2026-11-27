@@ -26,6 +26,7 @@ import { useAppearanceStore, type AppearanceMode } from '../../../src/lib/appear
 import { useLocaleStore } from '../../../src/lib/locale';
 import type { SupportedLocale } from '../../../src/lib/i18n';
 import { getBarberMe, getBarberBookings, getBarberEarnings } from '../../../src/lib/api';
+import { occupiesTime } from '../../../src/lib/bookingActions';
 import {
   BARBER_TAB_BAR_PILL_HEIGHT,
   BARBER_TAB_BAR_BOTTOM_OFFSET,
@@ -109,7 +110,7 @@ export default function BarberProfileScreen() {
   // shown here matches what tapping through to it shows.
   const bookingsCount = (bookingsQuery.data ?? []).filter((b) => {
     const d = new Date(b.timestamp);
-    return d >= monthStart && d <= monthEnd;
+    return occupiesTime(b.status) && d >= monthStart && d <= monthEnd;
   }).length;
   const earningsTotal = earningsQuery.data?.summary.gross_total ?? 0;
   const rating = barberMeQuery.data?.barber.ratingAverage ?? 0;

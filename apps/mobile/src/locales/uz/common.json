@@ -268,7 +268,12 @@
     "today": "Bugun",
     "todayBookings": "Bugun",
     "hoursBooked": "Band",
-    "earnings": "Daromad"
+    "earnings": "Daromad",
+    "summary": "Tasdiqlangan: {{confirmed}}, kutilmoqda: {{pending}}",
+    "legendBooked": "Band",
+    "legendPending": "Kutilmoqda",
+    "visitsUnit": "marta",
+    "hoursUnit": "soat"
   },
   "requests": {
     "title": "So'rovlar",
@@ -406,5 +411,51 @@
     "check": "Holatni tekshirish",
     "unchanged": "Holat hozircha o'zgarmadi.",
     "language": "Til"
+  },
+  "barberActions": {
+    "confirm": {
+      "label": "Qabul qilish",
+      "title": "Arizani qabul qilasizmi?",
+      "body": "Mijoz tasdiq oladi."
+    },
+    "decline": {
+      "label": "Rad etish",
+      "title": "Arizani rad etasizmi?",
+      "body": "Mijoz xabar oladi, vaqt bo'shaydi."
+    },
+    "cancel": {
+      "label": "Yozuvni bekor qilish",
+      "title": "Yozuvni bekor qilasizmi?",
+      "body": "Mijoz xabar oladi, vaqt bo'shaydi."
+    },
+    "complete": {
+      "label": "Tashrifni yakunlash",
+      "title": "Tashrif bo'lib o'tdimi?",
+      "body": "Summa daromadga qo'shiladi, mijoz sharh qoldira oladi."
+    },
+    "noShow": {
+      "label": "Mijoz kelmadi",
+      "title": "Kelmaganini belgilaysizmi?",
+      "body": "Bu tashrif daromadga qo'shilmaydi."
+    }
+  },
+  "bookingErrors": {
+    "slotTaken": "Bu vaqt band. Boshqasini tanlang.",
+    "pastTime": "Bu vaqt o'tib ketgan.",
+    "outsideHours": "Sartarosh bu vaqtda ishlamaydi.",
+    "invalidServices": "Bu xizmatlar endi mavjud emas. Sahifani yangilang.",
+    "barberUnavailable": "Bu sartarosh hozir yozuv qabul qilmaydi.",
+    "notStarted": "Tashrif hali boshlanmagan.",
+    "changed": "Yozuv holati o'zgargan. Ro'yxat yangilandi."
+  },
+  "review": {
+    "title": "Sharh",
+    "question": "Tashrif qanday o'tdi? Baholang: {{name}}",
+    "barber": "sartarosh",
+    "comment": "Izoh (ixtiyoriy)",
+    "submit": "Yuborish",
+    "duplicate": "Siz bu tashrifni baholagansiz.",
+    "leave": "Sharh qoldirish",
+    "sent": "Sharh yuborilgan"
   }
 }

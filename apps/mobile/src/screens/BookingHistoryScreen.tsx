@@ -31,6 +31,7 @@ import {
   TAB_BAR_BOTTOM_OFFSET,
 } from '../navigation/GlassTabBar';
 import { api, cancelBooking, getBarbers } from '../lib/api';
+import { bookingErrorKey } from '../lib/bookingErrors';
 import { queryKeys, STALE } from '../lib/query';
 import {
   formatDurationMinutes,
@@ -69,6 +70,8 @@ interface BookingHistoryItem {
   timestamp: string;
   status: string;
   barber_id: string;
+  cancellation_reason?: string | null;
+  reviewed?: boolean;
   services?: Array<{ name: string; price: number; durationMinutes?: number }>;
 }
 
@@ -82,8 +85,9 @@ interface BookingsByWeek {
 // barber never answered stays "upcoming" forever once its time passes.
 function isExpiredPending(item: BookingHistoryItem): boolean {
   return (
-    item.status === 'pending_confirmation' &&
-    new Date(item.timestamp).getTime() < Date.now()
+    item.cancellation_reason === 'expired' ||
+    (item.status === 'pending_confirmation' &&
+      new Date(item.timestamp).getTime() < Date.now())
   );
 }
 
@@ -167,8 +171,9 @@ export const BookingHistoryScreen: React.FC = () => {
       sheetRef.current?.dismiss();
       void qc.invalidateQueries({ queryKey: ['bookings'] });
     },
-    onError: () => {
-      Alert.alert(t('common.error'), t('booking.createError'));
+    onError: (error) => {
+      Alert.alert(t('common.error'), t(bookingErrorKey(error)));
+      void qc.invalidateQueries({ queryKey: ['bookings'] });
     },
   });
 
@@ -239,7 +244,10 @@ export const BookingHistoryScreen: React.FC = () => {
     if (segment === 'upcoming') {
       return upcomingRaw.filter((i) => !isExpiredPending(i));
     }
-    return [...pastRaw, ...upcomingRaw.filter(isExpiredPending)].sort((a, b) =>
+    // Newer APIs already list expired requests under "past".
+    const past = new Set(pastRaw.map((i) => i.id));
+    const expired = upcomingRaw.filter((i) => isExpiredPending(i) && !past.has(i.id));
+    return [...pastRaw, ...expired].sort((a, b) =>
       b.timestamp.localeCompare(a.timestamp),
     );
   }, [segment, upcomingQuery.data, pastQuery.data]);
@@ -367,6 +375,7 @@ export const BookingHistoryScreen: React.FC = () => {
                     const { label: statusLabel, tone } = effectiveBookingStatus(
                       item.status,
                       item.timestamp,
+                      item.cancellation_reason,
                     );
                     const toneColors = {
                       success: theme.colors.success,
@@ -533,6 +542,7 @@ export const BookingHistoryScreen: React.FC = () => {
               const { label: statusLabel, tone } = effectiveBookingStatus(
                 activeItem.status,
                 activeItem.timestamp,
+                activeItem.cancellation_reason,
               );
               const toneColors = {
                 success: theme.colors.success,
@@ -646,6 +656,36 @@ export const BookingHistoryScreen: React.FC = () => {
                       </Text>
                     </View>
                   </View>
+
+                  {activeItem.status === 'completed' &&
+                  activeItem.reviewed === false ? (
+                    <Button
+                      fullWidth
+                      label={t('review.leave')}
+                      onPress={() => {
+                        sheetRef.current?.dismiss();
+                        router.push({
+                          pathname: '/review/[bookingId]',
+                          params: {
+                            bookingId: activeItem.id,
+                            barberName: barberName ?? '',
+                          },
+                        } as any);
+                      }}
+                      testID="booking-review"
+                    />
+                  ) : null}
+                  {activeItem.reviewed ? (
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        color: theme.colors.muted,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {t('review.sent')}
+                    </Text>
+                  ) : null}
 
                   {isCancellable(activeItem) ? (
                     <Button

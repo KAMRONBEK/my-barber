@@ -40,6 +40,7 @@ import {
   getBookingsForBarberDay,
 } from '../lib/api';
 import { queryKeys, STALE } from '../lib/query';
+import { bookingErrorKey } from '../lib/bookingErrors';
 import type { AppTheme } from '../lib/restyle';
 
 export interface BookingFormProps {
@@ -135,6 +136,12 @@ export const BookingForm: React.FC<BookingFormProps> = ({
         shopDisplay: '',
       });
       onBooked(booking);
+    },
+    onError: () => {
+      // Someone may have just taken the slot: show the current availability.
+      void qc.invalidateQueries({
+        queryKey: queryKeys.bookings(barber.id, dateKey),
+      });
     },
   });
 
@@ -325,7 +332,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
               textAlign: 'center',
             }}
           >
-            {t('booking.createError')}
+            {t(bookingErrorKey(createMut.error, 'booking.createError'))}
           </Text>
         ) : null}
       </View>

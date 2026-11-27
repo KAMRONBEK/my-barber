@@ -232,6 +232,7 @@ export default function RootLayout() {
             segments[0] === 'settings' ||
             segments[0] === 'notifications' ||
             segments[0] === 'bookings' ||
+            (segments[0] as string) === 'review' ||
             segments[0] === 'cuts-history' ||
             segments[0] === 'saved-barbers';
           if (!onValidClientScreen) {

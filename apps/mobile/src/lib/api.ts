@@ -418,9 +418,10 @@ export async function getBarberBookings(
   return r.data.data ?? [];
 }
 
+/** Answers a new request. Later steps have their own endpoints below. */
 export async function patchBookingStatus(
   bookingId: string,
-  status: 'confirmed' | 'declined' | 'cancelled' | 'completed' | 'no_show',
+  status: 'confirmed' | 'declined',
   reason?: string | null,
 ): Promise<BookingContract> {
   const r = await api.patch<OkData<{ booking: BookingContract }>>(
@@ -428,6 +429,44 @@ export async function patchBookingStatus(
     { status, reason },
   );
   return r.data.data.booking;
+}
+
+async function postBarberBooking(
+  bookingId: string,
+  action: 'cancel' | 'complete' | 'no-show',
+  body: Record<string, unknown> = {},
+): Promise<BookingContract> {
+  const r = await api.post<OkData<{ booking: BookingContract }>>(
+    `/barber/bookings/${encodeURIComponent(bookingId)}/${action}`,
+    body,
+  );
+  return r.data.data.booking;
+}
+
+export function cancelBarberBooking(
+  bookingId: string,
+  reason: string | null = null,
+): Promise<BookingContract> {
+  return postBarberBooking(bookingId, 'cancel', { reason });
+}
+
+export function completeBooking(bookingId: string): Promise<BookingContract> {
+  return postBarberBooking(bookingId, 'complete');
+}
+
+export function markNoShow(bookingId: string): Promise<BookingContract> {
+  return postBarberBooking(bookingId, 'no-show');
+}
+
+export async function createReview(
+  bookingId: string,
+  rating: number,
+  comment: string,
+): Promise<void> {
+  await api.post(`/client/bookings/${encodeURIComponent(bookingId)}/review`, {
+    rating,
+    comment,
+  });
 }
 
 export async function confirmBarberArrival(

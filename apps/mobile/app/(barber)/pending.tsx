@@ -15,6 +15,7 @@ import { Badge } from '../../src/atoms/Badge';
 import { ScreenHeader } from '../../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../../src/templates/ScreenLayout';
 import { getBarberBookings } from '../../src/lib/api';
+import { isAgreed } from '../../src/lib/bookingActions';
 import {
   BARBER_TAB_BAR_PILL_HEIGHT,
   BARBER_TAB_BAR_BOTTOM_OFFSET,
@@ -64,7 +65,7 @@ export default function BarberPendingScreen() {
   });
 
   const bookings = bookingsQuery.data ?? [];
-  const confirmed = bookings.filter((b) => b.status === 'confirmed');
+  const confirmed = bookings.filter((b) => isAgreed(b.status));
   const sorted = [...confirmed].sort(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   );
