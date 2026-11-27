@@ -13,4 +13,8 @@ export const COLLECTIONS = {
   /** CMS-style config docs (e.g. banner under `banner`) */
   CMS: 'cms',
   FAVORITES: 'favorites',
+  /** Lock documents that keep usernames unique (services/usernameRegistry.ts) */
+  USERNAMES: 'usernames',
+  /** One lock document per barber; serialises booking writes */
+  BOOKING_LOCKS: 'bookingLocks',
 } as const;

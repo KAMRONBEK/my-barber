@@ -1,3 +1,5 @@
+import { formatTashkentDateTime } from '../utils/tashkentTime';
+
 /**
  * Single source for booking-driven inbox + Expo push copy and recipient routing.
  * Keep in sync with lifecycle callers in BookingServiceClass.
@@ -237,7 +239,7 @@ export function getBookingLifecycleDeliveries(
   extra?: Record<string, unknown>,
   locales?: LifecycleLocales
 ): BookingLifecycleDelivery[] {
-  const timeLocale = new Date(booking.timestamp).toLocaleString();
+  const timeLocale = formatTashkentDateTime(booking.timestamp);
 
   if (kind === 'booking_cancelled') {
     const by = extra?.cancelled_by as string | undefined;

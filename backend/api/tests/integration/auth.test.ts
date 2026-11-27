@@ -64,15 +64,14 @@ describe('auth routes', () => {
   });
 
   it('POST /auth/client/register and login', async () => {
-    const username = `client_${Math.random().toString(36).slice(2)}`;
+    const username = '+998901112233';
     const reg = await request(app)
       .post('/auth/client/register')
       .send({
-        username,
         password: 'secret12',
         firstName: 'C',
         lastName: 'L',
-        phone: '+998901234567',
+        phone: username,
       })
       .expect(201);
 

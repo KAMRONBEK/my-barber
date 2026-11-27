@@ -9,9 +9,12 @@ import { favoriteService } from '../services/favoriteService';
 import { bookingService } from '../services/bookingService';
 import { authService } from '../services/authService';
 import { logger } from '../utils/logger';
+import { sendBookingError } from '../utils/bookingErrors';
+import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy';
 import { reviewService } from '../services/reviewService';
 import { bookingResponseToContract } from '../utils/bookingContract';
 import { resolveMediaRefForApi } from '../services/fileStorage';
+import { isPublicBarber, toPublicBarber } from '../utils/barberVisibility';
 
 const router = Router();
 
@@ -203,14 +206,16 @@ router.put(
   '/update',
   [
     authenticateToken,
+    // A first name is required; the last name may stay empty.
     body('firstName')
       .optional()
+      .trim()
       .isLength({ min: 1, max: 50 })
       .withMessage('First name must be 1-50 characters'),
     body('lastName')
       .optional()
-      .isLength({ min: 1, max: 50 })
-      .withMessage('Last name must be 1-50 characters'),
+      .isLength({ max: 50 })
+      .withMessage('Last name must be at most 50 characters'),
     body('phone')
       .optional()
       .isMobilePhone('any')
@@ -327,8 +332,10 @@ router.post(
       .isLength({ min: 3, max: 50 })
       .withMessage('Username must be 3-50 characters'),
     body('password')
-      .isLength({ min: 6 })
-      .withMessage('Password must be at least 6 characters'),
+      .isLength({ min: MIN_PASSWORD_LENGTH })
+      .withMessage(
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
+      ),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -719,11 +726,13 @@ router.get(
       const results = await Promise.all(
         barberIds.map(id => barberService.getBarberWithServices(id))
       );
-      // A favorited barber may since have been deleted/deactivated — drop nulls
-      // rather than surfacing a broken entry.
+      // A favorited barber may since have been deleted or lost approval — drop
+      // them rather than surfacing a broken entry.
       const barbers = results
         .filter((r): r is NonNullable<typeof r> => r !== null)
-        .map(r => r.barber);
+        .map(r => r.barber)
+        .filter(isPublicBarber)
+        .map(toPublicBarber);
 
       res.json({ ok: true, data: barbers });
     } catch (error) {
@@ -1169,6 +1178,7 @@ router.post(
           error: 'Cannot book this barber',
         });
       }
+      if (sendBookingError(res, error)) return;
       logger.error('Error creating booking:', error);
       res.status(500).json({
         ok: false,
@@ -1216,6 +1226,7 @@ router.post(
           data: { booking: bookingResponseToContract(updated) },
         });
       } catch (e: unknown) {
+        if (sendBookingError(res, e)) return;
         if ((e as Error).message === 'INVALID_STATE') {
           return res.status(409).json({
             ok: false,
@@ -1271,6 +1282,7 @@ router.post(
           data: { booking: bookingResponseToContract(updated) },
         });
       } catch (e: unknown) {
+        if (sendBookingError(res, e)) return;
         if ((e as Error).message === 'INVALID_STATE') {
           return res.status(409).json({
             ok: false,
@@ -1322,6 +1334,7 @@ router.post(
           data: { booking: bookingResponseToContract(updated) },
         });
       } catch (e: unknown) {
+        if (sendBookingError(res, e)) return;
         if ((e as Error).message === 'INVALID_STATE') {
           return res.status(409).json({
             ok: false,

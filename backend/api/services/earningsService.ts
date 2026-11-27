@@ -2,18 +2,14 @@ import { db, COLLECTIONS } from '../config/database';
 import { Booking, BookingStatus } from '../models/booking';
 import { normalizeBookingStatus } from '../utils/bookingContract';
 import { firestoreDateToIso } from '../utils/firestoreDates';
-
-function parseDayUtc(iso: string): string {
-  const d = new Date(iso);
-  return d.toISOString().slice(0, 10);
-}
+import { tashkentDay } from '../utils/tashkentTime';
 
 function inClosedDateRange(
   isoInstant: string,
   fromDay: string,
   toDay: string
 ): boolean {
-  const day = parseDayUtc(isoInstant);
+  const day = tashkentDay(isoInstant);
   return day >= fromDay && day <= toDay;
 }
 
@@ -97,7 +93,7 @@ export class EarningsServiceClass {
         const total = b.serviceTotal ?? 0;
         gross_total += total;
 
-        const dayKey = parseDayUtc(completedAt!);
+        const dayKey = tashkentDay(completedAt!);
         const cur = dailyMap.get(dayKey) ?? {
           gross_total: 0,
           completed_bookings: 0,

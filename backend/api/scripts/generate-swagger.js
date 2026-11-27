@@ -143,14 +143,17 @@ const swaggerOptions = {
         },
         RegisterRequest: {
           type: 'object',
-          required: ['username', 'password', 'firstName', 'lastName'],
+          description:
+            'Client sign-up. The normalised phone number becomes the username.',
+          required: ['phone', 'password', 'firstName'],
           properties: {
-            username: {
+            phone: {
               type: 'string',
-              example: 'johndoe',
+              example: '+998901234567',
             },
             password: {
               type: 'string',
+              minLength: 8,
               example: 'password123',
             },
             firstName: {
@@ -160,10 +163,6 @@ const swaggerOptions = {
             lastName: {
               type: 'string',
               example: 'Doe',
-            },
-            phone: {
-              type: 'string',
-              example: '+998901234567',
             },
           },
         },

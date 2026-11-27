@@ -85,12 +85,14 @@ export interface BarberDeviceUpdateRequest {
 
 export interface BarberResponse {
   id: string;
-  username: string;
+  /** Omitted from client-facing responses. */
+  username?: string;
   firstName: string;
   lastName: string;
   phone: string;
   location: LatLng;
-  birthDate: string;
+  /** Omitted from client-facing responses. */
+  birthDate?: string;
   workingHours: string;
   experienceYears?: number;
   title?: string;

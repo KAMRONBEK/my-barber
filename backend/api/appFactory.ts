@@ -39,12 +39,8 @@ export function createApp(): express.Application {
     collectDefaultMetrics({ register });
   }
 
-  app.use(
-    cors({
-      origin: '*',
-      credentials: true,
-    })
-  );
+  // Auth is a bearer token, never a cookie, so credentials stay off.
+  app.use(cors({ origin: '*' }));
 
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -161,7 +157,10 @@ export function createApp(): express.Application {
 
   app.use('/', systemRoutes);
   app.use(publicRoutes);
-  app.use('/test', testRoutes);
+  // Debug helpers can send push notifications, so production never has them.
+  if (config.nodeEnv !== 'production') {
+    app.use('/test', testRoutes);
+  }
   app.use('/auth', authRoutes);
   app.use('/admin', adminAuthMiddleware, adminRoutes);
   app.use(trustRoutes);

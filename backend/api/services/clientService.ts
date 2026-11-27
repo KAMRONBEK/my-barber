@@ -15,6 +15,9 @@ import {
   resolveMediaRefForApi,
   validateStoredAvatarRef,
 } from './fileStorage';
+import { writeWithUniqueUsername } from './usernameRegistry';
+import { effectiveBookingStatus, occupiesSlot } from '../utils/bookingRules';
+import { tashkentDayRange } from '../utils/tashkentTime';
 
 export class ClientServiceClass {
   private firestore = db.getFirestore();
@@ -35,7 +38,12 @@ export class ClientServiceClass {
         updatedAt: new Date(),
       };
 
-      await this.firestore.collection(COLLECTIONS.CLIENTS).doc(id).set(client);
+      await writeWithUniqueUsername({
+        kind: 'client',
+        userId: id,
+        username: client.username,
+        write: (tx, ref) => tx.set(ref, client),
+      });
       logger.info('Client created successfully', { clientId: id });
       return id;
     } catch (error) {
@@ -111,10 +119,16 @@ export class ClientServiceClass {
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      await this.firestore.collection(COLLECTIONS.CLIENTS).doc(id).update({
+      await writeWithUniqueUsername({
+        kind: 'client',
+        userId: id,
         username,
-        password: hashedPassword,
-        updatedAt: new Date(),
+        write: (tx, ref) =>
+          tx.update(ref, {
+            username,
+            password: hashedPassword,
+            updatedAt: new Date(),
+          }),
       });
 
       logger.info('Client credentials updated successfully', { clientId: id });
@@ -203,6 +217,11 @@ export class ClientServiceClass {
     }
   }
 
+  /**
+   * Busy times of one barber, for the slot grid. Any client can call this, so
+   * it must not say who booked. The name fields stay (empty) because installed
+   * app builds expect them.
+   */
   async getClientBookings(
     barberId: string,
     date?: string
@@ -213,13 +232,10 @@ export class ClientServiceClass {
         .where('barberId', '==', barberId);
 
       if (date) {
-        const startDate = new Date(date);
-        const endDate = new Date(date);
-        endDate.setDate(endDate.getDate() + 1);
-
+        const { start, end } = tashkentDayRange(date);
         query = query
-          .where('timestamp', '>=', startDate.toISOString())
-          .where('timestamp', '<', endDate.toISOString());
+          .where('timestamp', '>=', start)
+          .where('timestamp', '<', end);
       }
 
       const snapshot = await query.get();
@@ -227,12 +243,11 @@ export class ClientServiceClass {
 
       for (const doc of snapshot.docs) {
         const bookingData = { id: doc.id, ...doc.data() } as Booking;
-
-        const clientDoc = await this.firestore
-          .collection(COLLECTIONS.CLIENTS)
-          .doc(bookingData.clientId)
-          .get();
-        const clientData = clientDoc.data();
+        const status = effectiveBookingStatus(
+          bookingData.status,
+          bookingData.timestamp
+        );
+        if (!occupiesSlot(status)) continue;
 
         const servicesSnapshot = await this.firestore
           .collection(COLLECTIONS.BOOKING_SERVICES)
@@ -259,9 +274,10 @@ export class ClientServiceClass {
 
         bookings.push({
           bookingId: doc.id,
-          clientFirstName: clientData?.firstName || '',
-          clientLastName: clientData?.lastName || '',
+          clientFirstName: '',
+          clientLastName: '',
           timestamp: bookingData.timestamp,
+          status,
           services,
         });
       }

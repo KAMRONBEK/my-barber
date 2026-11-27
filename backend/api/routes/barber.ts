@@ -6,6 +6,8 @@ import { authenticateToken } from '../middleware/auth';
 import { barberService } from '../services/barberService';
 import { authService } from '../services/authService';
 import { logger } from '../utils/logger';
+import { sendBookingError } from '../utils/bookingErrors';
+import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy';
 import { bookingService } from '../services/bookingService';
 import { earningsService } from '../services/earningsService';
 import { bookingResponseToContract } from '../utils/bookingContract';
@@ -372,8 +374,8 @@ router.put(
       .withMessage('First name must be 1-50 characters'),
     body('lastName')
       .optional()
-      .isLength({ min: 1, max: 50 })
-      .withMessage('Last name must be 1-50 characters'),
+      .isLength({ max: 50 })
+      .withMessage('Last name must be at most 50 characters'),
     body('phone')
       .optional()
       .isMobilePhone('any')
@@ -505,8 +507,10 @@ router.post(
       .isLength({ min: 3, max: 50 })
       .withMessage('Username must be 3-50 characters'),
     body('password')
-      .isLength({ min: 6 })
-      .withMessage('Password must be at least 6 characters'),
+      .isLength({ min: MIN_PASSWORD_LENGTH })
+      .withMessage(
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
+      ),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -853,6 +857,11 @@ router.delete(
         message: 'Image removed successfully',
       });
     } catch (error) {
+      if ((error as Error).message === 'Image index out of range') {
+        return res
+          .status(400)
+          .json({ ok: false, error: 'Invalid image index' });
+      }
       logger.error('Error removing barber image:', error);
       res.status(500).json({
         ok: false,
@@ -1038,9 +1047,14 @@ router.delete(
         });
       }
 
-      const serviceId = req.params.service_id;
-
-      await barberService.deleteBarberService(serviceId);
+      // Soft delete: past bookings still show the service. Only the owner's.
+      const removed = await barberService.softDeleteBarberService(
+        (req as any).user.id,
+        req.params.service_id
+      );
+      if (!removed) {
+        return res.status(404).json({ ok: false, error: 'Service not found' });
+      }
 
       res.json({
         ok: true,
@@ -1196,6 +1210,7 @@ router.patch(
           data: { booking: bookingResponseToContract(updated) },
         });
       } catch (e: unknown) {
+        if (sendBookingError(res, e)) return;
         if ((e as Error).message === 'INVALID_STATE') {
           return res.status(409).json({
             ok: false,
@@ -1249,6 +1264,7 @@ router.post(
           data: { booking: bookingResponseToContract(updated) },
         });
       } catch (e: unknown) {
+        if (sendBookingError(res, e)) return;
         if ((e as Error).message === 'INVALID_STATE') {
           return res.status(409).json({
             ok: false,
@@ -1304,6 +1320,7 @@ router.post(
           data: { booking: bookingResponseToContract(updated) },
         });
       } catch (e: unknown) {
+        if (sendBookingError(res, e)) return;
         if ((e as Error).message === 'INVALID_STATE') {
           return res.status(409).json({
             ok: false,
@@ -1349,6 +1366,7 @@ router.post(
           data: { booking: bookingResponseToContract(updated) },
         });
       } catch (e: unknown) {
+        if (sendBookingError(res, e)) return;
         if ((e as Error).message === 'INVALID_STATE') {
           return res.status(409).json({
             ok: false,
@@ -1400,6 +1418,7 @@ router.post(
           data: { booking: bookingResponseToContract(updated) },
         });
       } catch (e: unknown) {
+        if (sendBookingError(res, e)) return;
         if ((e as Error).message === 'INVALID_STATE') {
           return res.status(409).json({
             ok: false,
@@ -1469,6 +1488,7 @@ router.post(
           data: { booking: bookingResponseToContract(updated) },
         });
       } catch (e: unknown) {
+        if (sendBookingError(res, e)) return;
         if ((e as Error).message === 'INVALID_STATE') {
           return res.status(409).json({
             ok: false,
@@ -1544,7 +1564,7 @@ router.put(
     body('services').isArray({ min: 1 }),
     body('services.*.catalog_service_id').notEmpty(),
     body('services.*.name').notEmpty(),
-    body('services.*.price').isNumeric(),
+    body('services.*.price').isFloat({ min: 0 }),
     body('services.*.duration_minutes').isInt({ min: 1 }),
     body('services.*.is_active').isBoolean(),
   ],

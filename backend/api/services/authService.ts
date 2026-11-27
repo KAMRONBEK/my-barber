@@ -3,6 +3,8 @@ import { config } from '../config/config';
 import { logger } from '../utils/logger';
 import { barberService } from './barberService';
 import { clientService } from './clientService';
+import { USERNAME_TAKEN } from './usernameRegistry';
+import { normalizePhone } from '../utils/phone';
 import {
   BarberCreateRequest,
   BarberLoginRequest,
@@ -11,6 +13,7 @@ import {
 import {
   ClientCreateRequest,
   ClientLoginRequest,
+  ClientRegisterRequest,
   ClientResponse,
 } from '../models/client';
 
@@ -75,6 +78,9 @@ export class AuthServiceClass {
         services: barberWithServices.services,
       };
     } catch (error) {
+      if ((error as Error).message === USERNAME_TAKEN) {
+        return { ok: false, error: 'Username already exists' };
+      }
       logger.error('Error in barber registration:', error);
       return {
         ok: false,
@@ -143,26 +149,34 @@ export class AuthServiceClass {
     }
   }
 
-  async clientRegister(clientData: ClientCreateRequest): Promise<AuthResponse> {
+  /** Clients sign up with a phone number, which is also their username. */
+  async clientRegister(input: ClientRegisterRequest): Promise<AuthResponse> {
+    const phoneTaken = { ok: false, error: 'Phone already registered' };
     try {
-      // Check if username already exists
-      const existingClient = await clientService.getClientByUsername(
-        clientData.username
-      );
-      if (existingClient) {
-        return {
-          ok: false,
-          error: 'Username already exists',
-        };
+      const phone = normalizePhone(input.phone);
+      if (!phone) {
+        return { ok: false, error: 'Valid phone number is required' };
+      }
+      if (await clientService.getClientByUsername(phone)) {
+        return phoneTaken;
       }
 
-      // Create client
+      const clientData: ClientCreateRequest = {
+        username: phone,
+        phone,
+        password: input.password,
+        firstName: input.firstName.trim(),
+        lastName: input.lastName?.trim() ?? '',
+      };
       const clientId = await clientService.createClient(clientData);
+      const created = await clientService.getClientById(clientId);
+      if (!created) {
+        return { ok: false, error: 'Registration failed' };
+      }
 
-      // Generate JWT token
       const token = this.generateToken({
         id: clientId,
-        username: clientData.username,
+        username: phone,
         type: 'client',
       });
 
@@ -171,8 +185,12 @@ export class AuthServiceClass {
       return {
         ok: true,
         token,
+        client: await clientService.toClientResponse(created),
       };
     } catch (error) {
+      if ((error as Error).message === USERNAME_TAKEN) {
+        return phoneTaken;
+      }
       logger.error('Error in client registration:', error);
       return {
         ok: false,
@@ -183,10 +201,12 @@ export class AuthServiceClass {
 
   async clientLogin(loginData: ClientLoginRequest): Promise<AuthResponse> {
     try {
-      // Get client by username
-      const client = await clientService.getClientByUsername(
-        loginData.username
-      );
+      // The username field also accepts a phone number in any common format.
+      let client = await clientService.getClientByUsername(loginData.username);
+      const phone = normalizePhone(loginData.username);
+      if (!client && phone && phone !== loginData.username) {
+        client = await clientService.getClientByUsername(phone);
+      }
       if (!client) {
         return {
           ok: false,
@@ -244,6 +264,9 @@ export class AuthServiceClass {
 
       return { ok: true };
     } catch (error) {
+      if ((error as Error).message === USERNAME_TAKEN) {
+        return { ok: false, error: 'Username already exists' };
+      }
       logger.error('Error updating barber credentials:', error);
       return {
         ok: false,
@@ -264,6 +287,9 @@ export class AuthServiceClass {
 
       return { ok: true };
     } catch (error) {
+      if ((error as Error).message === USERNAME_TAKEN) {
+        return { ok: false, error: 'Username already exists' };
+      }
       logger.error('Error updating client credentials:', error);
       return {
         ok: false,

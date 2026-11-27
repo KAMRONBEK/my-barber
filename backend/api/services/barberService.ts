@@ -19,6 +19,23 @@ import {
   resolveManyMediaRefsForApi,
   validateStoredAvatarRef,
 } from './fileStorage';
+import { writeWithUniqueUsername } from './usernameRegistry';
+import { isPublicBarber, toPublicBarber } from '../utils/barberVisibility';
+import { effectiveBookingStatus } from '../utils/bookingRules';
+import { tashkentDayRange } from '../utils/tashkentTime';
+
+/** The only fields a barber may change about themselves. */
+const EDITABLE_PROFILE_FIELDS = [
+  'firstName',
+  'lastName',
+  'phone',
+  'location',
+  'birthDate',
+  'workingHours',
+  'experienceYears',
+  'title',
+  'bio',
+] as const;
 
 export class BarberServiceClass {
   private firestore = db.getFirestore();
@@ -45,7 +62,12 @@ export class BarberServiceClass {
         updatedAt: new Date(),
       };
 
-      await this.firestore.collection(COLLECTIONS.BARBERS).doc(id).set(barber);
+      await writeWithUniqueUsername({
+        kind: 'barber',
+        userId: id,
+        username: barber.username,
+        write: (tx, ref) => tx.set(ref, barber),
+      });
       logger.info('Barber created successfully', { barberId: id });
       return id;
     } catch (error) {
@@ -101,7 +123,7 @@ export class BarberServiceClass {
         return null;
       }
 
-      const services = await this.getBarberServices(id);
+      const services = await this.getOfferedServices(id);
 
       // Validate avatar URL if it exists
       let validatedAvatar = barber.avatar;
@@ -176,26 +198,22 @@ export class BarberServiceClass {
       const pageSize = limit || 10;
       const offset = page * pageSize;
 
-      let query: any = this.firestore.collection(COLLECTIONS.BARBERS);
-
-      if (limit) {
-        query = query.limit(limit);
-      }
-
-      if (offset > 0) {
-        query = query.offset(offset);
-      }
-
-      const snapshot = await query.get();
-      const totalSnapshot = await this.firestore
+      // Firestore cannot query "approved or no status", so filter in memory
+      // before paginating to keep pages full.
+      const snapshot = await this.firestore
         .collection(COLLECTIONS.BARBERS)
         .get();
+      const visible = snapshot.docs.filter(doc => isPublicBarber(doc.data()));
+      const pageDocs = visible.slice(
+        offset,
+        limit ? offset + limit : undefined
+      );
 
       const barbers: BarberResponse[] = [];
 
-      for (const doc of snapshot.docs) {
+      for (const doc of pageDocs) {
         const barberData = { id: doc.id, ...doc.data() } as Barber;
-        const services = await this.getBarberServices(doc.id);
+        const services = await this.getOfferedServices(doc.id);
 
         // Validate avatar URL if it exists
         let validatedAvatar = barberData.avatar;
@@ -236,29 +254,32 @@ export class BarberServiceClass {
           barberData.images
         );
 
-        barbers.push({
-          id: barberData.id,
-          username: barberData.username,
-          firstName: barberData.firstName,
-          lastName: barberData.lastName,
-          phone: barberData.phone,
-          location: barberData.location,
-          birthDate: barberData.birthDate,
-          workingHours: barberData.workingHours,
-          experienceYears: barberData.experienceYears,
-          title: barberData.title,
-          bio: barberData.bio,
-          avatar: avatarResolved,
-          images: imagesResolved,
-          services,
-        });
+        barbers.push(
+          toPublicBarber({
+            id: barberData.id,
+            firstName: barberData.firstName,
+            lastName: barberData.lastName,
+            phone: barberData.phone,
+            location: barberData.location,
+            workingHours: barberData.workingHours,
+            experienceYears: barberData.experienceYears,
+            title: barberData.title,
+            bio: barberData.bio,
+            avatar: avatarResolved,
+            images: imagesResolved,
+            services,
+            approvalStatus: barberData.approvalStatus ?? 'approved',
+            ratingAverage: barberData.ratingAverage,
+            ratingCount: barberData.ratingCount,
+          })
+        );
       }
 
       return {
         barbers,
         page,
         limit: pageSize,
-        total: totalSnapshot.size,
+        total: visible.length,
       };
     } catch (error) {
       logger.error('Error getting all barbers:', error);
@@ -271,10 +292,14 @@ export class BarberServiceClass {
     updateData: BarberUpdateRequest
   ): Promise<void> {
     try {
-      const updateObject = {
-        ...updateData,
-        updatedAt: new Date(),
-      };
+      // Never spread the request body into the document: that would let a
+      // barber set approvalStatus, ratings or credentials.
+      const updateObject: Record<string, unknown> = { updatedAt: new Date() };
+      for (const field of EDITABLE_PROFILE_FIELDS) {
+        if (updateData[field] !== undefined) {
+          updateObject[field] = updateData[field];
+        }
+      }
 
       await this.firestore
         .collection(COLLECTIONS.BARBERS)
@@ -295,10 +320,16 @@ export class BarberServiceClass {
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      await this.firestore.collection(COLLECTIONS.BARBERS).doc(id).update({
+      await writeWithUniqueUsername({
+        kind: 'barber',
+        userId: id,
         username,
-        password: hashedPassword,
-        updatedAt: new Date(),
+        write: (tx, ref) =>
+          tx.update(ref, {
+            username,
+            password: hashedPassword,
+            updatedAt: new Date(),
+          }),
       });
 
       logger.info('Barber credentials updated successfully', { barberId: id });
@@ -478,6 +509,12 @@ export class BarberServiceClass {
     }
   }
 
+  /** Services the barber still offers (soft-deleted ones are hidden). */
+  async getOfferedServices(barberId: string): Promise<BarberService[]> {
+    const services = await this.getBarberServices(barberId);
+    return services.filter(s => s.isActive !== false);
+  }
+
   async addBarberServices(
     barberId: string,
     services: Omit<BarberService, 'id' | 'barberId'>[]
@@ -506,19 +543,6 @@ export class BarberServiceClass {
       });
     } catch (error) {
       logger.error('Error adding barber services:', error);
-      throw error;
-    }
-  }
-
-  async deleteBarberService(serviceId: string): Promise<void> {
-    try {
-      await this.firestore
-        .collection(COLLECTIONS.BARBER_SERVICES)
-        .doc(serviceId)
-        .delete();
-      logger.info('Barber service deleted successfully', { serviceId });
-    } catch (error) {
-      logger.error('Error deleting barber service:', error);
       throw error;
     }
   }
@@ -645,13 +669,10 @@ export class BarberServiceClass {
         .where('barberId', '==', barberId);
 
       if (date) {
-        const startDate = new Date(date);
-        const endDate = new Date(date);
-        endDate.setDate(endDate.getDate() + 1);
-
+        const { start, end } = tashkentDayRange(date);
         query = query
-          .where('timestamp', '>=', startDate.toISOString())
-          .where('timestamp', '<', endDate.toISOString());
+          .where('timestamp', '>=', start)
+          .where('timestamp', '<', end);
       }
 
       const snapshot = await query.get();
@@ -694,6 +715,10 @@ export class BarberServiceClass {
           clientFirstName: clientData?.firstName || '',
           clientLastName: clientData?.lastName || '',
           timestamp: bookingData.timestamp,
+          status: effectiveBookingStatus(
+            bookingData.status,
+            bookingData.timestamp
+          ),
           services,
         });
       }

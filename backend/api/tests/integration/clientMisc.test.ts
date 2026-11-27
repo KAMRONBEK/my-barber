@@ -215,9 +215,13 @@ describe('client misc routes', () => {
 
       expect(res.body.ok).toBe(true);
       // Only the confirmed booking should appear; the completed one is filtered out
-      expect(res.body.data.items.every((b: { status: string }) =>
-        ['pending_confirmation', 'confirmed', 'rescheduled'].includes(b.status)
-      )).toBe(true);
+      expect(
+        res.body.data.items.every((b: { status: string }) =>
+          ['pending_confirmation', 'confirmed', 'rescheduled'].includes(
+            b.status
+          )
+        )
+      ).toBe(true);
     });
 
     it('accepts legacy path GET /client/barber-bookings', async () => {
@@ -248,6 +252,12 @@ describe('client misc routes', () => {
   describe('POST /client/bookings', () => {
     it('creates a new booking', async () => {
       seedApprovedBarber('newo1');
+      seedDoc(COLLECTIONS.BARBER_SERVICES, 'svc-1', {
+        id: 'svc-1',
+        barberId: 'newo1',
+        name: 'Cut',
+        price: 1,
+      });
       seedClient('cno1');
       const token = signClientToken('cno1', 'c_cno1');
 
@@ -347,8 +357,7 @@ describe('client misc routes', () => {
   });
 
   describe('PUT /client/update-device-id and DELETE /client/push-token', () => {
-    const validExpo =
-      'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx]';
+    const validExpo = 'ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx]';
 
     it('stores a valid Expo token', async () => {
       seedClient('cdev1');

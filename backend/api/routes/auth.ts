@@ -3,10 +3,16 @@ import { body, validationResult } from 'express-validator';
 import { authService } from '../services/authService';
 import { logger } from '../utils/logger';
 
+import { normalizePhone } from '../utils/phone';
+import { createLoginLimiter } from '../middleware/loginLimiter';
+import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy';
+
 const router = Router();
 
 // Auth routes will be implemented here
 // These will handle login/register for both barbers and clients
+
+const loginLimiter = createLoginLimiter();
 
 // Validation rules
 const barberRegisterValidation = [
@@ -14,8 +20,8 @@ const barberRegisterValidation = [
     .isLength({ min: 3, max: 50 })
     .withMessage('Username must be 3-50 characters'),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters'),
+    .isLength({ min: MIN_PASSWORD_LENGTH })
+    .withMessage(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`),
   body('firstName')
     .isLength({ min: 1, max: 50 })
     .withMessage('First name is required'),
@@ -40,20 +46,22 @@ const barberLoginValidation = [
 ];
 
 const clientRegisterValidation = [
-  body('username')
-    .isLength({ min: 3, max: 50 })
-    .withMessage('Username must be 3-50 characters'),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters'),
+    .isString()
+    .isLength({ min: MIN_PASSWORD_LENGTH })
+    .withMessage(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`),
   body('firstName')
+    .isString()
+    .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('First name is required'),
   body('lastName')
-    .isLength({ min: 1, max: 50 })
-    .withMessage('Last name is required'),
+    .optional()
+    .isString()
+    .isLength({ max: 50 })
+    .withMessage('Last name must be at most 50 characters'),
   body('phone')
-    .isMobilePhone('any')
+    .custom(value => normalizePhone(value) !== null)
     .withMessage('Valid phone number is required'),
 ];
 
@@ -203,6 +211,7 @@ router.post(
  */
 router.post(
   '/barber/login',
+  loginLimiter,
   barberLoginValidation,
   async (req: Request, res: Response) => {
     try {
@@ -288,8 +297,10 @@ router.post(
 
       if (result.ok) {
         res.status(201).json({
+          ok: true,
           success: true,
           token: result.token,
+          data: { client: result.client, token: result.token },
         });
       } else {
         res.status(400).json(result);
@@ -357,6 +368,7 @@ router.post(
  */
 router.post(
   '/client/login',
+  loginLimiter,
   clientLoginValidation,
   async (req: Request, res: Response) => {
     try {
