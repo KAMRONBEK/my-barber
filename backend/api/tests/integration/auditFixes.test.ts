@@ -299,6 +299,48 @@ describe('client sign-up with a phone number', () => {
     expect(again.body.error).toBe('Phone already registered');
   });
 
+  it('moves the phone sign-in along when the number is changed', async () => {
+    const signUp = async (phone: string) =>
+      (
+        await request(app)
+          .post('/auth/client/register')
+          .send({ phone, password: 'password1', firstName: 'Ali' })
+          .expect(201)
+      ).body.data;
+    const ali = await signUp('+998901110001');
+    await signUp('+998901110002');
+    const change = (phone: string) =>
+      request(app)
+        .put('/client/update')
+        .set('Authorization', `Bearer ${ali.token}`)
+        .send({ firstName: 'Ali', phone });
+    const signIn = (username: string) =>
+      request(app)
+        .post('/auth/client/login')
+        .send({ username, password: 'password1' });
+
+    const taken = await change('+998901110002').expect(400);
+    expect(taken.body.error).toBe('Phone already registered');
+
+    await change('90 111 00 03').expect(200);
+    await signIn('+998901110003').expect(200);
+    await signIn('+998901110001').expect(401);
+    // The old number is free again.
+    await signUp('+998901110001');
+  });
+
+  it('leaves an older username sign-in unchanged', async () => {
+    await request(app)
+      .put('/client/update')
+      .set('Authorization', asClient())
+      .send({ phone: '+998901110009' })
+      .expect(200);
+    expect(await stored(COLLECTIONS.CLIENTS, CLIENT)).toMatchObject({
+      username: `login_${CLIENT}`,
+      phone: '+998901110009',
+    });
+  });
+
   it('creates one account for simultaneous sign-ups', async () => {
     const send = () =>
       request(app).post('/auth/client/register').send({
@@ -343,6 +385,78 @@ describe('client sign-up with a phone number', () => {
     expect(normalizePhone('+99890123456')).toBeNull();
     expect(normalizePhone('client@test.local')).toBeNull();
     expect(normalizePhone('barber1')).toBeNull();
+  });
+});
+
+describe('barber application', () => {
+  const body = (location: unknown) => ({
+    username: `loc_${Math.random().toString(36).slice(2)}`,
+    password: 'password1',
+    firstName: 'A',
+    lastName: 'B',
+    phone: '+998901234567',
+    location,
+    birthDate: '1990-01-01',
+    workingHours: '09:00 - 18:00',
+  });
+  const point = {
+    address: 'Amir Temur 1',
+    coords: { latitude: 41.3, longitude: 69.2 },
+  };
+
+  it('accepts an address with a map point', async () => {
+    const res = await request(app)
+      .post('/auth/barber/register')
+      .send(body(point))
+      .expect(201);
+    expect(res.body.data.barber.location).toEqual(point);
+  });
+
+  it.each([
+    [''],
+    [{ address: 'x' }],
+    [{ coords: { latitude: 100, longitude: 0 } }],
+  ])('rejects the location %j', async location => {
+    await request(app)
+      .post('/auth/barber/register')
+      .send(body(location))
+      .expect(400);
+  });
+
+  it('lets a pending barber sync language and push token, nothing more', async () => {
+    seedBarber('af-wait', { approvalStatus: 'pending' });
+    const auth = asBarber('af-wait');
+    await request(app)
+      .put('/barber/locale')
+      .set('Authorization', auth)
+      .send({ locale: 'ru' })
+      .expect(200);
+    await request(app)
+      .delete('/barber/push-token')
+      .set('Authorization', auth)
+      .expect(200);
+    await request(app)
+      .get('/barber/bookings')
+      .set('Authorization', auth)
+      .expect(403);
+  });
+
+  it('drops the old review note when the status changes', async () => {
+    seedBarber('af-wait', {
+      approvalStatus: 'pending',
+      approvalMessage: 'Your account is under review',
+    });
+    process.env.ADMIN_API_KEY = 'key-2';
+    try {
+      const res = await request(app)
+        .patch('/admin/barbers/af-wait/approval')
+        .set('X-Admin-Api-Key', 'key-2')
+        .send({ status: 'rejected' })
+        .expect(200);
+      expect(res.body.data.approvalMessage ?? null).toBeNull();
+    } finally {
+      delete process.env.ADMIN_API_KEY;
+    }
   });
 });
 

@@ -8,6 +8,8 @@ import { barberService } from '../services/barberService';
 import { favoriteService } from '../services/favoriteService';
 import { bookingService } from '../services/bookingService';
 import { authService } from '../services/authService';
+import { USERNAME_TAKEN } from '../services/usernameRegistry';
+import { normalizePhone } from '../utils/phone';
 import { logger } from '../utils/logger';
 import { sendBookingError } from '../utils/bookingErrors';
 import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy';
@@ -216,9 +218,10 @@ router.put(
       .optional()
       .isLength({ max: 50 })
       .withMessage('Last name must be at most 50 characters'),
+    // Same formats as sign-up accepts.
     body('phone')
       .optional()
-      .isMobilePhone('any')
+      .custom(value => normalizePhone(value) !== null)
       .withMessage('Valid phone number is required'),
     body('location')
       .optional()
@@ -255,6 +258,11 @@ router.put(
         message: 'Profile updated successfully',
       });
     } catch (error) {
+      if ((error as Error).message === USERNAME_TAKEN) {
+        return res
+          .status(400)
+          .json({ ok: false, error: 'Phone already registered' });
+      }
       logger.error('Error updating client profile:', error);
       res.status(500).json({
         ok: false,

@@ -20,6 +20,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Text } from '../src/atoms/Text';
 import { Input } from '../src/atoms/Input';
+import { PhoneInput } from '../src/molecules/PhoneInput';
+import { isPhoneUsername, localFromPhone, phoneFromLocal } from '../src/lib/phone';
 import { Button } from '../src/atoms/Button';
 import { Icon } from '../src/atoms/Icon';
 import { Avatar } from '../src/atoms/Avatar';
@@ -28,6 +30,7 @@ import { ScreenLayout } from '../src/templates/ScreenLayout';
 import { getMe, api, uploadClientAvatar } from '../src/lib/api';
 import { useAuthStore } from '../src/lib/auth';
 import { queryKeys, STALE } from '../src/lib/query';
+import { authErrorKey } from '../src/lib/authErrors';
 import { useLocationPickerStore } from '../src/lib/locationPicker';
 import type { AppTheme } from '../src/lib/restyle';
 
@@ -49,6 +52,8 @@ export default function ProfileEditScreen() {
   const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
+  // A number outside Uzbekistan cannot use the +998 field.
+  const foreignPhone = !!profile?.phone && localFromPhone(profile.phone) === null;
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
@@ -63,7 +68,7 @@ export default function ProfileEditScreen() {
       setFirstName(profile.firstName ?? '');
       setLastName(profile.lastName ?? '');
       setUsername(profile.username ?? '');
-      setPhone(profile.phone ?? '');
+      setPhone(localFromPhone(profile.phone ?? '') ?? profile.phone ?? '');
       setLocation(profile.location ?? '');
     }
   }, [profile]);
@@ -81,17 +86,28 @@ export default function ProfileEditScreen() {
       isAxiosError<{ error?: string }>(err) && err.response?.data?.error
         ? err.response.data.error
         : null;
-    return serverMessage ?? t('common.error');
+    const known = authErrorKey(err, '');
+    return known ? t(known) : (serverMessage ?? t('common.error'));
   }
 
   async function onSave() {
+    const fullPhone = foreignPhone ? phone : phoneFromLocal(phone);
+    if (!fullPhone) {
+      setSaveError(t('signup.errors.phone'));
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     try {
       // Username changes require a password confirmation and go through
       // /client/update-credentials, not this endpoint — the field here is
       // display-only.
-      await api.put('/client/update', { firstName, lastName, phone, location });
+      await api.put('/client/update', {
+        firstName,
+        lastName,
+        phone: fullPhone,
+        location,
+      });
       const fresh = await refetch();
       if (fresh.data) {
         await setClient(fresh.data);
@@ -227,24 +243,36 @@ export default function ProfileEditScreen() {
                 textContentType="familyName"
                 testID="edit-lastName"
               />
-              <Input
-                label={t('profileEdit.username')}
-                value={username}
-                editable={false}
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="username"
-                testID="edit-username"
-                style={{ opacity: 0.6 }}
-              />
-              <Input
-                label={t('profileEdit.phone')}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                textContentType="telephoneNumber"
-                testID="edit-phone"
-              />
+              {/* A phone username is the phone field below. */}
+              {!isPhoneUsername(username) && (
+                <Input
+                  label={t('profileEdit.username')}
+                  value={username}
+                  editable={false}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="username"
+                  testID="edit-username"
+                  style={{ opacity: 0.6 }}
+                />
+              )}
+              {foreignPhone ? (
+                <Input
+                  label={t('profileEdit.phone')}
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                  textContentType="telephoneNumber"
+                  testID="edit-phone"
+                />
+              ) : (
+                <PhoneInput
+                  label={t('profileEdit.phone')}
+                  value={phone}
+                  onChangeText={setPhone}
+                  testID="edit-phone"
+                />
+              )}
               <View style={styles.wrap}>
                 <Text style={[styles.fieldLabel, { color: theme.colors.muted }]}>
                   {t('profileEdit.location')}

@@ -11,6 +11,8 @@ const ALLOW_WITHOUT_APPROVAL = new Set([
   '/update-avatar',
   '/add-image',
   '/update-device-id',
+  '/locale',
+  '/push-token',
 ]);
 
 export async function barberApprovalGate(

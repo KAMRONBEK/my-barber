@@ -7,3 +7,4 @@ export * from './booking';
 export * from './slot';
 export * from './notification';
 export * from './duration';
+export * from './auth';

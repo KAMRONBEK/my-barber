@@ -18,6 +18,15 @@ import {
 import { writeWithUniqueUsername } from './usernameRegistry';
 import { effectiveBookingStatus, occupiesSlot } from '../utils/bookingRules';
 import { tashkentDayRange } from '../utils/tashkentTime';
+import { normalizePhone } from '../utils/phone';
+
+function withoutUndefined(
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(data).filter(([, value]) => value !== undefined)
+  );
+}
 
 export class ClientServiceClass {
   private firestore = db.getFirestore();
@@ -95,15 +104,36 @@ export class ClientServiceClass {
     updateData: ClientUpdateRequest
   ): Promise<void> {
     try {
-      const updateObject = {
+      const updateObject: Record<string, unknown> = {
         ...updateData,
         updatedAt: new Date(),
       };
+      const phone = normalizePhone(updateData.phone);
+      if (phone) updateObject.phone = phone;
 
-      await this.firestore
-        .collection(COLLECTIONS.CLIENTS)
-        .doc(id)
-        .update(updateObject);
+      // Whoever signs in with a phone number must be able to sign in with the
+      // new one, so the username moves together with it.
+      const current = phone ? await this.getClientById(id) : null;
+      const signsInByPhone =
+        !!current && normalizePhone(current.username) === current.username;
+
+      if (phone && signsInByPhone && current.username !== phone) {
+        await writeWithUniqueUsername({
+          kind: 'client',
+          userId: id,
+          username: phone,
+          write: (tx, ref) =>
+            tx.update(ref, {
+              ...withoutUndefined(updateObject),
+              username: phone,
+            }),
+        });
+      } else {
+        await this.firestore
+          .collection(COLLECTIONS.CLIENTS)
+          .doc(id)
+          .update(updateObject);
+      }
       logger.info('Client profile updated successfully', { clientId: id });
     } catch (error) {
       logger.error('Error updating client profile:', error);

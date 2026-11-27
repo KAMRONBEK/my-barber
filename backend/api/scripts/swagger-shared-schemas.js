@@ -358,7 +358,24 @@ function sharedSchemas() {
         firstName: { type: 'string', maxLength: 50 },
         lastName: { type: 'string', maxLength: 50 },
         phone: { type: 'string' },
-        location: { type: 'string', maxLength: 100 },
+        location: {
+          oneOf: [
+            { type: 'string', maxLength: 100 },
+            {
+              type: 'object',
+              properties: {
+                address: { type: 'string', maxLength: 200 },
+                coords: {
+                  type: 'object',
+                  properties: {
+                    latitude: { type: 'number' },
+                    longitude: { type: 'number' },
+                  },
+                },
+              },
+            },
+          ],
+        },
         birthDate: { type: 'string', format: 'date' },
         workingHours: { type: 'string', maxLength: 100 },
       },

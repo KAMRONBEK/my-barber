@@ -4,6 +4,7 @@ import { authService } from '../services/authService';
 import { logger } from '../utils/logger';
 
 import { normalizePhone } from '../utils/phone';
+import { isValidBarberLocation } from '../utils/barberLocation';
 import { createLoginLimiter } from '../middleware/loginLimiter';
 import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy';
 
@@ -32,7 +33,7 @@ const barberRegisterValidation = [
     .isMobilePhone('any')
     .withMessage('Valid phone number is required'),
   body('location')
-    .isLength({ min: 1, max: 100 })
+    .custom(isValidBarberLocation)
     .withMessage('Location is required'),
   body('birthDate').isISO8601().withMessage('Valid birth date is required'),
   body('workingHours')

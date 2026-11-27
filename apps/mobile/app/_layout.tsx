@@ -45,6 +45,7 @@ import {
   subscribeToPushTokenRotation,
 } from '../src/lib/pushToken';
 import { syncLocaleToBackend } from '../src/lib/localeSync';
+import { isBarberApproved, useBarberApprovalSync } from '../src/lib/approval';
 import { useArrivalCheckStore } from '../src/lib/arrivalCheck';
 import { useArrivalReminderPoll } from '../src/lib/useArrivalReminderPoll';
 import { ArrivalConfirmationSheet } from '../src/molecules/ArrivalConfirmationSheet';
@@ -78,6 +79,7 @@ export default function RootLayout() {
   const status = useAuthStore((s) => s.status);
   const role = useAuthStore((s) => s.role);
   const hydrate = useAuthStore((s) => s.hydrate);
+  const barberApproved = useAuthStore((s) => isBarberApproved(s.barber));
   const segments = useSegments();
   const router = useRouter();
 
@@ -120,6 +122,9 @@ export default function RootLayout() {
     if (status !== 'authenticated' || !role) return;
     void syncLocaleToBackend(role, locale);
   }, [status, role, locale]);
+
+  // Picks up approval or suspension decided by an admin since the last visit.
+  useBarberApprovalSync();
 
   // Foreground/backgrounded → foregrounded polling backstop, and periodic
   // local-notification scheduling, for the arrival-confirmation prompt.
@@ -194,7 +199,14 @@ export default function RootLayout() {
         const role = useAuthStore.getState().role;
         const onBarber = segments[0] === '(barber)';
 
-        if (role === 'barber') {
+        if (role === 'barber' && !barberApproved) {
+          // Until an admin approves, only the waiting screen and the
+          // appearance/language settings are reachable.
+          const allowed = ['awaiting-approval', 'appearance', 'language'];
+          if (!allowed.includes(segments[0] as string)) {
+            router.replace('/awaiting-approval' as any);
+          }
+        } else if (role === 'barber') {
           // Barbers belong in the barber workspace, but appearance/language/
           // notifications are shared top-level screens both roles can reach.
           const onValidBarberScreen =
@@ -233,14 +245,19 @@ export default function RootLayout() {
         const seen = await getItem(ONBOARDING_SEEN_KEY);
         if (!seen && !onOnboarding) {
           router.replace('/onboarding');
-        } else if (!onAuthRoute && !onOnboarding) {
+        } else if (
+          !onAuthRoute &&
+          !onOnboarding &&
+          // Barber sign-up opens the map to pick the shop's location.
+          (segments[0] as string) !== 'location-picker'
+        ) {
           router.replace('/(auth)/login');
         }
       }
     }
 
     void navigate();
-  }, [status, segments, router]);
+  }, [status, segments, router, barberApproved]);
 
   // Consumes a deep link queued by the notification-tap effect above because
   // it arrived before auth hydration settled (cold start). Declared after

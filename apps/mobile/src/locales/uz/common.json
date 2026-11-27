@@ -21,7 +21,7 @@
     "welcomeBack": "Xush kelibsiz",
     "signIn": "Kirish",
     "signInTitle": "Kirish.",
-    "signInBody": "Ro'yxatdan o'tgan emailingizdan foydalaning. Sizni shu qurilmada saqlab qolamiz.",
+    "signInBody": "Telefon yoki login va parolni kiriting. Sizni shu qurilmada saqlab qolamiz.",
     "username": "Foydalanuvchi nomi",
     "password": "Parol",
     "forgotPassword": "Parolni unutdingizmi?",
@@ -33,15 +33,14 @@
     "continueWithGoogle": "Google orqali kirish",
     "continueWithApple": "Apple orqali kirish",
     "switchRole": "Rolni o'zgartirish",
-    "emailAddress": "Elektron pochta manzilingiz",
-    "choosePassword": "Parol tanlang",
-    "passwordSubtitle": "Kamida 8 ta belgi, bitta raqam va bitta katta harf.",
-    "passwordWeak": "Kuchsiz",
-    "passwordFair": "O'rtacha",
-    "passwordStrong": "Kuchli",
-    "verification": "Tasdiqlash",
-    "enterCode": "Kodni kiriting",
-    "enterCodeSubtitle": "{{phone}} raqamiga yuborilgan kodni kiriting."
+    "signInBodyBarber": "Sartarosh logini va parolini kiriting. Sizni shu qurilmada saqlab qolamiz.",
+    "forgotPasswordHelp": "Kirishni tiklash uchun qo'llab-quvvatlashga qo'ng'iroq qiling: {{phone}}.",
+    "callSupport": "Qo'ng'iroq qilish",
+    "networkError": "Server bilan aloqa yo'q. Internetni tekshiring.",
+    "tooManyAttempts": "Urinishlar juda ko'p. 15 daqiqadan keyin qayta urining.",
+    "signInBodyPhone": "Telefon raqami va parolni kiriting. Sizni shu qurilmada saqlab qolamiz.",
+    "signInByUsername": "Login orqali kirish",
+    "signInByPhone": "Telefon raqami orqali kirish"
   },
   "home": {
     "greeting": "Salom, {{name}} —",
@@ -355,5 +354,57 @@
     "9": "oktyabr",
     "10": "noyabr",
     "11": "dekabr"
+  },
+  "signup": {
+    "clientTitle": "Mijoz ro'yxatdan o'tishi.",
+    "clientBody": "Ism va telefon raqami, so'ng parol.",
+    "barberTitle": "Sartarosh arizasi.",
+    "barberBody": "Administrator tekshirgandan so'ng kirish ochiladi.",
+    "firstName": "Ism",
+    "lastName": "Familiya",
+    "lastNameOptional": "Familiya (ixtiyoriy)",
+    "phone": "Telefon raqami",
+    "address": "Salon manzili",
+    "pickOnMap": "Xaritada belgilash",
+    "pointSelected": "Xaritada nuqta tanlandi",
+    "birthDate": "Tug'ilgan sana",
+    "birthDateHint": "KK.OO.YYYY",
+    "opensAt": "Ochilish",
+    "closesAt": "Yopilish",
+    "haveAccount": "Akkauntim bor",
+    "errors": {
+      "required": "Bu maydonni to'ldiring",
+      "phone": "Raqamning barcha 9 ta raqamini kiriting",
+      "password": "Parol kamida 8 ta belgi",
+      "username": "Login kamida 3 ta belgi",
+      "birthDate": "Sanani KK.OO.YYYY shaklida kiriting",
+      "time": "Vaqtni tekshiring (SS:DD)",
+      "checkFields": "Belgilangan maydonlarni tekshiring.",
+      "phoneTaken": "Bu raqam ro'yxatdan o'tgan.",
+      "usernameTaken": "Bu login band.",
+      "failed": "Akkaunt yaratilmadi. Qayta urinib ko'ring.",
+      "passwordMismatch": "Parollar mos kelmadi"
+    },
+    "passwordTitle": "Parol o'ylab toping.",
+    "passwordBody": "Xato bo'lmasligi uchun uni ikki marta kiriting.",
+    "passwordRepeat": "Parolni takrorlang",
+    "passwordHint": "Kamida 8 ta belgi"
+  },
+  "approval": {
+    "pending": {
+      "title": "Ariza tekshirilmoqda",
+      "body": "Administrator ma'lumotlaringizni tekshirmoqda. Tasdiqlangach, kirish darhol ochiladi."
+    },
+    "rejected": {
+      "title": "Ariza rad etildi",
+      "body": "Administrator akkauntni tasdiqlamadi."
+    },
+    "suspended": {
+      "title": "Akkaunt bloklandi",
+      "body": "Ilovaga kirish to'xtatib qo'yildi."
+    },
+    "check": "Holatni tekshirish",
+    "unchanged": "Holat hozircha o'zgarmadi.",
+    "language": "Til"
   }
 }
