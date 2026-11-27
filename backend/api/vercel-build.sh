@@ -17,7 +17,7 @@ echo "Bundling with esbuild..."
 ../../node_modules/.bin/esbuild server.ts \
   --bundle \
   --platform=node \
-  --target=node20 \
+  --target=node22 \
   --outfile=.vercel/output/functions/api.func/index.js \
   '--external:sharp' \
   '--external:@img/sharp-linux-x64' \
@@ -32,7 +32,7 @@ echo "Writing function config..."
 cat > .vercel/output/functions/api.func/.vc-config.json << 'EOF'
 {
   "handler": "index.js",
-  "runtime": "nodejs20.x",
+  "runtime": "nodejs22.x",
   "architecture": "x86_64",
   "launcherType": "Nodejs",
   "shouldAddHelpers": true,
