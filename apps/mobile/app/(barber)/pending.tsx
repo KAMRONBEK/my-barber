@@ -21,6 +21,7 @@ import {
   BARBER_TAB_BAR_BOTTOM_OFFSET,
 } from '../../src/navigation/BarberTabBar';
 import type { AppTheme } from '../../src/lib/restyle';
+import { serviceMinutes } from '../../src/lib/duration';
 
 function isoDate(d: Date) {
   return d.toISOString().split('T')[0];
@@ -85,10 +86,7 @@ export default function BarberPendingScreen() {
 
   const totalHours = thisWeek.reduce((acc, b) => {
     const dur =
-      b.services?.reduce(
-        (s: number, svc: any) => s + (svc.durationMinutes ?? 45),
-        0,
-      ) ?? 45;
+      serviceMinutes(b.services);
     return acc + dur / 60;
   }, 0);
 
@@ -289,11 +287,7 @@ export default function BarberPendingScreen() {
                     0,
                   ) ?? 0;
                 const duration =
-                  b.services?.reduce(
-                    (s: number, svc: any) =>
-                      s + (svc.durationMinutes ?? 45),
-                    0,
-                  ) ?? 45;
+                  serviceMinutes(b.services);
                 const d = new Date(b.timestamp);
                 const timeStr = d.toLocaleTimeString('uz-UZ', {
                   hour: '2-digit',

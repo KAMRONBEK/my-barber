@@ -30,7 +30,8 @@ import {
   TAB_BAR_PILL_HEIGHT,
   TAB_BAR_BOTTOM_OFFSET,
 } from '../navigation/GlassTabBar';
-import { api, cancelBooking, getBarbers } from '../lib/api';
+import { cancelBooking, getBarbers } from '../lib/api';
+import { UPCOMING_QUERY_KEY, fetchClientBookings, type ClientBooking } from '../lib/bookings';
 import { bookingErrorKey } from '../lib/bookingErrors';
 import { queryKeys, STALE } from '../lib/query';
 import {
@@ -42,6 +43,7 @@ import {
   effectiveBookingStatus,
 } from '../lib/format';
 import type { AppTheme } from '../lib/restyle';
+import { serviceMinutes } from '../lib/duration';
 
 // Statuses the client can still back out of. Declined/cancelled/completed/
 // no-show are terminal; a booking whose time already passed can't be
@@ -62,18 +64,7 @@ function isCancellable(item: BookingHistoryItem): boolean {
 
 type Segment = 'upcoming' | 'past';
 
-// Minimal shape from GET /client/bookings?status=... — the wire contract has
-// no embedded barber display info, only barber_id, so the name is resolved
-// client-side against /client/barbers (see barberById below).
-interface BookingHistoryItem {
-  id: string;
-  timestamp: string;
-  status: string;
-  barber_id: string;
-  cancellation_reason?: string | null;
-  reviewed?: boolean;
-  services?: Array<{ name: string; price: number; durationMinutes?: number }>;
-}
+type BookingHistoryItem = ClientBooking;
 
 interface BookingsByWeek {
   label: string;
@@ -127,17 +118,6 @@ function groupByWeek(
     label,
     items: bookings,
   }));
-}
-
-// GET /client/bookings?status=... returns a cursor page — the array lives
-// under data.items, not data directly (matches BookingContract's shape from
-// @my-barber/types, but we only need the fields BookingHistoryItem uses).
-async function fetchBookings(status: Segment): Promise<BookingHistoryItem[]> {
-  const r = await api.get<{ ok: boolean; data: { items: BookingHistoryItem[] } }>(
-    '/client/bookings',
-    { params: { status } },
-  );
-  return r.data.data?.items ?? [];
 }
 
 export const BookingHistoryScreen: React.FC = () => {
@@ -204,13 +184,13 @@ export const BookingHistoryScreen: React.FC = () => {
   // (see `items` below), and this also makes switching tabs instant since
   // neither query re-fires on segment change.
   const upcomingQuery = useQuery({
-    queryKey: ['bookings', 'upcoming'],
-    queryFn: () => fetchBookings('upcoming'),
+    queryKey: UPCOMING_QUERY_KEY,
+    queryFn: () => fetchClientBookings('upcoming'),
     staleTime: 30_000,
   });
   const pastQuery = useQuery({
     queryKey: ['bookings', 'past'],
-    queryFn: () => fetchBookings('past'),
+    queryFn: () => fetchClientBookings('past'),
     staleTime: 30_000,
   });
   const isLoading = upcomingQuery.isLoading || pastQuery.isLoading;
@@ -527,10 +507,7 @@ export const BookingHistoryScreen: React.FC = () => {
             (() => {
               const start = new Date(activeItem.timestamp);
               const duration =
-                activeItem.services?.reduce(
-                  (s, svc) => s + (svc.durationMinutes ?? 45),
-                  0,
-                ) ?? 45;
+                serviceMinutes(activeItem.services);
               const total = (activeItem.services ?? []).reduce(
                 (sum, s) => sum + s.price,
                 0,

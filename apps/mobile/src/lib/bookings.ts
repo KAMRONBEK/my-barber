@@ -26,3 +26,39 @@ export async function fetchCompletedCuts(): Promise<CutHistoryItem[]> {
   );
   return r.data.data?.items ?? [];
 }
+
+/** One entry of the client's own booking history. */
+export interface ClientBooking {
+  id: string;
+  timestamp: string;
+  status: string;
+  barber_id: string;
+  cancellation_reason?: string | null;
+  reviewed?: boolean;
+  services?: Array<{ name: string; price: number; durationMinutes?: number }>;
+}
+
+// The home banner and the bookings list read the same cache entry.
+export const UPCOMING_QUERY_KEY = ['bookings', 'upcoming'] as const;
+
+export async function fetchClientBookings(
+  status: 'upcoming' | 'past',
+): Promise<ClientBooking[]> {
+  const r = await api.get<{ ok: boolean; data: { items: ClientBooking[] } }>(
+    '/client/bookings',
+    { params: { status } },
+  );
+  return r.data.data?.items ?? [];
+}
+
+/** The soonest visit that is still ahead. */
+export function nextBooking(
+  items: ClientBooking[],
+  now: number = Date.now(),
+): ClientBooking | null {
+  return (
+    items
+      .filter((b) => b.status !== 'cancelled' && new Date(b.timestamp).getTime() >= now)
+      .sort((a, b) => a.timestamp.localeCompare(b.timestamp))[0] ?? null
+  );
+}

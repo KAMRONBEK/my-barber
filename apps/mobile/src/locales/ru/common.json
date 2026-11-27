@@ -46,7 +46,8 @@
     "greeting": "Привет, {{name}} —",
     "greetingPrefix": "Привет, ",
     "dateLine": "{{weekday}} · {{date}}",
-    "upcomingEyebrow": "Скоро · Сегодня",
+    "upcomingEyebrow": "Скоро",
+    "today": "Сегодня",
     "viewBooking": "Открыть запись",
     "bookAgain": "Записаться снова",
     "seeAll": "Все",
@@ -84,7 +85,11 @@
     "share": "Поделиться",
     "aboutMe": "О себе",
     "schedule": "График работы",
-    "bio": "Восемь лет специализируется на градиентных стрижках, оформлении бороды и редакторском мужском груминге."
+    "bio": "Восемь лет специализируется на градиентных стрижках, оформлении бороды и редакторском мужском груминге.",
+    "allServices": "Все {{count}}",
+    "directions": "Маршрут",
+    "kmAway": "{{distance}} км от вас",
+    "more": "Подробнее"
   },
   "booking": {
     "title": "Записаться",
@@ -107,10 +112,6 @@
     "durationHrMin": "{{hours}} ч {{minutes}} мин"
   },
   "confirmation": {
-    "eyebrow": "Запись подтверждена",
-    "title": "Вы в кресле.",
-    "body": "{{name}} ждёт вас {{dayLong}}, {{date}}, в {{time}}. Напомним за 24 часа.",
-    "status": "Подтверждено",
     "addCalendar": "В календарь",
     "viewBooking": "Открыть запись",
     "viewBookings": "Мои записи",
@@ -119,8 +120,18 @@
     "cancelConfirmTitle": "Подтвердить отмену?",
     "cancelConfirmBody": "Если вы отмените запись, время освободится для других.",
     "cancelledNote": "Запись отменена.",
-    "footnote": "Бесплатная отмена за 24 часа.",
-    "ref": "Номер записи"
+    "ref": "Номер записи",
+    "pending": {
+      "eyebrow": "Заявка отправлена",
+      "title": "Ждём ответа.",
+      "body": "{{name}}: {{dayLong}}, {{date}} в {{time}}. Барбер должен подтвердить запись."
+    },
+    "confirmed": {
+      "eyebrow": "Запись подтверждена",
+      "title": "Вы в кресле.",
+      "body": "{{name}} ждёт вас {{dayLong}}, {{date}}, в {{time}}."
+    },
+    "footnote": "Отменить запись можно в разделе «Записи» до её начала."
   },
   "arrivalCheck": {
     "titleClient": "Ваша запись начинается",
@@ -199,15 +210,17 @@
     "title": "Все барберы",
     "subtitle": "Найдите мастера рядом",
     "filterLabel": "Фильтры",
-    "filterRating": "★ 4.8+",
-    "filterDistance": "1.5 км",
+    "filterRating": "По рейтингу",
+    "filterDistance": "Сначала рядом",
     "filterOpen": "Сейчас открыт",
     "filterBeard": "Борода",
     "resultCount": "{{count}} барбер(ов)",
     "open": "Открыт",
     "closed": "Закрыт",
     "mapView": "Карта",
-    "listView": "Список"
+    "listView": "Список",
+    "filterAll": "Все",
+    "locationNeeded": "Разрешите доступ к геолокации, чтобы отсортировать по расстоянию."
   },
   "map": {
     "title": "Карта",
@@ -319,7 +332,8 @@
     "removeService": "Удалить",
     "photos": "Фото портфолио",
     "addPhoto": "Добавить фото",
-    "removePhoto": "Удалить фото"
+    "removePhoto": "Удалить фото",
+    "portfolioEditTitle": "Редактирование портфолио"
   },
   "weekday": {
     "short": {

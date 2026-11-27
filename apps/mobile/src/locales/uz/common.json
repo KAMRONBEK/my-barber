@@ -46,7 +46,8 @@
     "greeting": "Salom, {{name}} —",
     "greetingPrefix": "Salom, ",
     "dateLine": "{{weekday}} · {{date}}",
-    "upcomingEyebrow": "Bo'lajak · Bugun",
+    "upcomingEyebrow": "Bo'lajak",
+    "today": "Bugun",
     "viewBooking": "Buyurtmani ko'rish",
     "bookAgain": "Yana band qilish",
     "seeAll": "Hammasi",
@@ -111,10 +112,6 @@
     "durationHrMin": "{{hours}} soat {{minutes}} min"
   },
   "confirmation": {
-    "eyebrow": "Buyurtma tasdiqlandi",
-    "title": "Siz o'rindiqdasiz.",
-    "body": "{{name}} sizni {{dayLong}}, {{date}}, soat {{time}} da kutadi. 24 soat oldin eslatib qo'yamiz.",
-    "status": "Tasdiqlangan",
     "addCalendar": "Kalendarga qo'shish",
     "viewBooking": "Buyurtmani ko'rish",
     "viewBookings": "Buyurtmalarim",
@@ -123,8 +120,18 @@
     "cancelConfirmTitle": "Bekor qilishni tasdiqlaysizmi?",
     "cancelConfirmBody": "Buyurtmani bekor qilsangiz, bu vaqt boshqalar uchun ochiladi.",
     "cancelledNote": "Buyurtma bekor qilindi.",
-    "footnote": "24 soat oldin bepul bekor qilish mumkin.",
-    "ref": "Buyurtma raqami"
+    "ref": "Buyurtma raqami",
+    "pending": {
+      "eyebrow": "Ariza yuborildi",
+      "title": "Javobni kutamiz.",
+      "body": "{{name}}: {{dayLong}}, {{date}}, soat {{time}}. Sartarosh yozuvni tasdiqlashi kerak."
+    },
+    "confirmed": {
+      "eyebrow": "Buyurtma tasdiqlandi",
+      "title": "Siz o'rindiqdasiz.",
+      "body": "{{name}} sizni {{dayLong}}, {{date}}, soat {{time}} da kutadi."
+    },
+    "footnote": "Yozuvni boshlanishigacha «Buyurtmalar» bo'limida bekor qilish mumkin."
   },
   "arrivalCheck": {
     "titleClient": "Uchrashuvingiz boshlanmoqda",
@@ -203,15 +210,17 @@
     "title": "Barcha sartaroshlar",
     "subtitle": "Yaqinidagi ustalarni toping",
     "filterLabel": "Filtrlar",
-    "filterRating": "★ 4.8+",
-    "filterDistance": "1.5 km",
+    "filterRating": "Reyting bo'yicha",
+    "filterDistance": "Avval yaqinlar",
     "filterOpen": "Hozir ochiq",
     "filterBeard": "Soqol",
     "resultCount": "{{count}} ta sartarosh",
     "open": "Ochiq",
     "closed": "Yopiq",
     "mapView": "Xarita ko'rinishi",
-    "listView": "Ro'yxat ko'rinishi"
+    "listView": "Ro'yxat ko'rinishi",
+    "filterAll": "Barchasi",
+    "locationNeeded": "Masofa bo'yicha saralash uchun joylashuvga ruxsat bering."
   },
   "map": {
     "title": "Xarita",

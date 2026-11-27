@@ -11,14 +11,16 @@ import { Badge } from '../atoms/Badge';
 import {
   formatUZS,
   formatTimeRange,
+  bookingStatusLabel,
+  bookingStatusTone,
   formatWeekdayShort,
   formatDayMonth,
 } from '../lib/format';
 import type { AppTheme } from '../lib/restyle';
 import {
-  calculateTotalDuration,
   type Booking,
 } from '@my-barber/types';
+import { serviceMinutes } from '../lib/duration';
 
 export interface BookingTicketProps {
   booking: Booking;
@@ -38,17 +40,10 @@ export const BookingTicket: React.FC<BookingTicketProps> = ({
 
   const start = new Date(booking.timestamp);
   const total = booking.services.reduce((sum, s) => sum + s.price, 0);
-  const duration = calculateTotalDuration(
-    booking.services.map((s) => ({ durationMinutes: undefined })),
-  );
+  const duration = serviceMinutes(booking.services);
   const serviceLabel = booking.services.map((s) => s.name).join(' + ');
 
-  const statusTone =
-    booking.status === 'confirmed'
-      ? 'success'
-      : booking.status === 'cancelled' || booking.status === 'declined'
-      ? 'danger'
-      : 'accent';
+  const statusTone = bookingStatusTone(booking.status);
 
   return (
     <View
@@ -82,7 +77,7 @@ export const BookingTicket: React.FC<BookingTicketProps> = ({
             </Text>
           ) : null}
         </View>
-        <Badge label={t(`confirmation.status`)} tone={statusTone} />
+        <Badge label={bookingStatusLabel(booking.status)} tone={statusTone} />
       </View>
 
       <View

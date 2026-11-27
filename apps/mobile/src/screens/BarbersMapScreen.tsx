@@ -20,12 +20,11 @@ import { useTheme } from '@shopify/restyle';
 import { useTranslation } from 'react-i18next';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { YandexMapView, type YandexMapViewRef } from 'expo-yandex-mapkit';
-import * as Location from 'expo-location';
 import {
   DEFAULT_CAMERA,
   FOCUS_ZOOM,
   WARM_DARK_MAP_STYLE,
-  parseBarberCoordinate,
+  extractBarberCoordinate,
 } from '../lib/maps';
 import { BarberMapMarker } from '../molecules/BarberMapMarker';
 import { Text } from '../atoms/Text';
@@ -41,6 +40,9 @@ import {
 } from '../navigation/GlassTabBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AppTheme } from '../lib/restyle';
+import { listBarbers, type BarberFilter } from '../lib/barberList';
+import { openState } from '../lib/openState';
+import { useUserCoordinate } from '../lib/useUserCoordinate';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -52,20 +54,12 @@ const CARD_GRADIENTS = [
   ['#2a2a2a', '#181818'] as const,
 ];
 
-const FILTER_CHIPS: Array<{ key: string; labelKey: string; icon?: boolean }> = [
-  { key: 'filters', labelKey: 'map.filters', icon: true },
+const FILTER_CHIPS: Array<{ key: BarberFilter; labelKey: string }> = [
+  { key: 'all', labelKey: 'search.filterAll' },
   { key: 'rating', labelKey: 'map.filterRating' },
   { key: 'distance', labelKey: 'map.filterDistance' },
-  { key: 'style', labelKey: 'map.filterStyle' },
   { key: 'open', labelKey: 'map.openNow' },
 ];
-
-function getBarberCoordinate(
-  barber: ApiBarberFull,
-  index: number,
-): { latitude: number; longitude: number } {
-  return parseBarberCoordinate(barber.location, index);
-}
 
 export const BarbersMapScreen: React.FC = () => {
   const theme = useTheme<AppTheme>();
@@ -77,7 +71,8 @@ export const BarbersMapScreen: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
   const [selectedPin, setSelectedPin] = useState<number | null>(null);
   const [query, setQuery] = useState('');
-  const [activeChip, setActiveChip] = useState('filters');
+  const [activeChip, setActiveChip] = useState<BarberFilter>('all');
+  const { coordinate: user, request: requestUser } = useUserCoordinate();
   const [mapLoaded, setMapLoaded] = useState(false);
   const didFitRef = useRef(false);
 
@@ -89,28 +84,21 @@ export const BarbersMapScreen: React.FC = () => {
 
   const rawBarbers = barbersQuery.data ?? [];
 
-  // Only show approved barbers on the map; apply simple text filter if query entered.
-  const barbers = useMemo(() => {
-    let list = rawBarbers.filter(
-      (b) => !b.approvalStatus || b.approvalStatus === 'approved'
-    );
-    const q = query.trim().toLowerCase();
-    if (q) {
-      list = list.filter((b) => {
-        const fullName = `${b.firstName} ${b.lastName}`.toLowerCase();
-        const services = (b.services ?? [])
-          .map((s) => s.name.toLowerCase())
-          .join(' ');
-        return fullName.includes(q) || services.includes(q);
-      });
-    }
-    return list;
-  }, [rawBarbers, query]);
+  // Only barbers who marked their shop on the map can be shown on it; a
+  // guessed pin would send the client to the wrong place.
+  const barbers = useMemo(
+    () =>
+      listBarbers(
+        rawBarbers.filter((b) => extractBarberCoordinate(b.location)),
+        { query, filter: activeChip, user },
+      ),
+    [rawBarbers, query, activeChip, user],
+  );
 
   // Stable per-barber coordinates so the memoized markers don't get a fresh
   // `point` object (and re-render) on every parent state change.
   const coords = useMemo(
-    () => barbers.map((b, i) => getBarberCoordinate(b, i)),
+    () => barbers.map((b) => extractBarberCoordinate(b.location)!),
     [barbers]
   );
 
@@ -155,20 +143,13 @@ export const BarbersMapScreen: React.FC = () => {
   );
 
   const handleLocateMe = useCallback(async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') return;
-    const loc = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
+    const position = await requestUser();
+    if (!position) return;
     void mapRef.current?.setCenter(
-      {
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-        zoom: FOCUS_ZOOM,
-      },
+      { ...position, zoom: FOCUS_ZOOM },
       { durationSeconds: 0.5 }
     );
-  }, []);
+  }, [requestUser]);
 
   // Compute min/max price from services if available.
   const getPriceRange = useCallback((b: ApiBarberFull) => {
@@ -262,7 +243,6 @@ export const BarbersMapScreen: React.FC = () => {
               autoCorrect={false}
               autoCapitalize="none"
             />
-            <Icon name="mic" size={16} color={theme.colors.accent} />
           </View>
 
           {/* Filter chips */}
@@ -276,7 +256,11 @@ export const BarbersMapScreen: React.FC = () => {
               return (
                 <Pressable
                   key={chip.key}
-                  onPress={() => setActiveChip(chip.key)}
+                  onPress={() => {
+                    setActiveChip(chip.key);
+                    setSelectedPin(null);
+                    if (chip.key === 'distance' && !user) void requestUser();
+                  }}
                   style={[
                     styles.chip,
                     {
@@ -287,13 +271,6 @@ export const BarbersMapScreen: React.FC = () => {
                     },
                   ]}
                 >
-                  {chip.icon && (
-                    <Icon
-                      name="filter"
-                      size={14}
-                      color={isActive ? theme.colors.bg : theme.colors.fg}
-                    />
-                  )}
                   <Text
                     style={{
                       fontSize: 13,
@@ -393,22 +370,19 @@ export const BarbersMapScreen: React.FC = () => {
                   const gradients =
                     CARD_GRADIENTS[i % CARD_GRADIENTS.length];
 
-                  // Placeholder open status until backend provides real hours.
-                  const openStatus: 'open' | 'closing' | 'closed' =
-                    i % 3 === 0 ? 'open' : i % 3 === 1 ? 'closing' : 'closed';
-
-                  let openLabel: string;
-                  let dotColor: string;
-                  if (openStatus === 'open') {
-                    openLabel = t('search.open');
-                    dotColor = theme.colors.success ?? '#2f9d5e';
-                  } else if (openStatus === 'closing') {
-                    openLabel = t('map.closingSoon');
-                    dotColor = theme.colors.warning ?? '#d4a043';
-                  } else {
-                    openLabel = t('search.closed');
-                    dotColor = theme.colors.muted2 ?? '#8f8f8f';
-                  }
+                  const state = openState(barber.workingHours);
+                  const openLabel =
+                    state === 'open'
+                      ? t('search.open')
+                      : state === 'closing'
+                        ? t('map.closingSoon')
+                        : t('search.closed');
+                  const dotColor =
+                    state === 'open'
+                      ? theme.colors.success
+                      : state === 'closing'
+                        ? theme.colors.warning
+                        : theme.colors.muted2;
 
                   const priceRange = getPriceRange(barber);
                   const displayName = `${barber.firstName} ${barber.lastName}`;
@@ -446,6 +420,7 @@ export const BarbersMapScreen: React.FC = () => {
                           end={{ x: 0.5, y: 1 }}
                         />
                         {/* Open pill */}
+                        {state ? (
                         <View
                           style={[
                             styles.openPill,
@@ -469,6 +444,7 @@ export const BarbersMapScreen: React.FC = () => {
                             {openLabel}
                           </Text>
                         </View>
+                        ) : null}
                       </View>
 
                       {/* Meta */}

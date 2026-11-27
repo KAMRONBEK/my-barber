@@ -7,7 +7,7 @@
 //     completed bookings (real visit counts), not the generic banner feed
 //   - featured list — top barbers from /client/banner
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -29,7 +29,6 @@ import {
   getBarbers,
   getClientCompletedBookings,
   getUnreadNotificationCount,
-  api,
   type ApiBarberFull,
 } from '../lib/api';
 import { useAuthStore } from '../lib/auth';
@@ -40,6 +39,7 @@ import {
 } from '../lib/format';
 import { fontFamilies } from '@my-barber/ui';
 import type { AppTheme } from '../lib/restyle';
+import { UPCOMING_QUERY_KEY, fetchClientBookings, nextBooking } from '../lib/bookings';
 
 export const HomeScreen: React.FC = () => {
   const theme = useTheme<AppTheme>();
@@ -100,36 +100,13 @@ export const HomeScreen: React.FC = () => {
   });
   const hasUnreadNotifications = (unreadNotificationsQuery.data ?? 0) > 0;
 
-  // TODO: fetch the user's next upcoming booking from
-  //       GET /client/bookings?status=upcoming&limit=1 once that endpoint ships.
-  //       The response shape is { timestamp: string; serviceLabel: string; subtitle: string }.
-  const [nextBooking, setNextBooking] = useState<{
-    timestamp: string;
-    serviceLabel?: string;
-    subtitle?: string;
-  } | null>(null);
-  const [upcomingError, setUpcomingError] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchUpcoming() {
-      try {
-        const r = await api.get<{
-          ok: boolean;
-          data: { timestamp: string; serviceLabel?: string; subtitle?: string } | null;
-        }>('/client/bookings', { params: { status: 'upcoming', limit: 1 } });
-        if (!cancelled && r.data?.data) {
-          setNextBooking(r.data.data);
-        }
-      } catch {
-        // Endpoint may not exist yet or auth may have failed — signal error so
-        // the banner hides rather than showing a misleading "no bookings" state.
-        if (!cancelled) setUpcomingError(true);
-      }
-    }
-    void fetchUpcoming();
-    return () => { cancelled = true; };
-  }, []);
+  const upcomingQuery = useQuery({
+    queryKey: UPCOMING_QUERY_KEY,
+    queryFn: () => fetchClientBookings('upcoming'),
+    staleTime: STALE.bookings,
+  });
+  const upcoming = nextBooking(upcomingQuery.data ?? []);
+  const upcomingBarber = allBarbersQuery.data?.find((b) => b.id === upcoming?.barber_id);
 
   const today = new Date();
 
@@ -214,11 +191,18 @@ export const HomeScreen: React.FC = () => {
                 />
               ) : null}
             </Pressable>
-            <Avatar
-              size={40}
-              uri={client?.avatar ?? undefined}
-              initials={`${client?.firstName?.[0] ?? ''}${client?.lastName?.[0] ?? ''}`}
-            />
+            <Pressable
+              onPress={() => router.push('/(tabs)/profile' as any)}
+              accessibilityRole="button"
+              accessibilityLabel={t('tabs.profile')}
+              testID="home-avatar"
+            >
+              <Avatar
+                size={40}
+                uri={client?.avatar ?? undefined}
+                initials={`${client?.firstName?.[0] ?? ''}${client?.lastName?.[0] ?? ''}`}
+              />
+            </Pressable>
           </View>
         </View>
 
@@ -227,10 +211,14 @@ export const HomeScreen: React.FC = () => {
             When isError is true the banner renders nothing (VIS-004). */}
         <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
           <UpcomingBanner
-            bookingTimestamp={nextBooking?.timestamp ?? null}
-            serviceLabel={nextBooking?.serviceLabel}
-            subtitle={nextBooking?.subtitle}
-            isError={upcomingError}
+            bookingTimestamp={upcoming?.timestamp ?? null}
+            serviceLabel={upcoming?.services?.map((s) => s.name).join(' + ')}
+            subtitle={
+              upcomingBarber
+                ? `${upcomingBarber.firstName} ${upcomingBarber.lastName}`
+                : undefined
+            }
+            isError={upcomingQuery.isError}
             onPress={() => router.push('/bookings')}
           />
         </View>
@@ -248,7 +236,10 @@ export const HomeScreen: React.FC = () => {
               >
                 {t('home.bookAgain')}
               </Text>
-              <Text style={{ color: theme.colors.accent, fontSize: 13 }}>
+              <Text
+                onPress={() => router.push('/(tabs)/search' as any)}
+                style={{ color: theme.colors.accent, fontSize: 13 }}
+              >
                 {t('home.seeAll')}
               </Text>
             </View>
@@ -282,8 +273,11 @@ export const HomeScreen: React.FC = () => {
               {t('home.featuredTitle')}
             </Text>
             {(bannerQuery.data ?? []).length > 0 ? (
-              <Text style={{ color: theme.colors.accent, fontSize: 13 }}>
-                {t('home.seeAllCount', { count: (bannerQuery.data ?? []).length })}
+              <Text
+                onPress={() => router.push('/(tabs)/search' as any)}
+                style={{ color: theme.colors.accent, fontSize: 13 }}
+              >
+                {t('home.seeAllCount', { count: allBarbersQuery.data?.length ?? 0 })}
               </Text>
             ) : null}
           </View>

@@ -41,6 +41,7 @@ export const UpcomingBanner: React.FC<UpcomingBannerProps> = ({
   if (!bookingTimestamp) {
     return (
       <Pressable
+        key="empty"
         onPress={onPress}
         style={[
           styles.empty,
@@ -68,7 +69,9 @@ export const UpcomingBanner: React.FC<UpcomingBannerProps> = ({
   const isToday = isSameLocalDay(dt, new Date());
 
   return (
+    // Its own key: Android left the card blank when it reused the empty state's view.
     <Pressable
+      key="upcoming"
       onPress={onPress}
       style={[
         styles.card,
@@ -107,7 +110,7 @@ export const UpcomingBanner: React.FC<UpcomingBannerProps> = ({
               textTransform: 'uppercase',
             }}
           >
-            {isToday ? `${t('home.upcomingEyebrow')} · ${time}` : `${weekday} · ${day} · ${time}`}
+            {isToday ? `${t('home.today')} · ${time}` : `${weekday} · ${day} · ${time}`}
           </Text>
           <Text
             style={{
