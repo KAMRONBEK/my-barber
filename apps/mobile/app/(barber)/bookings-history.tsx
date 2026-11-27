@@ -20,6 +20,7 @@ import { Button } from '../../src/atoms/Button';
 import { ScreenHeader } from '../../src/molecules/ScreenHeader';
 import { ScreenLayout } from '../../src/templates/ScreenLayout';
 import { getBarberBookings, type BarberBookingDetail } from '../../src/lib/api';
+import { isUpcoming } from '../../src/lib/bookingActions';
 import {
   BARBER_TAB_BAR_PILL_HEIGHT,
   BARBER_TAB_BAR_BOTTOM_OFFSET,
@@ -97,7 +98,8 @@ export default function BarberBookingsHistoryScreen() {
 
   const now = new Date();
   const items = (data ?? [])
-    .filter((b) => new Date(b.timestamp) >= now === (segment === 'upcoming'))
+    // Upcoming means still going to happen; cancelled ones are history.
+    .filter((b) => isUpcoming(b, now.getTime()) === (segment === 'upcoming'))
     .sort((a, b) => {
       const diff =
         new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();

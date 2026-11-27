@@ -664,6 +664,15 @@ export class BookingServiceClass {
     }
   }
 
+  private async hasReview(bookingId: string): Promise<boolean> {
+    const found = await this.firestore
+      .collection(COLLECTIONS.REVIEWS)
+      .where('bookingId', '==', bookingId)
+      .limit(1)
+      .get();
+    return !found.empty;
+  }
+
   /** Paginated booking contracts for the authenticated client (all barbers, newest first). */
   async listBookingHistoryForClient(
     clientId: string,
@@ -716,9 +725,12 @@ export class BookingServiceClass {
     const items: BookingContract[] = [];
     for (const d of docs) {
       const row = await this.getBookingById(d.id);
-      if (row) {
-        items.push(bookingResponseToContract(row));
+      if (!row) continue;
+      const item = bookingResponseToContract(row);
+      if (item.status === 'completed') {
+        item.reviewed = await this.hasReview(item.id);
       }
+      items.push(item);
     }
 
     let next_cursor: string | null = null;

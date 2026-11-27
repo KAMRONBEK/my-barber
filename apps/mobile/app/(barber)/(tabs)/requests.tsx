@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   View,
@@ -14,6 +15,8 @@ import { Button } from '../../../src/atoms/Button';
 import { Badge } from '../../../src/atoms/Badge';
 import { ScreenLayout } from '../../../src/templates/ScreenLayout';
 import { getBarberBookings, patchBookingStatus } from '../../../src/lib/api';
+import { invalidateBarberBookings } from '../../../src/lib/bookingActions';
+import { bookingErrorKey } from '../../../src/lib/bookingErrors';
 import {
   BARBER_TAB_BAR_PILL_HEIGHT,
   BARBER_TAB_BAR_BOTTOM_OFFSET,
@@ -64,17 +67,19 @@ export default function BarberRequestsScreen() {
   const confirmMutation = useMutation({
     mutationFn: (bookingId: string) =>
       patchBookingStatus(bookingId, 'confirmed'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+    onError: (error) => {
+      Alert.alert(t('common.error'), t(bookingErrorKey(error)));
     },
+    onSettled: () => invalidateBarberBookings(queryClient),
   });
 
   const declineMutation = useMutation({
     mutationFn: (bookingId: string) =>
       patchBookingStatus(bookingId, 'declined'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['barber-bookings'] });
+    onError: (error) => {
+      Alert.alert(t('common.error'), t(bookingErrorKey(error)));
     },
+    onSettled: () => invalidateBarberBookings(queryClient),
   });
 
   const tabs: { key: FilterTab; label: string }[] = [

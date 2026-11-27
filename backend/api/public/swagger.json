@@ -294,6 +294,10 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "reviewed": {
+            "type": "boolean",
+            "description": "On completed bookings in client history."
           }
         }
       },

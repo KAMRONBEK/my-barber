@@ -106,8 +106,14 @@ export function bookingStatusTone(status: string): 'success' | 'danger' | 'accen
 export function effectiveBookingStatus(
   status: string,
   timestampIso: string,
+  cancellationReason?: string | null,
 ): { label: string; tone: 'success' | 'warning' | 'danger' | 'accent' } {
-  if (status === 'pending_confirmation' && new Date(timestampIso).getTime() < Date.now()) {
+  // The API reports an unanswered past request as cancelled with this reason.
+  const expired = status === 'cancelled' && cancellationReason === 'expired';
+  if (
+    expired ||
+    (status === 'pending_confirmation' && new Date(timestampIso).getTime() < Date.now())
+  ) {
     return { label: i18n.t('bookingStatus.expired'), tone: 'warning' };
   }
   return { label: bookingStatusLabel(status), tone: bookingStatusTone(status) };

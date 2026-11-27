@@ -29,8 +29,9 @@ import { ScreenLayout } from '../../../src/templates/ScreenLayout';
 import {
   getBarberBookings,
   getUnreadNotificationCount,
-  patchBookingStatus,
 } from '../../../src/lib/api';
+import { BarberBookingActions } from '../../../src/molecules/BarberBookingActions';
+import { isAgreed, occupiesTime } from '../../../src/lib/bookingActions';
 import {
   bookingStatusLabel,
   bookingStatusTone,
@@ -236,7 +237,10 @@ export default function BarberCalendarScreen() {
     staleTime: 30_000,
   });
 
-  const bookings = bookingsQuery.data ?? [];
+  const bookings = useMemo(
+    () => (bookingsQuery.data ?? []).filter((b) => occupiesTime(b.status)),
+    [bookingsQuery.data],
+  );
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
@@ -266,7 +270,8 @@ export default function BarberCalendarScreen() {
   }, [todayBookings]);
 
   const earningsToday = useMemo(() => {
-    return todayBookings.reduce((acc, b) => {
+    // Money counts once the visit is completed, as on the earnings screen.
+    return todayBookings.filter((b) => b.status === 'completed').reduce((acc, b) => {
       return acc + (b.services?.reduce((s: number, svc: any) => s + (svc.price ?? 0), 0) ?? 0);
     }, 0);
   }, [todayBookings]);
@@ -468,30 +473,6 @@ export default function BarberCalendarScreen() {
     sheetRef.current?.present();
   };
 
-  const handleCancelBooking = () => {
-    if (!activeBooking) return;
-    sheetRef.current?.dismiss();
-    Alert.alert(
-      t('confirmation.cancelConfirmTitle'),
-      t('confirmation.cancelConfirmBody'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('confirmation.cancelBooking'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await patchBookingStatus(activeBooking.bookingId, 'cancelled');
-              bookingsQuery.refetch();
-            } catch {
-              Alert.alert(t('common.error'), t('booking.createError'));
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const handleBlockTime = (hour: number) => {
     Alert.alert(
       'Vaqtni bloklash',
@@ -625,7 +606,7 @@ export default function BarberCalendarScreen() {
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.fg }]}>
                 {todayBookings.length}{' '}
-                <Text style={{ color: theme.colors.accent }}>marta</Text>
+                <Text style={{ color: theme.colors.accent }}>{t('calendar.visitsUnit')}</Text>
               </Text>
             </View>
             <View
@@ -642,7 +623,7 @@ export default function BarberCalendarScreen() {
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.fg }]}>
                 {totalHours.toFixed(1)}{' '}
-                <Text style={{ color: theme.colors.accent }}>soat</Text>
+                <Text style={{ color: theme.colors.accent }}>{t('calendar.hoursUnit')}</Text>
               </Text>
             </View>
             <View
@@ -720,10 +701,11 @@ export default function BarberCalendarScreen() {
                   color: theme.colors.muted,
                 }}
               >
-                {todayBookings.filter((b) => b.status === 'confirmed').length} ta{' '}
-                tasdiqlangan,{' '}
-                {todayBookings.filter((b) => b.status === 'pending_confirmation').length}{' '}
-                ta kutilmoqda
+                {t('calendar.summary', {
+                  confirmed: todayBookings.filter((b) => isAgreed(b.status)).length,
+                  pending: todayBookings.filter((b) => b.status === 'pending_confirmation')
+                    .length,
+                })}
               </Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -736,7 +718,9 @@ export default function BarberCalendarScreen() {
                     backgroundColor: theme.colors.success,
                   }}
                 />
-                <Text style={{ fontSize: 10, color: theme.colors.muted }}>Band</Text>
+                <Text style={{ fontSize: 10, color: theme.colors.muted }}>
+                  {t('calendar.legendBooked')}
+                </Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <View
@@ -748,7 +732,7 @@ export default function BarberCalendarScreen() {
                   }}
                 />
                 <Text style={{ fontSize: 10, color: theme.colors.muted }}>
-                  Kutilmoqda
+                  {t('calendar.legendPending')}
                 </Text>
               </View>
             </View>
@@ -784,7 +768,11 @@ export default function BarberCalendarScreen() {
                   </Text>
                   <View style={{ flex: 1, gap: 4 }}>
                     {hourBookings.map((b) => {
-                      const isConfirmed = b.status === 'confirmed';
+                      const toneColor = {
+                        success: theme.colors.success,
+                        danger: theme.colors.danger,
+                        accent: theme.colors.warning,
+                      }[bookingStatusTone(b.status ?? '')];
                       const clientName = `${b.clientFirstName} ${b.clientLastName}`;
                       const serviceNames =
                         b.services?.map((s: any) => s.name).join(' + ') ?? '';
@@ -807,13 +795,9 @@ export default function BarberCalendarScreen() {
                           style={[
                             styles.bookingBlock,
                             {
-                              backgroundColor: isConfirmed
-                                ? theme.colors.successSoft ?? 'rgba(34,197,94,0.12)'
-                                : theme.colors.warningSoft ?? 'rgba(234,179,8,0.12)',
+                              backgroundColor: `${toneColor}1f`,
                               borderLeftWidth: 3,
-                              borderLeftColor: isConfirmed
-                                ? theme.colors.success
-                                : theme.colors.warning,
+                              borderLeftColor: toneColor,
                             },
                           ]}
                         >
@@ -1021,14 +1005,12 @@ export default function BarberCalendarScreen() {
                 );
               })()}
 
-              {activeBooking.status !== 'cancelled' && (
-                <Button
-                  variant="destructive"
-                  label={t('confirmation.cancelBooking')}
-                  onPress={handleCancelBooking}
-                  fullWidth
-                />
-              )}
+              <BarberBookingActions
+                bookingId={activeBooking.bookingId}
+                status={activeBooking.status}
+                timestamp={activeBooking.timestamp}
+                onDone={() => sheetRef.current?.dismiss()}
+              />
             </>
           )}
         </BottomSheetView>

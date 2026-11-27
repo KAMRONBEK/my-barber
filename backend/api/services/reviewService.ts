@@ -1,5 +1,4 @@
 import { db, COLLECTIONS } from '../config/database';
-import { v4 as uuidv4 } from 'uuid';
 import { bookingService } from './bookingService';
 import { normalizeBookingStatus } from '../utils/bookingContract';
 import { firestoreDateToIso } from '../utils/firestoreDates';
@@ -67,7 +66,12 @@ export class ReviewServiceClass {
       throw new Error('DUPLICATE');
     }
 
-    const reviewId = uuidv4();
+    // One review per booking: the id makes simultaneous submissions collide.
+    // (The query above still catches reviews stored under older random ids.)
+    const reviewId = bookingId;
+    const reviewRef = this.firestore
+      .collection(COLLECTIONS.REVIEWS)
+      .doc(reviewId);
     const barberRef = this.firestore
       .collection(COLLECTIONS.BARBERS)
       .doc(bookingRow.barberId);
@@ -75,6 +79,7 @@ export class ReviewServiceClass {
     await this.firestore.runTransaction(async tx => {
       const barberSnap = await tx.get(barberRef);
       if (!barberSnap.exists) throw new Error('BARBER_NOT_FOUND');
+      if ((await tx.get(reviewRef)).exists) throw new Error('DUPLICATE');
 
       const b = barberSnap.data() as {
         ratingAverage?: number;
@@ -87,7 +92,7 @@ export class ReviewServiceClass {
       const newAvg =
         newCount === 0 ? 0 : (prevAvg * prevCount + input.rating) / newCount;
 
-      tx.set(this.firestore.collection(COLLECTIONS.REVIEWS).doc(reviewId), {
+      tx.set(reviewRef, {
         id: reviewId,
         bookingId,
         barberId: bookingRow.barberId,

@@ -643,6 +643,59 @@ describe('booking validation', () => {
   );
 });
 
+describe('finishing a visit', () => {
+  const history = async () =>
+    (
+      await request(app)
+        .get('/client/bookings?status=past')
+        .set('Authorization', asClient())
+        .expect(200)
+    ).body.data.items as Array<{ id: string; reviewed?: boolean }>;
+  const review = () =>
+    request(app)
+      .post('/client/bookings/done/review')
+      .set('Authorization', asClient())
+      .send({ rating: 5, comment: 'Great' });
+
+  beforeEach(() => {
+    seedBooking('done', '2026-01-05T05:00:00.000Z', 'confirmed');
+  });
+
+  it('lets the barber complete it, then the client review it once', async () => {
+    await request(app)
+      .post('/barber/bookings/done/complete')
+      .set('Authorization', asBarber())
+      .expect(200);
+    expect((await history())[0]).toMatchObject({ reviewed: false });
+
+    const results = await Promise.all([review(), review()]);
+    expect(results.map(r => r.status).sort()).toEqual([201, 409]);
+    expect((await history())[0]).toMatchObject({ reviewed: true });
+    expect(await stored(COLLECTIONS.BARBERS, BARBER)).toMatchObject({
+      ratingAverage: 5,
+      ratingCount: 1,
+    });
+
+    const earnings = await request(app)
+      .get('/barber/earnings?from=2026-01-01&to=2099-12-31')
+      .set('Authorization', asBarber())
+      .expect(200);
+    expect(earnings.body.data.summary).toMatchObject({
+      gross_total: 1000,
+      completed_bookings: 1,
+    });
+  });
+
+  it('records a missed visit without income', async () => {
+    const res = await request(app)
+      .post('/barber/bookings/done/no-show')
+      .set('Authorization', asBarber())
+      .expect(200);
+    expect(res.body.data.booking.status).toBe('no_show');
+    expect((await history())[0].reviewed).toBeUndefined();
+  });
+});
+
 describe('notification time', () => {
   it('is written in Tashkent time', () => {
     const deliveries = getBookingLifecycleDeliveries('booking_rescheduled', {

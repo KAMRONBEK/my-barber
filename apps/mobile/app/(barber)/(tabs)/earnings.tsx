@@ -468,6 +468,8 @@ const styles = StyleSheet.create({
   },
   barTrack: {
     width: '100%',
+    // One or two days of income would otherwise stretch into a solid block.
+    maxWidth: 40,
     height: 100,
     justifyContent: 'flex-end',
     borderRadius: 6,
