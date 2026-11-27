@@ -22,7 +22,6 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@shopify/restyle';
 import {
   bookingFromContract,
-  calculateTotalDuration,
   type BookingContract,
   type Booking,
 } from '@my-barber/types';
@@ -115,9 +114,9 @@ export const ConfirmationScreen: React.FC = () => {
   }
 
   const start = new Date(booking.timestamp);
-  const duration = calculateTotalDuration(
-    booking.services.map((s) => ({ durationMinutes: undefined })),
-  );
+  // A new booking waits for the barber's answer.
+  const pending = booking.status === 'pending_confirmation';
+  const stage = pending ? 'pending' : 'confirmed';
 
   return (
     <ScreenLayout>
@@ -133,7 +132,7 @@ export const ConfirmationScreen: React.FC = () => {
             marginTop: 16,
           }}
         >
-          {t('confirmation.eyebrow')}
+          {t(`confirmation.${stage}.eyebrow`)}
         </Text>
 
         <Animated.View style={[styles.ringWrap, ringStyle]}>
@@ -161,7 +160,7 @@ export const ConfirmationScreen: React.FC = () => {
             letterSpacing: -0.6,
           }}
         >
-          {t('confirmation.title')}
+          {t(`confirmation.${stage}.title`)}
         </Text>
         <Text
           style={{
@@ -173,7 +172,7 @@ export const ConfirmationScreen: React.FC = () => {
             lineHeight: 22,
           }}
         >
-          {t('confirmation.body', {
+          {t(`confirmation.${stage}.body`, {
             name: barberDisplay || '—',
             dayLong: formatWeekdayLong(start),
             date: formatDayMonth(start),
@@ -195,7 +194,8 @@ export const ConfirmationScreen: React.FC = () => {
             variant="secondary"
             fullWidth
             label={t('confirmation.viewBookings')}
-            onPress={() => router.replace('/(tabs)')}
+            onPress={() => router.replace('/bookings')}
+            testID="confirmation-bookings"
           />
         </View>
 

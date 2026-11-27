@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Location from 'expo-location';
 import Animated, {
   interpolate,
   interpolateColor,
@@ -63,8 +62,8 @@ import {
   formatBarberAddress,
   formatDistanceKm,
   openBarberDirections,
-  parseBarberCoordinate,
 } from '../lib/maps';
+import { useUserCoordinate } from '../lib/useUserCoordinate';
 
 type TabKey = 'bio' | 'services' | 'portfolio' | 'reviews';
 
@@ -154,32 +153,9 @@ export const BarberShopScreen: React.FC = () => {
     return barber.services.reduce((min, s) => (s.price < min ? s.price : min), barber.services[0].price);
   }, [barber]);
 
-  // Real distance needs the user's own position — only computed when
-  // permission is granted; otherwise the stat honestly shows "—" below
-  // rather than a guessed number.
-  const [userCoordinate, setUserCoordinate] = useState<
-    { latitude: number; longitude: number } | null
-  >(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted' || cancelled) return;
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      if (!cancelled) {
-        setUserCoordinate({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-        });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Distance is shown only when the user's position and the barber's map
+  // point are both known; otherwise the stat shows "—".
+  const { coordinate: userCoordinate } = useUserCoordinate(true);
 
   const reviewsQuery = useQuery({
     queryKey: ['barber-reviews', id],
@@ -220,14 +196,8 @@ export const BarberShopScreen: React.FC = () => {
   }
 
   const rating = barber.ratingAverage ?? 0;
-  const barberIndex = (barbersQuery.data ?? []).findIndex((b) => b.id === id);
-  const mapCoordinate = parseBarberCoordinate(
-    barber.location,
-    barberIndex >= 0 ? barberIndex : 0,
-  );
-  // Only a *real* barber coordinate counts — parseBarberCoordinate above
-  // falls back to an approximate fixed point for map display, which must
-  // never be used to compute a distance number presented as fact.
+  // Only a real map point counts: without one there is no map, no directions
+  // and no distance.
   const realBarberCoordinate = extractBarberCoordinate(barber.location);
   const distanceLabel =
     userCoordinate && realBarberCoordinate
@@ -298,7 +268,6 @@ export const BarberShopScreen: React.FC = () => {
                 <Text style={styles.coverName} numberOfLines={1}>
                   {barber.firstName} {barber.lastName}
                 </Text>
-                <Icon name="verified" size={16} color={theme.colors.muted2} />
               </View>
               {barber.title ? (
                 <Text style={styles.coverTitle} numberOfLines={1}>
@@ -433,13 +402,15 @@ export const BarberShopScreen: React.FC = () => {
                 },
               ]}
             >
-              <BarberMapPreview
-                coordinate={mapCoordinate}
-                avatarUri={barber.avatar}
-                initials={initials}
-                rating={rating}
-                height={160}
-              />
+              {realBarberCoordinate ? (
+                <BarberMapPreview
+                  coordinate={realBarberCoordinate}
+                  avatarUri={barber.avatar}
+                  initials={initials}
+                  rating={rating}
+                  height={160}
+                />
+              ) : null}
               <View style={styles.mapMeta}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                   <Icon name="pin" size={16} color={theme.colors.accent} />
@@ -449,10 +420,11 @@ export const BarberShopScreen: React.FC = () => {
                     </Text>
                   </View>
                 </View>
+                {realBarberCoordinate ? (
                 <Pressable
                   style={[styles.navBtn, { backgroundColor: theme.colors.fg }]}
                   onPress={() =>
-                    void openBarberDirections(mapCoordinate, { title: addressLabel })
+                    void openBarberDirections(realBarberCoordinate, { title: addressLabel })
                   }
                   accessibilityRole="button"
                   accessibilityLabel={t('barber.directions')}
@@ -462,6 +434,7 @@ export const BarberShopScreen: React.FC = () => {
                     {t('barber.directions')}
                   </Text>
                 </Pressable>
+                ) : null}
               </View>
             </View>
           </View>

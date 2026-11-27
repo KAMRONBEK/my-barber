@@ -19,6 +19,8 @@ import {
 } from '../src/navigation/GlassTabBar';
 import { useFavoriteBarbers } from '../src/hooks/useFavoriteBarbers';
 import type { AppTheme } from '../src/lib/restyle';
+import { kmTo } from '../src/lib/barberList';
+import { useUserCoordinate } from '../src/lib/useUserCoordinate';
 
 export default function SavedBarbersScreen() {
   const theme = useTheme<AppTheme>();
@@ -27,6 +29,7 @@ export default function SavedBarbersScreen() {
   const insets = useSafeAreaInsets();
   const tabBarPadding = TAB_BAR_PILL_HEIGHT + Math.max(insets.bottom, TAB_BAR_BOTTOM_OFFSET) + 8;
   const { favorites, favoriteIds, pendingIds, isLoading, toggleFavorite } = useFavoriteBarbers();
+  const { coordinate } = useUserCoordinate();
 
   return (
     <ScreenLayout>
@@ -75,6 +78,7 @@ export default function SavedBarbersScreen() {
               <BarberListRow
                 key={barber.id}
                 barber={barber}
+                distanceKm={kmTo(barber, coordinate)}
                 isSaved={favoriteIds.has(barber.id)}
                 isSaving={pendingIds.has(barber.id)}
                 onPress={() => router.push(`/barber/${barber.id}`)}

@@ -24,7 +24,6 @@ import {
 } from '@gorhom/bottom-sheet';
 import { Text } from '../../../src/atoms/Text';
 import { Icon } from '../../../src/atoms/Icon';
-import { Button } from '../../../src/atoms/Button';
 import { ScreenLayout } from '../../../src/templates/ScreenLayout';
 import {
   getBarberBookings,
@@ -45,6 +44,7 @@ import {
   BARBER_TAB_BAR_BOTTOM_OFFSET,
 } from '../../../src/navigation/BarberTabBar';
 import type { AppTheme } from '../../../src/lib/restyle';
+import { serviceMinutes } from '../../../src/lib/duration';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 9); // 09:00 – 20:00
 
@@ -264,7 +264,7 @@ export default function BarberCalendarScreen() {
   const totalHours = useMemo(() => {
     return todayBookings.reduce((acc, b) => {
       const dur =
-        b.services?.reduce((s: number, svc: any) => s + (svc.durationMinutes ?? 45), 0) ?? 45;
+        serviceMinutes(b.services);
       return acc + dur / 60;
     }, 0);
   }, [todayBookings]);
@@ -778,10 +778,7 @@ export default function BarberCalendarScreen() {
                         b.services?.map((s: any) => s.name).join(' + ') ?? '';
                       const { minute } = parseTime(b.timestamp);
                       const duration =
-                        b.services?.reduce(
-                          (s: number, svc: any) => s + (svc.durationMinutes ?? 45),
-                          0
-                        ) ?? 45;
+                        serviceMinutes(b.services);
                       const end = new Date(b.timestamp);
                       end.setMinutes(end.getMinutes() + duration);
                       const endStr = `${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`;
@@ -892,10 +889,7 @@ export default function BarberCalendarScreen() {
             <>
               {(() => {
                 const duration: number =
-                  activeBooking.services?.reduce(
-                    (s: number, svc: any) => s + (svc.durationMinutes ?? 45),
-                    0,
-                  ) ?? 45;
+                  serviceMinutes(activeBooking.services);
                 const price: number =
                   activeBooking.services?.reduce(
                     (s: number, svc: any) => s + (svc.price ?? 0),

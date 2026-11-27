@@ -1,5 +1,5 @@
 // Portrait-style barber row: 84×100 gradient thumbnail, name, rating,
-// distance, open/closed pill, heart toggle top-right. Shared by the search
+// distance and open state when known, heart toggle top-right. Shared by the search
 // screen and the saved-barbers (favorites) screen.
 
 import React from 'react';
@@ -10,7 +10,9 @@ import { useTranslation } from 'react-i18next';
 import { Text } from '../atoms/Text';
 import { Icon } from '../atoms/Icon';
 import { Avatar } from '../atoms/Avatar';
-import type { ApiBarber } from '../lib/api';
+import type { ApiBarberFull } from '../lib/api';
+import { formatDistanceKm } from '../lib/maps';
+import { openState } from '../lib/openState';
 import { formatUZS } from '../lib/format';
 import { hapticToggle } from '../lib/haptics';
 import type { AppTheme } from '../lib/restyle';
@@ -22,19 +24,21 @@ const CARD_GRADIENTS = [
 ];
 
 export const BarberListRow: React.FC<{
-  barber: ApiBarber;
+  barber: ApiBarberFull;
+  /** Null or absent when either position is unknown. */
+  distanceKm?: number | null;
   isSaved: boolean;
   isSaving?: boolean;
   onPress: () => void;
   onToggleSave: () => void;
-}> = ({ barber, isSaved, isSaving, onPress, onToggleSave }) => {
+}> = ({ barber, distanceKm, isSaved, isSaving, onPress, onToggleSave }) => {
   const theme = useTheme<AppTheme>();
   const { t } = useTranslation();
   const gradients =
     CARD_GRADIENTS[Math.abs(barber.id.charCodeAt(0)) % CARD_GRADIENTS.length];
 
-  // Stub: barbers with an even last char in id are considered "open"
-  const isOpen = barber.id.charCodeAt(barber.id.length - 1) % 2 === 0;
+  const state = openState(barber.workingHours);
+  const isOpen = state !== 'closed';
   const minPrice =
     (barber.services ?? []).length > 0
       ? barber.services!.reduce(
@@ -90,7 +94,8 @@ export const BarberListRow: React.FC<{
             />
           )}
         </Pressable>
-        {/* Open/closed pill */}
+        {/* Open/closed pill, only when the working hours say so */}
+        {state ? (
         <View
           style={[
             styles.openPill,
@@ -105,6 +110,7 @@ export const BarberListRow: React.FC<{
             {isOpen ? t('search.open') : t('search.closed')}
           </Text>
         </View>
+        ) : null}
       </View>
 
       {/* Metadata */}
@@ -134,11 +140,14 @@ export const BarberListRow: React.FC<{
           ) : null}
         </View>
 
-        {/* Distance stub */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3, gap: 4 }}>
-          <Icon name="pin" size={11} color={theme.colors.muted2} />
-          <Text style={{ fontSize: 12, color: theme.colors.muted2 }}>1.2 km</Text>
-        </View>
+        {distanceKm != null ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3, gap: 4 }}>
+            <Icon name="pin" size={11} color={theme.colors.muted2} />
+            <Text style={{ fontSize: 12, color: theme.colors.muted2 }}>
+              {formatDistanceKm(distanceKm)}
+            </Text>
+          </View>
+        ) : null}
 
         {/* Price */}
         {minPrice != null ? (

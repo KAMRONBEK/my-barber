@@ -17,51 +17,47 @@ import { Text } from '../../src/atoms/Text';
 import { Icon } from '../../src/atoms/Icon';
 import { BarberListRow } from '../../src/molecules/BarberListRow';
 import { ScreenLayout } from '../../src/templates/ScreenLayout';
-import { getBanner } from '../../src/lib/api';
+import { getBarbers } from '../../src/lib/api';
+import { kmTo, listBarbers, type BarberFilter } from '../../src/lib/barberList';
+import { useUserCoordinate } from '../../src/lib/useUserCoordinate';
 import { useFavoriteBarbers } from '../../src/hooks/useFavoriteBarbers';
 import { queryKeys, STALE } from '../../src/lib/query';
 import type { AppTheme } from '../../src/lib/restyle';
 
-type FilterKey = 'all' | 'rating' | 'distance' | 'open' | 'beard';
-
-const FILTER_KEYS: FilterKey[] = ['all', 'rating', 'distance', 'open', 'beard'];
+const FILTER_KEYS: BarberFilter[] = ['all', 'rating', 'distance', 'open', 'beard'];
+const FILTER_LABELS: Record<BarberFilter, string> = {
+  all: 'search.filterAll',
+  rating: 'search.filterRating',
+  distance: 'search.filterDistance',
+  open: 'search.filterOpen',
+  beard: 'search.filterBeard',
+};
 
 export default function SearchScreen() {
   const theme = useTheme<AppTheme>();
   const router = useRouter();
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const [activeFilter, setActiveFilter] = useState<BarberFilter>('all');
   const { favoriteIds, pendingIds, toggleFavorite } = useFavoriteBarbers();
+  const { coordinate, request } = useUserCoordinate();
 
-  const bannerQuery = useQuery({
-    queryKey: queryKeys.banner,
-    queryFn: getBanner,
+  const barbersQuery = useQuery({
+    queryKey: queryKeys.barbers,
+    queryFn: () => getBarbers(0, 50),
     staleTime: STALE.banner,
   });
 
-  const barbers = (bannerQuery.data ?? []).filter((b) => {
-    if (!query.trim()) return true;
-    const q = query.toLowerCase();
-    return (
-      b.firstName.toLowerCase().includes(q) ||
-      b.lastName.toLowerCase().includes(q)
-    );
+  const barbers = listBarbers(barbersQuery.data ?? [], {
+    query,
+    filter: activeFilter,
+    user: coordinate,
   });
 
-  function filterLabel(key: FilterKey): string {
-    switch (key) {
-      case 'all':
-        return t('search.filterLabel');
-      case 'rating':
-        return t('search.filterRating');
-      case 'distance':
-        return t('search.filterDistance');
-      case 'open':
-        return t('search.filterOpen');
-      case 'beard':
-        return t('search.filterBeard');
-    }
+  function selectFilter(key: BarberFilter) {
+    setActiveFilter(key);
+    // Sorting by distance needs the user's position.
+    if (key === 'distance' && !coordinate) void request();
   }
 
   return (
@@ -132,7 +128,6 @@ export default function SearchScreen() {
           returnKeyType="search"
           testID="search-input"
         />
-        <Icon name="mic" size={16} color={theme.colors.accent} />
       </View>
 
       {/* Filter chips */}
@@ -147,7 +142,7 @@ export default function SearchScreen() {
           return (
             <Pressable
               key={key}
-              onPress={() => setActiveFilter(key)}
+              onPress={() => selectFilter(key)}
               style={[
                 styles.chip,
                 {
@@ -168,15 +163,21 @@ export default function SearchScreen() {
                   color: isActive ? theme.colors.bg : theme.colors.fg,
                 }}
               >
-                {filterLabel(key)}
+                {t(FILTER_LABELS[key])}
               </Text>
             </Pressable>
           );
         })}
       </ScrollView>
 
+      {activeFilter === 'distance' && !coordinate ? (
+        <Text style={{ paddingHorizontal: 20, paddingBottom: 6, fontSize: 12, color: theme.colors.muted }}>
+          {t('search.locationNeeded')}
+        </Text>
+      ) : null}
+
       {/* Result count */}
-      {!bannerQuery.isLoading && barbers.length > 0 ? (
+      {!barbersQuery.isLoading && barbers.length > 0 ? (
         <Text
           style={{
             paddingHorizontal: 20,
@@ -198,7 +199,7 @@ export default function SearchScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {bannerQuery.isLoading ? (
+        {barbersQuery.isLoading ? (
           <Text style={{ color: theme.colors.muted }}>{t('common.loading')}</Text>
         ) : barbers.length === 0 ? (
           <Text style={{ color: theme.colors.muted }}>{t('common.empty')}</Text>
@@ -208,6 +209,7 @@ export default function SearchScreen() {
               <BarberListRow
                 key={b.id}
                 barber={b}
+                distanceKm={kmTo(b, coordinate)}
                 isSaved={favoriteIds.has(b.id)}
                 isSaving={pendingIds.has(b.id)}
                 onPress={() => router.push(`/barber/${b.id}`)}
@@ -253,6 +255,8 @@ const styles = StyleSheet.create({
   },
   chipScroll: {
     flexGrow: 0,
+    // A long list below would otherwise squash the row and cut the labels.
+    flexShrink: 0,
     marginBottom: 4,
   },
   chips: {

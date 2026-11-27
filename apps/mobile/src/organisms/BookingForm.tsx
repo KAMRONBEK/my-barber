@@ -42,6 +42,7 @@ import {
 import { queryKeys, STALE } from '../lib/query';
 import { bookingErrorKey } from '../lib/bookingErrors';
 import type { AppTheme } from '../lib/restyle';
+import { serviceMinutes } from '../lib/duration';
 
 export interface BookingFormProps {
   barber: ApiBarberFull;
@@ -274,7 +275,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           label={t('booking.time')}
           value={
             selectedSlot
-              ? formatTimeRange(selectedSlot, totalDuration)
+              ? formatTimeRange(selectedSlot, serviceMinutes(selectedServices))
               : '—'
           }
         />

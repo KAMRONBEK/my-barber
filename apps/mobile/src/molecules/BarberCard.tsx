@@ -76,7 +76,6 @@ export const BarberCard: React.FC<BarberCardProps> = ({
           >
             {barber.firstName} {barber.lastName}
           </Text>
-          <Icon name="verified" size={14} color={theme.colors.accent} />
         </View>
         <View style={styles.subRow}>
           <View style={styles.starRow}>

@@ -22,6 +22,7 @@ import {
   BARBER_TAB_BAR_BOTTOM_OFFSET,
 } from '../../../src/navigation/BarberTabBar';
 import type { AppTheme } from '../../../src/lib/restyle';
+import { serviceMinutes } from '../../../src/lib/duration';
 
 type FilterTab = 'incoming' | 'declined';
 
@@ -208,10 +209,7 @@ export default function BarberRequestsScreen() {
             const totalPrice =
               b.services?.reduce((s, svc) => s + svc.price, 0) ?? 0;
             const duration =
-              b.services?.reduce(
-                (s, svc) => s + (svc.durationMinutes ?? 45),
-                0,
-              ) ?? 45;
+              serviceMinutes(b.services);
             const date = new Date(b.timestamp);
             const dateStr = date.toLocaleDateString('uz-UZ', {
               weekday: 'short',

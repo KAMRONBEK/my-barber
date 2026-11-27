@@ -535,6 +535,11 @@ describe('booking statuses', () => {
 });
 
 describe('booking validation', () => {
+  it('returns service durations with the booking', async () => {
+    const res = await book(AT_10).expect(201);
+    expect(res.body.data.booking.services[0].durationMinutes).toBe(40);
+  });
+
   it('stores the time in UTC and reads a bare time as Tashkent', async () => {
     const res = await book('2099-03-02T10:00:00').expect(201);
     expect(res.body.data.booking.timestamp).toBe(AT_10);

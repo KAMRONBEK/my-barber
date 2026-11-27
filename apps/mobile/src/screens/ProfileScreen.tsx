@@ -276,6 +276,11 @@ export const ProfileScreen: React.FC = () => {
             label={t('profile.edit')}
             onPress={() => router.push('/profile-edit')}
           />
+          <MenuRow
+            icon="calendar"
+            label={t('bookings.title')}
+            onPress={() => router.push('/bookings')}
+          />
         </Menu>
 
         {/* Settings */}
