@@ -880,10 +880,8 @@ export class BarberServiceClass {
       .doc(barberId)
       .update({
         approvalStatus: input.status,
-        approvalMessage:
-          input.message !== undefined
-            ? input.message
-            : (barber.approvalMessage ?? null),
+        // An older note (e.g. "under review") must not outlive its status.
+        approvalMessage: input.message ?? null,
         updatedAt: new Date(),
       });
 

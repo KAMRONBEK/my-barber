@@ -7,6 +7,7 @@ import { barberService } from '../services/barberService';
 import { authService } from '../services/authService';
 import { logger } from '../utils/logger';
 import { sendBookingError } from '../utils/bookingErrors';
+import { isValidBarberLocation } from '../utils/barberLocation';
 import { MIN_PASSWORD_LENGTH } from '../utils/passwordPolicy';
 import { bookingService } from '../services/bookingService';
 import { earningsService } from '../services/earningsService';
@@ -382,8 +383,8 @@ router.put(
       .withMessage('Valid phone number is required'),
     body('location')
       .optional()
-      .isLength({ min: 1, max: 100 })
-      .withMessage('Location must be 1-100 characters'),
+      .custom(isValidBarberLocation)
+      .withMessage('Location must be an address or a map point'),
     body('birthDate')
       .optional()
       .isISO8601()

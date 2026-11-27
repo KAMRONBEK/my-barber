@@ -791,8 +791,32 @@
             "type": "string"
           },
           "location": {
-            "type": "string",
-            "maxLength": 100
+            "oneOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "coords": {
+                    "type": "object",
+                    "properties": {
+                      "latitude": {
+                        "type": "number"
+                      },
+                      "longitude": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
           },
           "birthDate": {
             "type": "string",
