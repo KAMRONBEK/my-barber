@@ -63,6 +63,10 @@ function sharedSchemas() {
           items: { $ref: '#/components/schemas/BookingServiceLine' },
         },
         updated_at: { type: 'string', format: 'date-time' },
+        reviewed: {
+          type: 'boolean',
+          description: 'On completed bookings in client history.',
+        },
       },
     },
     BookingCalendarRow: {

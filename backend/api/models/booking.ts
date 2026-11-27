@@ -95,6 +95,8 @@ export interface BookingContract {
   client_id: string;
   services: Array<{ id: string; name: string; price: number }>;
   updated_at: string;
+  /** Present on completed bookings in the client's history. */
+  reviewed?: boolean;
   client_arrival_response: 'yes' | 'no' | null;
   client_arrival_confirmed_at: string | null;
   barber_arrival_response: 'yes' | 'no' | null;
