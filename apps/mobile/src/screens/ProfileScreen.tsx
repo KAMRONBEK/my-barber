@@ -26,6 +26,7 @@ import {
 import { HelpSheet, type HelpSheetRef } from '../molecules/HelpSheet';
 import { getMe } from '../lib/api';
 import { useAuthStore } from '../lib/auth';
+import { formatPhone, isPhoneUsername } from '../lib/phone';
 import { clearPushToken } from '../lib/pushToken';
 import { useAppearanceStore, type AppearanceMode } from '../lib/appearance';
 import { useLocaleStore } from '../lib/locale';
@@ -78,10 +79,14 @@ export const ProfileScreen: React.FC = () => {
 
   const profile = meQuery.data ?? client;
 
-  const displayHandle = profile?.username
-    ? profile.username.includes('@')
-      ? `@${profile.username.split('@')[0]}`
-      : `@${profile.username}`
+  // A phone username is already shown as the phone number below.
+  const handle =
+    profile?.username && !isPhoneUsername(profile.username) ? profile.username : null;
+
+  const displayHandle = handle
+    ? handle.includes('@')
+      ? `@${handle.split('@')[0]}`
+      : `@${handle}`
     : null;
 
   async function onSignOut() {
@@ -96,7 +101,10 @@ export const ProfileScreen: React.FC = () => {
       ? `${profile.firstName} ${profile.lastName}`
       : 'My Barber';
     await Share.share({
-      message: `My Barber profilim: https://my-barber.uz/u/${profile?.username ?? ''}`,
+      // Never put a phone number into a shared link.
+      message: handle
+        ? `My Barber profilim: https://my-barber.uz/u/${handle}`
+        : 'My Barber: https://my-barber.uz',
       title: name,
     });
   }
@@ -202,7 +210,7 @@ export const ProfileScreen: React.FC = () => {
                 fontSize: 12,
               }}
             >
-              {profile.phone}
+              {formatPhone(profile.phone)}
             </Text>
           ) : null}
         </View>

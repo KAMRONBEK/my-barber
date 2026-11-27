@@ -122,7 +122,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     await removeItem(STORAGE_KEYS.jwt);
     await removeItem(STORAGE_KEYS.client);
     await removeItem(STORAGE_KEYS.barber);
-    await removeItem(STORAGE_KEYS.role);
+    // STORAGE_KEYS.role stays: it is also the login screen's chosen role.
     set({ status: 'unauthenticated', token: null, client: null, barber: null, role: null });
     // The QueryClient is a module-level singleton shared across roles — without
     // this, signing in as a different account (or switching barber/client on
@@ -136,7 +136,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     await removeItem(STORAGE_KEYS.jwt);
     await removeItem(STORAGE_KEYS.client);
     await removeItem(STORAGE_KEYS.barber);
-    await removeItem(STORAGE_KEYS.role);
+    // STORAGE_KEYS.role stays: it is also the login screen's chosen role.
     set({ status: 'unauthenticated', token: null, client: null, barber: null, role: null });
     queryClient.clear();
   },

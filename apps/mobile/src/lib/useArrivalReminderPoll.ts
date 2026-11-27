@@ -22,6 +22,7 @@
 import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import { useAuthStore } from './auth';
+import { isBarberApproved } from './approval';
 import {
   getClientArrivalPending,
   getBarberArrivalPending,
@@ -36,10 +37,13 @@ const SCHEDULE_INTERVAL_MS = 2 * 60_000;
 export function useArrivalReminderPoll(): void {
   const status = useAuthStore((s) => s.status);
   const role = useAuthStore((s) => s.role);
+  const barberApproved = useAuthStore((s) => isBarberApproved(s.barber));
   const appState = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
     if (status !== 'authenticated' || !role) return undefined;
+    // An unapproved barber has no bookings and the API refuses the request.
+    if (role === 'barber' && !barberApproved) return undefined;
 
     let cancelled = false;
 
@@ -106,5 +110,5 @@ export function useArrivalReminderPoll(): void {
       clearInterval(scheduleInterval);
       subscription.remove();
     };
-  }, [status, role]);
+  }, [status, role, barberApproved]);
 }

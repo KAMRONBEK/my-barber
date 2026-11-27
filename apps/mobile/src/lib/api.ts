@@ -49,8 +49,10 @@ api.interceptors.response.use(
 // ---- Typed endpoint helpers ----
 
 import type {
+  BarberRegisterRequest,
   BookingContract,
   BookingCreateRequest,
+  ClientRegisterRequest,
 } from '@my-barber/types';
 import type { BarberProfile, ClientProfile } from './auth';
 import type { BarberLocationWire } from './maps';
@@ -90,6 +92,20 @@ export async function loginBarber(
     username,
     password,
   });
+  return r.data.data;
+}
+
+export async function registerClient(
+  body: ClientRegisterRequest,
+): Promise<LoginResponse> {
+  const r = await api.post<OkData<LoginResponse>>('/auth/client/register', body);
+  return r.data.data;
+}
+
+export async function registerBarber(
+  body: BarberRegisterRequest,
+): Promise<BarberLoginResponse> {
+  const r = await api.post<OkData<BarberLoginResponse>>('/auth/barber/register', body);
   return r.data.data;
 }
 

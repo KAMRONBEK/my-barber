@@ -1,58 +1,77 @@
-// TODO: Implement sign-up step 2 — password entry with strength indicator.
-//       Design reference: OD screen 05-signup-password.html
-//       Password strength rules: min 8 chars, at least one number, one uppercase.
-//       On success POST /auth/client/register and navigate to /(auth)/otp.
+// Sign-up, step 2: the password, typed twice to catch typos. Creating the
+// account signs the user in; the root layout then navigates.
 
-import React, { useState, useMemo } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useTheme } from '@shopify/restyle';
+import React, { useEffect, useState } from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '@shopify/restyle';
 import { Text } from '../../src/atoms/Text';
 import { BackButton } from '../../src/atoms/BackButton';
 import { Input } from '../../src/atoms/Input';
 import { Button } from '../../src/atoms/Button';
 import { ScreenLayout } from '../../src/templates/ScreenLayout';
+import { registerBarber, registerClient } from '../../src/lib/api';
+import { useAuthStore } from '../../src/lib/auth';
+import { authErrorKey } from '../../src/lib/authErrors';
+import { useSignupDraftStore } from '../../src/lib/signupDraft';
+import { passwordErrors, type PasswordErrors } from '../../src/lib/signupForm';
 import type { AppTheme } from '../../src/lib/restyle';
-
-type StrengthLevel = 'weak' | 'fair' | 'strong';
-
-function getStrength(pw: string): StrengthLevel {
-  if (pw.length < 6) return 'weak';
-  const hasUpper = /[A-Z]/.test(pw);
-  const hasNumber = /[0-9]/.test(pw);
-  if (pw.length >= 8 && hasUpper && hasNumber) return 'strong';
-  if (pw.length >= 6) return 'fair';
-  return 'weak';
-}
 
 export default function SignupPasswordScreen() {
   const theme = useTheme<AppTheme>();
   const router = useRouter();
   const { t } = useTranslation();
-  const { email } = useLocalSearchParams<{ email: string }>();
+  const signIn = useAuthStore((s) => s.signIn);
+  const draft = useSignupDraftStore((s) => s.draft);
+  const reject = useSignupDraftStore((s) => s.reject);
 
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [errors, setErrors] = useState<PasswordErrors>({});
+  const [failure, setFailure] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const strength = useMemo(() => getStrength(password), [password]);
+  // Opened without the first step (a deep link, or a reloaded app).
+  useEffect(() => {
+    if (!draft) router.replace('/(auth)/signup' as any);
+  }, [draft, router]);
 
-  const strengthColor = {
-    weak: theme.colors.danger,
-    fair: theme.colors.warning,
-    strong: theme.colors.success,
-  }[strength];
+  async function onSubmit() {
+    if (!draft) return;
+    Keyboard.dismiss();
+    const problems = passwordErrors(password, confirm);
+    setErrors(problems);
+    if (Object.keys(problems).length > 0) return;
 
-  async function onContinue() {
     setSubmitting(true);
-    setError(null);
+    setFailure(null);
     try {
-      // TODO: POST /auth/client/register with { email, password }
-      //       then navigate to OTP screen passing the email/phone for verification
-      router.push({ pathname: '/(auth)/otp', params: { email } });
-    } catch {
-      setError(t('common.error'));
+      if (draft.role === 'barber') {
+        const { token, barber } = await registerBarber({ ...draft.body, password });
+        await signIn(token, barber, 'barber');
+      } else {
+        const { token, client } = await registerClient({ ...draft.body, password });
+        await signIn(token, client, 'client');
+      }
+    } catch (error) {
+      const key = authErrorKey(error, 'signup.errors.failed');
+      // A taken phone or username is fixed on the first screen.
+      if (key === 'signup.errors.phoneTaken') {
+        reject({ phone: key });
+        router.back();
+      } else if (key === 'signup.errors.usernameTaken') {
+        reject({ username: key });
+        router.back();
+      } else {
+        setFailure(t(key));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -60,14 +79,16 @@ export default function SignupPasswordScreen() {
 
   return (
     <ScreenLayout>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.flex}
-      >
+      <KeyboardAvoidingView behavior="padding" style={styles.flex}>
         <View style={styles.top}>
           <BackButton />
         </View>
-        <View style={styles.head}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
           <Text
             style={{
               color: theme.colors.muted,
@@ -81,91 +102,70 @@ export default function SignupPasswordScreen() {
           </Text>
           <Text
             style={{
-              marginTop: 14,
-              fontSize: 32,
+              marginTop: 10,
+              fontSize: 28,
               fontWeight: '700',
               color: theme.colors.fg,
               letterSpacing: -0.6,
             }}
           >
-            {t('auth.choosePassword')}
+            {t('signup.passwordTitle')}
           </Text>
-          <Text
-            style={{
-              marginTop: 6,
-              color: theme.colors.muted,
-              fontSize: 14,
-              lineHeight: 21,
-            }}
-          >
-            {t('auth.passwordSubtitle')}
+          <Text style={[styles.subtitle, { color: theme.colors.muted }]}>
+            {t('signup.passwordBody')}
           </Text>
-          {email ? (
-            <Text style={{ marginTop: 4, color: theme.colors.muted2, fontSize: 13 }}>
-              {email}
-            </Text>
-          ) : null}
-        </View>
 
-        <View style={styles.body}>
           <Input
             label={t('auth.password')}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              setErrors({});
+              setFailure(null);
+            }}
             secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
             textContentType="newPassword"
+            placeholder={t('signup.passwordHint')}
+            errorText={errors.password ? t(errors.password) : undefined}
             testID="signup-password"
-            errorText={error ?? undefined}
+          />
+          <Input
+            label={t('signup.passwordRepeat')}
+            value={confirm}
+            onChangeText={(text) => {
+              setConfirm(text);
+              setErrors({});
+              setFailure(null);
+            }}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="newPassword"
+            returnKeyType="done"
+            onSubmitEditing={onSubmit}
+            errorText={errors.confirm ? t(errors.confirm) : undefined}
+            testID="signup-password-confirm"
           />
 
-          {/* Strength bar — segmented progress indicator with label */}
-          {password.length > 0 ? (
-            <View style={{ marginTop: 8 }}>
-              <View style={{ flexDirection: 'row', gap: 4 }}>
-                {(['weak', 'fair', 'strong'] as StrengthLevel[]).map((level, i) => {
-                  const levels: StrengthLevel[] = ['weak', 'fair', 'strong'];
-                  const active = levels.indexOf(strength) >= i;
-                  return (
-                    <View
-                      key={level}
-                      style={{
-                        flex: 1,
-                        height: 4,
-                        borderRadius: 2,
-                        backgroundColor: active ? strengthColor : theme.colors.border,
-                      }}
-                    />
-                  );
-                })}
-              </View>
-              <Text
-                style={{
-                  marginTop: 4,
-                  fontSize: 12,
-                  fontWeight: '600',
-                  color: strengthColor,
-                }}
-              >
-                {strength === 'weak'
-                  ? t('auth.passwordWeak')
-                  : strength === 'fair'
-                  ? t('auth.passwordFair')
-                  : t('auth.passwordStrong')}
-              </Text>
-            </View>
+          {failure ? (
+            <Text
+              style={{ color: theme.colors.danger, fontSize: 13, marginBottom: 12 }}
+              accessibilityRole="alert"
+            >
+              {failure}
+            </Text>
           ) : null}
-        </View>
 
-        <View style={styles.foot}>
           <Button
             fullWidth
-            label={submitting ? t('common.loading') : t('common.continue')}
-            onPress={onContinue}
-            disabled={strength === 'weak' || submitting}
+            label={t('auth.createAccount')}
+            onPress={onSubmit}
             loading={submitting}
-            testID="signup-password-continue"
+            testID="signup-submit"
           />
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </ScreenLayout>
   );
@@ -178,11 +178,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'flex-start',
   },
-  head: {
+  content: {
     paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 24,
+    paddingTop: 20,
+    paddingBottom: 32,
   },
-  body: { flex: 1, paddingHorizontal: 24 },
-  foot: { padding: 24 },
+  subtitle: {
+    marginTop: 6,
+    marginBottom: 20,
+    fontSize: 14,
+  },
 });
