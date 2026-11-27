@@ -56,6 +56,7 @@ export interface BookingDetails {
   clientFirstName: string;
   clientLastName: string;
   timestamp: string;
+  status: BookingStatus;
   services: Array<{
     name: string;
     price: number;

@@ -8,14 +8,14 @@ import { barberService } from '../../services/barberService';
 import { clientService } from '../../services/clientService';
 import { bookingService } from '../../services/bookingService';
 
-type AnyService = { firestore: { collection: (...args: unknown[]) => unknown } };
+type AnyService = {
+  firestore: { collection: (...args: unknown[]) => unknown };
+};
 
 function makeBoom(svc: AnyService) {
-  const spy = jest
-    .spyOn(svc.firestore, 'collection')
-    .mockImplementation(() => {
-      throw new Error('boom');
-    });
+  const spy = jest.spyOn(svc.firestore, 'collection').mockImplementation(() => {
+    throw new Error('boom');
+  });
   return () => spy.mockRestore();
 }
 
@@ -30,14 +30,19 @@ describe('service catch blocks', () => {
     const cases: Array<[string, () => Promise<unknown>]> = [
       ['getBarberByUsername', () => barberService.getBarberByUsername('u')],
       ['getBarberById', () => barberService.getBarberById('id')],
-      ['getBarberWithServices', () => barberService.getBarberWithServices('id')],
+      [
+        'getBarberWithServices',
+        () => barberService.getBarberWithServices('id'),
+      ],
       ['getAllBarbers', () => barberService.getAllBarbers(0, 10)],
       [
         'updateBarberProfile',
         () =>
           barberService.updateBarberProfile('id', {
             firstName: 'x',
-          } as unknown as Parameters<typeof barberService.updateBarberProfile>[1]),
+          } as unknown as Parameters<
+            typeof barberService.updateBarberProfile
+          >[1]),
       ],
       [
         'updateBarberCredentials',
@@ -53,11 +58,13 @@ describe('service catch blocks', () => {
       [
         'addBarberServices',
         () =>
-          barberService.addBarberServices('id', [{ name: 's', price: 1 } as never]),
+          barberService.addBarberServices('id', [
+            { name: 's', price: 1 } as never,
+          ]),
       ],
       [
-        'deleteBarberService',
-        () => barberService.deleteBarberService('svc'),
+        'softDeleteBarberService',
+        () => barberService.softDeleteBarberService('barber', 'svc'),
       ],
     ];
 
@@ -92,7 +99,9 @@ describe('service catch blocks', () => {
         () =>
           clientService.updateClientProfile('id', {
             firstName: 'x',
-          } as unknown as Parameters<typeof clientService.updateClientProfile>[1]),
+          } as unknown as Parameters<
+            typeof clientService.updateClientProfile
+          >[1]),
       ],
       [
         'updateClientCredentials',

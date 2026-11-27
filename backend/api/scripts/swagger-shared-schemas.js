@@ -74,6 +74,7 @@ function sharedSchemas() {
         clientFirstName: { type: 'string' },
         clientLastName: { type: 'string' },
         timestamp: { type: 'string', format: 'date-time' },
+        status: { type: 'string', example: 'confirmed' },
         services: {
           type: 'array',
           items: {
@@ -353,7 +354,7 @@ function sharedSchemas() {
       ],
       properties: {
         username: { type: 'string', minLength: 3, maxLength: 50 },
-        password: { type: 'string', minLength: 6 },
+        password: { type: 'string', minLength: 8 },
         firstName: { type: 'string', maxLength: 50 },
         lastName: { type: 'string', maxLength: 50 },
         phone: { type: 'string' },

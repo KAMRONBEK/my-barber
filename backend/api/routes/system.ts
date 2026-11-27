@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { metricsHandler } from '../middleware/metrics';
 import { config } from '../config/config';
 
@@ -54,10 +54,12 @@ router.get('/', (req: Request, res: Response) => {
       metrics: '/metrics',
       documentation: '/docs',
       openApiJson: '/docs.json',
-      development: {
-        note: 'Helpers for debugging; disable or protect in production if desired.',
-        endpoints: ['POST /test/send-notification', 'GET /test/logging'],
-      },
+      ...(config.nodeEnv !== 'production' && {
+        development: {
+          note: 'Debugging helpers; not mounted in production.',
+          endpoints: ['POST /test/send-notification', 'GET /test/logging'],
+        },
+      }),
       authentication: {
         base: '/auth',
         endpoints: [
@@ -149,7 +151,16 @@ router.get('/', (req: Request, res: Response) => {
   });
 });
 
-// Metrics endpoint
-router.get('/metrics', metricsHandler);
+// Metrics endpoint. In production it needs the admin API key.
+router.get('/metrics', (req: Request, res: Response, next: NextFunction) => {
+  const allowed =
+    config.nodeEnv !== 'production' ||
+    (!!config.adminApiKey && req.get('X-Admin-Api-Key') === config.adminApiKey);
+  if (!allowed) {
+    res.status(404).json({ ok: false, error: 'Not found' });
+    return;
+  }
+  Promise.resolve(metricsHandler(req, res)).catch(next);
+});
 
 export default router;

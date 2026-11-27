@@ -27,10 +27,14 @@ class MockDocSnapshot {
 }
 
 class MockTransaction {
-  constructor(private readonly store: MemoryStore) {}
+  private writes: Array<() => void> = [];
 
-  async get(ref: MockDocumentReference): Promise<MockDocSnapshot> {
-    return ref.get();
+  async get<T>(target: { get(): Promise<T> }): Promise<T> {
+    // Real Firestore rejects this, so catch it in tests too.
+    if (this.writes.length > 0) {
+      throw new Error('Mock Firestore: transaction read after write');
+    }
+    return target.get();
   }
 
   set(
@@ -38,11 +42,19 @@ class MockTransaction {
     data: DocData,
     options?: { merge?: boolean }
   ): void {
-    ref._set(data, options);
+    this.writes.push(() => ref._set(data, options));
   }
 
   update(ref: MockDocumentReference, data: DocData): void {
-    ref._update(data);
+    this.writes.push(() => ref._update(data));
+  }
+
+  delete(ref: MockDocumentReference): void {
+    this.writes.push(() => ref._deleteSync());
+  }
+
+  _commit(): void {
+    this.writes.forEach(write => write());
   }
 }
 
@@ -361,6 +373,8 @@ function createCollectionRef(store: MemoryStore, collectionId: string) {
 
 export function createMockFirestore() {
   const store = globalStore;
+  /** Firestore transactions are serialisable; running them in turn models that. */
+  let transactionQueue: Promise<unknown> = Promise.resolve();
 
   return {
     settings: (_opts: unknown): void => {
@@ -368,11 +382,17 @@ export function createMockFirestore() {
     },
     collection: (name: string) => createCollectionRef(store, name),
     batch: () => new MockWriteBatch(store),
-    runTransaction: async <T>(
+    runTransaction: <T>(
       fn: (tx: MockTransaction) => Promise<T>
     ): Promise<T> => {
-      const tx = new MockTransaction(store);
-      return fn(tx);
+      const run = transactionQueue.then(async () => {
+        const tx = new MockTransaction();
+        const result = await fn(tx);
+        tx._commit();
+        return result;
+      });
+      transactionQueue = run.catch(() => {});
+      return run;
     },
     listCollections: async (): Promise<unknown[]> => {
       return [];

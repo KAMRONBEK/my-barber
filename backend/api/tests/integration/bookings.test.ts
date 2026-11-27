@@ -43,7 +43,7 @@ describe('bookings (contract)', () => {
       id: bookingId,
       barberId,
       clientId,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(Date.now() + 60 * 60_000).toISOString(),
       status: 'pending_confirmation',
       declineReason: null,
       cancellationReason: null,

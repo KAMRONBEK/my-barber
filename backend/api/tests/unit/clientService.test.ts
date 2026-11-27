@@ -107,7 +107,7 @@ describe('clientService', () => {
       id: 'or-co2',
       barberId: 'b-co2',
       clientId: 'missing-client',
-      timestamp: '2026-06-15T10:00:00.000Z',
+      timestamp: '2099-06-15T10:00:00.000Z',
       status: 'pending_confirmation',
     });
     seedDoc(COLLECTIONS.BOOKING_SERVICES, 'os-co2', {

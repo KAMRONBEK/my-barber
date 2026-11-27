@@ -1,4 +1,4 @@
-import { QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { QueryDocumentSnapshot, Transaction } from 'firebase-admin/firestore';
 import { db, COLLECTIONS } from '../config/database';
 import {
   CancellationParty,
@@ -16,6 +16,37 @@ import {
   normalizeBookingStatus,
 } from '../utils/bookingContract';
 import { resolveMediaRefForApi } from './fileStorage';
+import { BookingError } from '../utils/bookingErrors';
+import {
+  EXPIRED_REASON,
+  bookingDurationMinutes,
+  effectiveBookingStatus,
+  fitsWorkingHours,
+  isExpiredRequest,
+  occupiesSlot,
+} from '../utils/bookingRules';
+import { isPublicBarber } from '../utils/barberVisibility';
+
+const HOUR_MS = 60 * 60_000;
+/** Allows for clock drift between the phone and the server. */
+const PAST_GRACE_MS = 60_000;
+
+/**
+ * Parse a requested start time into the stored UTC form. A value without a
+ * timezone is Tashkent wall-clock time.
+ */
+function parseStartTime(input: string): string {
+  const hasTime = /T\d{2}/.test(input);
+  const hasZone = /(Z|[+-]\d{2}(:?\d{2})?)$/i.test(input);
+  const date = new Date(hasZone ? input : `${input}+05:00`);
+  if (!hasTime || Number.isNaN(date.getTime())) {
+    throw new BookingError('INVALID_TIME');
+  }
+  if (date.getTime() < Date.now() - PAST_GRACE_MS) {
+    throw new BookingError('PAST_TIME');
+  }
+  return date.toISOString();
+}
 
 export class BookingServiceClass {
   private firestore = db.getFirestore();
@@ -41,6 +72,64 @@ export class BookingServiceClass {
     return total;
   }
 
+  private async serviceRowsOfBooking(
+    tx: Transaction,
+    bookingId: string
+  ): Promise<Array<{ durationMinutes?: number }>> {
+    const links = await tx.get(
+      this.firestore
+        .collection(COLLECTIONS.BOOKING_SERVICES)
+        .where('bookingId', '==', bookingId)
+    );
+    const rows: Array<{ durationMinutes?: number }> = [];
+    for (const link of links.docs) {
+      const service = await tx.get(
+        this.firestore
+          .collection(COLLECTIONS.BARBER_SERVICES)
+          .doc(link.data().serviceId)
+      );
+      rows.push((service.data() as { durationMinutes?: number }) ?? {});
+    }
+    return rows;
+  }
+
+  /** Throws when the barber already has a booking overlapping this interval. */
+  private async assertSlotFree(
+    tx: Transaction,
+    barberId: string,
+    timestamp: string,
+    durationMinutes: number,
+    ignoreBookingId?: string
+  ): Promise<void> {
+    const start = new Date(timestamp).getTime();
+    const end = start + durationMinutes * 60_000;
+    // Wider than any booking, so an earlier one that runs into this slot is seen.
+    const nearby = await tx.get(
+      this.firestore
+        .collection(COLLECTIONS.BOOKINGS)
+        .where('barberId', '==', barberId)
+        .where('timestamp', '>=', new Date(start - 48 * HOUR_MS).toISOString())
+        .where('timestamp', '<', new Date(end + 24 * HOUR_MS).toISOString())
+    );
+
+    for (const doc of nearby.docs) {
+      if (doc.id === ignoreBookingId) continue;
+      const other = doc.data() as Booking;
+      if (
+        !occupiesSlot(effectiveBookingStatus(other.status, other.timestamp))
+      ) {
+        continue;
+      }
+      const otherStart = new Date(other.timestamp).getTime();
+      if (otherStart >= end) continue;
+      const services = await this.serviceRowsOfBooking(tx, doc.id);
+      const otherEnd = otherStart + bookingDurationMinutes(services) * 60_000;
+      if (otherEnd > start) {
+        throw new BookingError('SLOT_TAKEN');
+      }
+    }
+  }
+
   async createBooking(bookingData: BookingCreateRequest): Promise<string> {
     try {
       const blocked = await blockService.isBlockedBetween(
@@ -51,44 +140,78 @@ export class BookingServiceClass {
         throw new Error('BLOCKED');
       }
 
+      const timestamp = parseStartTime(bookingData.timestamp);
       const bookingId = uuidv4();
+      const { barberId, clientId, serviceIds } = bookingData;
 
-      const booking: Booking = {
-        id: bookingId,
-        barberId: bookingData.barberId,
-        clientId: bookingData.clientId,
-        timestamp: bookingData.timestamp,
-        status: 'pending_confirmation',
-        declineReason: null,
-        cancellationReason: null,
-        previousTimestamp: null,
-        cancelledBy: null,
-        completedAt: null,
-        serviceTotal: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      // The per-barber lock document makes concurrent requests conflict, so two
+      // clients cannot both pass the overlap check.
+      await this.firestore.runTransaction(async tx => {
+        const lockRef = this.firestore
+          .collection(COLLECTIONS.BOOKING_LOCKS)
+          .doc(barberId);
+        await tx.get(lockRef);
 
-      await this.firestore
-        .collection(COLLECTIONS.BOOKINGS)
-        .doc(bookingId)
-        .set(booking);
+        const barber = await tx.get(
+          this.firestore.collection(COLLECTIONS.BARBERS).doc(barberId)
+        );
+        const barberData = barber.data();
+        if (!barber.exists || !isPublicBarber(barberData ?? {})) {
+          throw new BookingError('BARBER_NOT_AVAILABLE');
+        }
 
-      const batch = this.firestore.batch();
-      bookingData.serviceIds.forEach(serviceId => {
-        const joinId = uuidv4();
-        const joinRef = this.firestore
-          .collection(COLLECTIONS.BOOKING_SERVICES)
-          .doc(joinId);
+        const services: Array<{ durationMinutes?: number }> = [];
+        for (const serviceId of serviceIds) {
+          const service = await tx.get(
+            this.firestore
+              .collection(COLLECTIONS.BARBER_SERVICES)
+              .doc(serviceId)
+          );
+          const data = service.data();
+          if (
+            !service.exists ||
+            data?.barberId !== barberId ||
+            data?.isActive === false
+          ) {
+            throw new BookingError('INVALID_SERVICES');
+          }
+          services.push(data);
+        }
 
-        batch.set(joinRef, {
-          id: joinId,
-          bookingId,
-          serviceId,
-        });
+        const duration = bookingDurationMinutes(services);
+        if (!fitsWorkingHours(timestamp, duration, barberData?.workingHours)) {
+          throw new BookingError('OUTSIDE_WORKING_HOURS');
+        }
+        await this.assertSlotFree(tx, barberId, timestamp, duration);
+
+        const booking: Booking = {
+          id: bookingId,
+          barberId,
+          clientId,
+          timestamp,
+          status: 'pending_confirmation',
+          declineReason: null,
+          cancellationReason: null,
+          previousTimestamp: null,
+          cancelledBy: null,
+          completedAt: null,
+          serviceTotal: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        tx.set(
+          this.firestore.collection(COLLECTIONS.BOOKINGS).doc(bookingId),
+          booking
+        );
+        for (const serviceId of serviceIds) {
+          const joinId = uuidv4();
+          tx.set(
+            this.firestore.collection(COLLECTIONS.BOOKING_SERVICES).doc(joinId),
+            { id: joinId, bookingId, serviceId }
+          );
+        }
+        tx.set(lockRef, { updatedAt: new Date() });
       });
-
-      await batch.commit();
 
       void this.dispatchBookingLifecycleNotifications(
         'booking_created',
@@ -97,7 +220,7 @@ export class BookingServiceClass {
 
       logger.info('Booking created successfully', {
         bookingId,
-        serviceCount: bookingData.serviceIds.length,
+        serviceCount: serviceIds.length,
       });
       return bookingId;
     } catch (error) {
@@ -178,7 +301,14 @@ export class BookingServiceClass {
         }
       }
 
-      const status = normalizeBookingStatus(bookingData.status);
+      const expired = isExpiredRequest(
+        bookingData.status,
+        bookingData.timestamp
+      );
+      const status = effectiveBookingStatus(
+        bookingData.status,
+        bookingData.timestamp
+      );
 
       const clientAvatar = clientData
         ? await resolveMediaRefForApi(clientData.avatar)
@@ -202,7 +332,8 @@ export class BookingServiceClass {
         timestamp: bookingData.timestamp,
         status,
         declineReason: bookingData.declineReason ?? null,
-        cancellationReason: bookingData.cancellationReason ?? null,
+        cancellationReason:
+          bookingData.cancellationReason ?? (expired ? EXPIRED_REASON : null),
         previousTimestamp: bookingData.previousTimestamp ?? null,
         cancelledBy: bookingData.cancelledBy ?? null,
         completedAt: bookingData.completedAt ?? null,
@@ -228,6 +359,12 @@ export class BookingServiceClass {
 
   private isActiveForArrival(status: BookingStatus): boolean {
     return status === 'confirmed' || status === 'rescheduled';
+  }
+
+  private assertStarted(timestamp: string): void {
+    if (new Date(timestamp).getTime() > Date.now()) {
+      throw new BookingError('NOT_STARTED');
+    }
   }
 
   async patchBarberBookingStatus(
@@ -327,16 +464,41 @@ export class BookingServiceClass {
       throw new Error('INVALID_STATE');
     }
 
-    await this.firestore
-      .collection(COLLECTIONS.BOOKINGS)
-      .doc(bookingId)
-      .update({
-        status: 'rescheduled',
-        previousTimestamp: bookingRow.timestamp,
-        timestamp: newTimestamp,
-        cancellationReason: reason ?? null,
-        updatedAt: new Date(),
-      });
+    const timestamp = parseStartTime(newTimestamp);
+    const { barberId } = bookingRow;
+
+    await this.firestore.runTransaction(async tx => {
+      const lockRef = this.firestore
+        .collection(COLLECTIONS.BOOKING_LOCKS)
+        .doc(barberId);
+      await tx.get(lockRef);
+
+      const barber = await tx.get(
+        this.firestore.collection(COLLECTIONS.BARBERS).doc(barberId)
+      );
+      if (!barber.exists || !isPublicBarber(barber.data() ?? {})) {
+        throw new BookingError('BARBER_NOT_AVAILABLE');
+      }
+      const duration = bookingDurationMinutes(
+        await this.serviceRowsOfBooking(tx, bookingId)
+      );
+      if (!fitsWorkingHours(timestamp, duration, barber.data()?.workingHours)) {
+        throw new BookingError('OUTSIDE_WORKING_HOURS');
+      }
+      await this.assertSlotFree(tx, barberId, timestamp, duration, bookingId);
+
+      tx.update(
+        this.firestore.collection(COLLECTIONS.BOOKINGS).doc(bookingId),
+        {
+          status: 'rescheduled',
+          previousTimestamp: bookingRow.timestamp,
+          timestamp,
+          cancellationReason: reason ?? null,
+          updatedAt: new Date(),
+        }
+      );
+      tx.set(lockRef, { updatedAt: new Date() });
+    });
 
     void this.dispatchBookingLifecycleNotifications(
       'booking_rescheduled',
@@ -357,6 +519,8 @@ export class BookingServiceClass {
     if (st !== 'confirmed' && st !== 'rescheduled') {
       throw new Error('INVALID_STATE');
     }
+
+    this.assertStarted(bookingRow.timestamp);
 
     await this.firestore
       .collection(COLLECTIONS.BOOKINGS)
@@ -429,6 +593,8 @@ export class BookingServiceClass {
     if (st !== 'confirmed' && st !== 'rescheduled') {
       throw new Error('INVALID_STATE');
     }
+
+    this.assertStarted(bookingRow.timestamp);
 
     const total = await this.computeServiceTotal(bookingId);
     const completedAt = new Date().toISOString();
@@ -536,11 +702,12 @@ export class BookingServiceClass {
     // Pre-filter on raw document status before the expensive per-booking enrichment,
     // so getBookingById is only called for docs that will actually appear in the page.
     const candidateDocs = statusFilter
-      ? snapshot.docs.filter((d: QueryDocumentSnapshot) =>
-          statusFilter.includes(
-            normalizeBookingStatus((d.data() as Booking).status)
-          )
-        )
+      ? snapshot.docs.filter((d: QueryDocumentSnapshot) => {
+          const row = d.data() as Booking;
+          return statusFilter.includes(
+            effectiveBookingStatus(row.status, row.timestamp)
+          );
+        })
       : snapshot.docs;
 
     const hasMore = candidateDocs.length > limit;

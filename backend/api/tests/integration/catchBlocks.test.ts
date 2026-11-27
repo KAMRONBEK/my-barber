@@ -84,9 +84,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('GET /barber/ returns 500 when service throws', async () => {
-    jest.spyOn(barberService, 'getAllBarbers').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(barberService, 'getAllBarbers')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signBarberToken(barberId);
     const res = await request(app)
       .get('/barber/')
@@ -96,9 +96,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('GET /barber/getMe returns 500 when service throws', async () => {
-    jest.spyOn(barberService, 'getBarberWithServices').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(barberService, 'getBarberWithServices')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signBarberToken(barberId);
     await request(app)
       .get('/barber/getMe')
@@ -107,9 +107,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('PUT /barber/update returns 500 when service throws', async () => {
-    jest.spyOn(barberService, 'updateBarberProfile').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(barberService, 'updateBarberProfile')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signBarberToken(barberId);
     await request(app)
       .put('/barber/update')
@@ -143,9 +143,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('POST /barber/add-service returns 500 when service throws', async () => {
-    jest.spyOn(barberService, 'addBarberServices').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(barberService, 'addBarberServices')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signBarberToken(barberId);
     await request(app)
       .post('/barber/add-service')
@@ -155,9 +155,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('DELETE /barber/delete-service/:id returns 500 when service throws', async () => {
-    jest.spyOn(barberService, 'deleteBarberService').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(barberService, 'softDeleteBarberService')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signBarberToken(barberId);
     await request(app)
       .delete('/barber/delete-service/x')
@@ -166,9 +166,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('GET /barber/bookings returns 500 when service throws', async () => {
-    jest.spyOn(barberService, 'getBarberBookings').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(barberService, 'getBarberBookings')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signBarberToken(barberId);
     await request(app)
       .get('/barber/bookings')
@@ -191,9 +191,9 @@ describe('route catch-block coverage via spied service errors', () => {
 
   it('POST /barber/bookings/:id/cancel returns 500 on unexpected error', async () => {
     seedBooking('cb-o-cancel', barberId, clientId);
-    jest.spyOn(bookingService, 'cancelBooking').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(bookingService, 'cancelBooking')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signBarberToken(barberId);
     await request(app)
       .post('/barber/bookings/cb-o-cancel/cancel')
@@ -216,9 +216,9 @@ describe('route catch-block coverage via spied service errors', () => {
 
   it('POST /barber/bookings/:id/no-show returns 500 on unexpected error', async () => {
     seedBooking('cb-o-noshow', barberId, clientId);
-    jest.spyOn(bookingService, 'markNoShow').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(bookingService, 'markNoShow')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signBarberToken(barberId);
     await request(app)
       .post('/barber/bookings/cb-o-noshow/no-show')
@@ -228,9 +228,9 @@ describe('route catch-block coverage via spied service errors', () => {
 
   it('POST /barber/bookings/:id/complete returns 500 on unexpected error', async () => {
     seedBooking('cb-o-complete', barberId, clientId);
-    jest.spyOn(bookingService, 'completeBooking').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(bookingService, 'completeBooking')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signBarberToken(barberId);
     await request(app)
       .post('/barber/bookings/cb-o-complete/complete')
@@ -239,9 +239,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('GET /barber/earnings returns 500 when service throws', async () => {
-    jest.spyOn(earningsService, 'getBarberEarnings').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(earningsService, 'getBarberEarnings')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signBarberToken(barberId);
     await request(app)
       .get('/barber/earnings')
@@ -295,9 +295,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('PUT /barber/update-device-id returns 500 when service throws', async () => {
-    jest.spyOn(barberService, 'updateBarberDeviceId').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(barberService, 'updateBarberDeviceId')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signBarberToken(barberId);
     await request(app)
       .put('/barber/update-device-id')
@@ -309,9 +309,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('GET /client/getMe returns 500 when service throws', async () => {
-    jest.spyOn(clientService, 'getClientById').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(clientService, 'getClientById')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signClientToken(clientId);
     await request(app)
       .get('/client/getMe')
@@ -320,9 +320,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('PUT /client/update returns 500 when service throws', async () => {
-    jest.spyOn(clientService, 'updateClientProfile').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(clientService, 'updateClientProfile')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signClientToken(clientId);
     await request(app)
       .put('/client/update')
@@ -356,9 +356,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('GET /client/bookings returns 500 when service throws', async () => {
-    jest.spyOn(clientService, 'getClientBookings').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(clientService, 'getClientBookings')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signClientToken(clientId);
     await request(app)
       .get('/client/bookings')
@@ -368,9 +368,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('POST /client/bookings returns 500 when service throws unexpected', async () => {
-    jest.spyOn(bookingService, 'createBooking').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(bookingService, 'createBooking')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signClientToken(clientId);
     await request(app)
       .post('/client/bookings')
@@ -385,9 +385,9 @@ describe('route catch-block coverage via spied service errors', () => {
 
   it('POST /client/bookings/:id/cancel returns 500 on unexpected error', async () => {
     seedBooking('cb-cli-cancel', barberId, clientId);
-    jest.spyOn(bookingService, 'cancelBooking').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(bookingService, 'cancelBooking')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signClientToken(clientId);
     await request(app)
       .post('/client/bookings/cb-cli-cancel/cancel')
@@ -410,9 +410,9 @@ describe('route catch-block coverage via spied service errors', () => {
 
   it('POST /client/bookings/:id/review returns 500 on unexpected error', async () => {
     seedBooking('cb-cli-rev', barberId, clientId, 'completed');
-    jest.spyOn(reviewService, 'createReview').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(reviewService, 'createReview')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signClientToken(clientId);
     await request(app)
       .post('/client/bookings/cb-cli-rev/review')
@@ -422,9 +422,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('GET /client/banner returns 500 when service throws', async () => {
-    jest.spyOn(barberService, 'getAllBarbers').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(barberService, 'getAllBarbers')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signClientToken(clientId);
     await request(app)
       .get('/client/banner')
@@ -433,9 +433,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('GET /notifications returns 500 when service throws', async () => {
-    jest.spyOn(notificationInboxService, 'listForUser').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(notificationInboxService, 'listForUser')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signClientToken(clientId);
     await request(app)
       .get('/notifications')
@@ -444,9 +444,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('PATCH /notifications/:id/read returns 500 when service throws', async () => {
-    jest.spyOn(notificationInboxService, 'markRead').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(notificationInboxService, 'markRead')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signClientToken(clientId);
     await request(app)
       .patch('/notifications/x/read')
@@ -466,9 +466,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('POST /reports returns 500 when service throws', async () => {
-    jest.spyOn(trustService, 'createReport').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(trustService, 'createReport')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signClientToken(clientId);
     await request(app)
       .post('/reports')
@@ -482,9 +482,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('POST /blocks returns 500 when service throws non-INVALID error', async () => {
-    jest.spyOn(blockService, 'addBlock').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(blockService, 'addBlock')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signClientToken(clientId);
     await request(app)
       .post('/blocks')
@@ -494,9 +494,9 @@ describe('route catch-block coverage via spied service errors', () => {
   });
 
   it('DELETE /blocks/:id returns 500 when service throws', async () => {
-    jest.spyOn(blockService, 'removeBlock').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(blockService, 'removeBlock')
+      .mockRejectedValueOnce(new Error('boom'));
     const token = signClientToken(clientId);
     await request(app)
       .delete('/blocks/x')
@@ -511,9 +511,9 @@ describe('authService catch blocks', () => {
   });
 
   it('barberRegister returns Registration failed on unexpected error', async () => {
-    jest.spyOn(barberService, 'getBarberByUsername').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(barberService, 'getBarberByUsername')
+      .mockRejectedValueOnce(new Error('boom'));
     const out = await authService.barberRegister({
       username: 'x',
       password: 'pass1234',
@@ -529,9 +529,9 @@ describe('authService catch blocks', () => {
   });
 
   it('barberLogin returns Login failed on unexpected error', async () => {
-    jest.spyOn(barberService, 'getBarberByUsername').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(barberService, 'getBarberByUsername')
+      .mockRejectedValueOnce(new Error('boom'));
     const out = await authService.barberLogin({
       username: 'x',
       password: 'pass1234',
@@ -541,24 +541,23 @@ describe('authService catch blocks', () => {
   });
 
   it('clientRegister returns Registration failed on unexpected error', async () => {
-    jest.spyOn(clientService, 'getClientByUsername').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(clientService, 'getClientByUsername')
+      .mockRejectedValueOnce(new Error('boom'));
     const out = await authService.clientRegister({
-      username: 'x',
       password: 'pass1234',
       firstName: 'F',
       lastName: 'L',
-      phone: '+1',
+      phone: '+998901234567',
     });
     expect(out.ok).toBe(false);
     expect(out.error).toBe('Registration failed');
   });
 
   it('clientLogin returns Login failed on unexpected error', async () => {
-    jest.spyOn(clientService, 'getClientByUsername').mockRejectedValueOnce(
-      new Error('boom')
-    );
+    jest
+      .spyOn(clientService, 'getClientByUsername')
+      .mockRejectedValueOnce(new Error('boom'));
     const out = await authService.clientLogin({
       username: 'x',
       password: 'pass1234',
@@ -599,7 +598,10 @@ describe('authService catch blocks', () => {
       birthDate: '1990-01-01',
       workingHours: '9-5',
     });
-    const out = await authService.barberLogin({ username, password: 'secret12' });
+    const out = await authService.barberLogin({
+      username,
+      password: 'secret12',
+    });
     expect(out.ok).toBe(true);
   });
 

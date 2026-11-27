@@ -23,6 +23,14 @@ export interface ClientCreateRequest {
   phone: string;
 }
 
+/** Public sign-up body; the username is derived from the phone number. */
+export interface ClientRegisterRequest {
+  phone: string;
+  password: string;
+  firstName: string;
+  lastName?: string;
+}
+
 export interface ClientLoginRequest {
   username: string;
   password: string;

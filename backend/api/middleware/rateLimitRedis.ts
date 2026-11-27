@@ -32,9 +32,12 @@ function startRedis(url: string): Promise<void> {
  * Redis-backed store for express-rate-limit so counts are shared across Vercel serverless instances.
  * Omit REDIS_URL to fall back to default in-memory store (not shared between lambdas).
  */
-export function createSharedRedisRateLimitStore(redisUrl: string): RedisStore {
+export function createSharedRedisRateLimitStore(
+  redisUrl: string,
+  prefix = 'my-barber-api:rl:'
+): RedisStore {
   return new RedisStore({
-    prefix: 'my-barber-api:rl:',
+    prefix,
     sendCommand: (...args: string[]) =>
       startRedis(redisUrl).then(
         () => client!.sendCommand(args) as Promise<RedisReply>

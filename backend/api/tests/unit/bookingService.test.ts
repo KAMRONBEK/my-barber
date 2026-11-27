@@ -12,6 +12,19 @@ function seedClient(id: string) {
   });
 }
 
+function seedBarber(id: string) {
+  seedDoc(COLLECTIONS.BARBERS, id, { id, approvalStatus: 'approved' });
+}
+
+function seedService(id: string, barberId: string) {
+  seedDoc(COLLECTIONS.BARBER_SERVICES, id, {
+    id,
+    barberId,
+    name: id,
+    price: 100,
+  });
+}
+
 describe('bookingService', () => {
   describe('getBookingById', () => {
     it('returns null when booking does not exist', async () => {
@@ -70,6 +83,9 @@ describe('bookingService', () => {
     });
 
     it('persists booking and service rows on happy path', async () => {
+      seedBarber('b-ok');
+      seedService('s1', 'b-ok');
+      seedService('s2', 'b-ok');
       const bookingId = await bookingService.createBooking({
         barberId: 'b-ok',
         clientId: 'c-ok',
@@ -84,13 +100,18 @@ describe('bookingService', () => {
     const barberId = 'lc-b';
     const clientId = 'lc-c';
 
-    function seedConfirmedBooking(id: string) {
+    const PAST = '2026-01-01T10:00:00.000Z';
+
+    function seedConfirmedBooking(
+      id: string,
+      timestamp = '2099-01-01T00:00:00.000Z'
+    ) {
       seedClient(clientId);
       seedDoc(COLLECTIONS.BOOKINGS, id, {
         id,
         barberId,
         clientId,
-        timestamp: '2099-01-01T00:00:00.000Z',
+        timestamp,
         status: 'confirmed',
         updatedAt: new Date(),
       });
@@ -177,7 +198,12 @@ describe('bookingService', () => {
     it('cancelBooking returns null when booking missing or wrong user', async () => {
       seedConfirmedBooking('lc-cancel-2');
       expect(
-        await bookingService.cancelBooking('barber', 'wrong-b', 'lc-cancel-2', null)
+        await bookingService.cancelBooking(
+          'barber',
+          'wrong-b',
+          'lc-cancel-2',
+          null
+        )
       ).toBeNull();
       expect(
         await bookingService.cancelBooking('client', clientId, 'no-id', null)
@@ -185,6 +211,7 @@ describe('bookingService', () => {
     });
 
     it('rescheduleBooking updates timestamp', async () => {
+      seedBarber(barberId);
       seedConfirmedBooking('lc-resched');
       const out = await bookingService.rescheduleBooking(
         'barber',
@@ -197,13 +224,13 @@ describe('bookingService', () => {
     });
 
     it('markNoShow only works on confirmed/rescheduled', async () => {
-      seedConfirmedBooking('lc-ns');
+      seedConfirmedBooking('lc-ns', PAST);
       const out = await bookingService.markNoShow(barberId, 'lc-ns');
       expect(out?.status).toBe('no_show');
 
-      await expect(bookingService.markNoShow(barberId, 'lc-ns')).rejects.toThrow(
-        'INVALID_STATE'
-      );
+      await expect(
+        bookingService.markNoShow(barberId, 'lc-ns')
+      ).rejects.toThrow('INVALID_STATE');
 
       expect(await bookingService.markNoShow(barberId, 'no-id')).toBeNull();
     });
@@ -286,7 +313,7 @@ describe('bookingService', () => {
         id: 'lc-cmp',
         barberId,
         clientId,
-        timestamp: '2099-01-01T00:00:00.000Z',
+        timestamp: PAST,
         status: 'confirmed',
         updatedAt: new Date(),
       });
@@ -303,7 +330,9 @@ describe('bookingService', () => {
         bookingService.completeBooking(barberId, 'lc-cmp')
       ).rejects.toThrow('INVALID_STATE');
 
-      expect(await bookingService.completeBooking(barberId, 'no-id')).toBeNull();
+      expect(
+        await bookingService.completeBooking(barberId, 'no-id')
+      ).toBeNull();
     });
 
     it('recordArrivalResponse updates the right party and validates ownership/state', async () => {
@@ -461,7 +490,10 @@ describe('bookingService', () => {
   describe('listBookingHistoryForClient', () => {
     it('returns empty list when no bookings', async () => {
       seedClient('hist-c0');
-      const out = await bookingService.listBookingHistoryForClient('hist-c0', 20);
+      const out = await bookingService.listBookingHistoryForClient(
+        'hist-c0',
+        20
+      );
       expect(out.items).toEqual([]);
       expect(out.next_cursor).toBeNull();
     });
@@ -501,7 +533,10 @@ describe('bookingService', () => {
         serviceId: 'hs1',
       });
 
-      const page1 = await bookingService.listBookingHistoryForClient('hist-c1', 1);
+      const page1 = await bookingService.listBookingHistoryForClient(
+        'hist-c1',
+        1
+      );
       expect(page1.items).toHaveLength(1);
       expect(page1.items[0].id).toBe('hist-new');
       expect(page1.next_cursor).not.toBeNull();
