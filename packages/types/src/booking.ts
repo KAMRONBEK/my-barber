@@ -17,6 +17,7 @@ export const BookingServiceRefSchema = z.object({
   id: IdSchema,
   name: z.string(),
   price: z.number().nonnegative(),
+  durationMinutes: z.number().optional(),
 });
 export type BookingServiceRef = z.infer<typeof BookingServiceRefSchema>;
 
